@@ -4,5 +4,14 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   clearScreen: false,
-  server: { strictPort: true },
+  server: {
+    strictPort: true,
+    host: "0.0.0.0",
+    port: 5173,
+    hmr: {
+      protocol: "wss",
+      host: undefined,
+      port: undefined,
+    },
+  },
 });
