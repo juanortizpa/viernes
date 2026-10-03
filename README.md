@@ -10,10 +10,21 @@ ruteo dinámico de modelos: usar el más barato capaz de resolver la tarea y esc
 
 ## Ver la demo visual
 
+### Local
+
 ```bash
 pnpm install
 pnpm dev        # http://localhost:5173
 ```
+
+### GitHub Codespace
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Codespace expondrá automáticamente el puerto 5173 y creará una URL pública (ej: `https://<usuario>-<repo>-<random>.github.dev:5173/`). Haz clic en la notificación de "Forwarded Ports" o abre la pestaña "Ports" en el terminal.
 
 Elige un escenario (acción local, modelo barato, escalado con permiso). La isla y el cuervo solo
 muestran lo que llega como `OrchestratorEvent`. Por ahora son escenarios guionados (etiquetados "DEMO");
