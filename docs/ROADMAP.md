@@ -7,7 +7,7 @@
 
 | Fase | Objetivo | Estado | Entregable de validación |
 |---|---|---|---|
-| 0 | Reducir riesgos, contratos, demo visual mínima | 🟦 en curso | Demo de isla + cuervo viendo eventos reales del protocolo |
+| 0 | Reducir riesgos, contratos, demo visual mínima | 🟦 casi listo (falta spike en Windows) | Demo de isla + cuervo sobre eventos del protocolo |
 | 1 | Columna vertebral (orquestador, proveedores, herramientas, policy) | ⬜ | Tarea de texto de punta a punta, sin UI compleja |
 | 2 | Router y evaluador, escalado | ⬜ | Escalado automático con evaluador de tests |
 | 3 | Arnés de experimento | ⬜ | Primer resultado de brazos A–D (¡temprano!) |
@@ -24,35 +24,35 @@
 exista algo visible, no solo logs.
 
 ### Entregables
-- [ ] Monorepo pnpm (workspace, tsconfig base, vitest)
-- [ ] `packages/protocol`: tipos y esquemas zod
-  - [ ] `PermissionLevel`, `Provenance`, `TaskType`, `Usage`
-  - [ ] `ModelCapabilities`, `RoutingDecision` (con `propensity`)
-  - [ ] `Verdict` + regla de escalado (`uncertain` ≠ éxito)
-  - [ ] `ToolDescriptor`, `PolicyDecision`
-  - [ ] `OrchestratorEvent` (unión discriminada, fuente única para UI y telemetría)
-  - [ ] `ExecutionTrace` (esquema del dataset de investigación)
-  - [ ] Tests de validación
-- [ ] **Demo visual mínima** (`apps/desktop`)
-  - [ ] Reducer puro `eventos → estado de la isla` (con tests)
-  - [ ] Isla colapsada/expandida con Framer Motion
-  - [ ] Cuervo SVG con estados: idle, listening, thinking, success, error, warning
-  - [ ] Reproductor de escenarios sobre el protocolo, **etiquetado "DEMO"** (no pasa por progreso real)
-  - [ ] Prompt de permiso interactivo (permitir/denegar reanuda el escenario)
-  - [ ] Escenarios: acción local sin LLM, modelo barato, escalado con permiso
-  - [ ] Captura de pantalla de verificación
-- [ ] Shell Tauri (`src-tauri`): ventana transparente, siempre encima, sin decoración
-  - [ ] Esqueleto escrito
+- [x] Monorepo pnpm (workspace, tsconfig base, vitest)
+- [x] `packages/protocol`: tipos y esquemas zod
+  - [x] `PermissionLevel`, `Provenance`, `TaskType`, `Usage`
+  - [x] `ModelCapabilities`, `RoutingDecision` (con `propensity`)
+  - [x] `Verdict` + regla de escalado (`uncertain` ≠ éxito)
+  - [x] `ToolDescriptor`, `PolicyDecision`
+  - [x] `OrchestratorEvent` (unión discriminada, fuente única para UI y telemetría)
+  - [x] `ExecutionTrace` (esquema del dataset de investigación)
+  - [x] Tests de validación
+- [x] **Demo visual mínima** (`apps/desktop`)
+  - [x] Reducer puro `eventos → estado de la isla` (con tests)
+  - [x] Isla colapsada/expandida con Framer Motion
+  - [x] Cuervo SVG con estados: idle, listening, thinking, success, error, warning
+  - [x] Reproductor de escenarios sobre el protocolo, **etiquetado "DEMO"** (no pasa por progreso real)
+  - [x] Prompt de permiso interactivo (permitir/denegar reanuda el escenario)
+  - [x] Escenarios: acción local sin LLM, modelo barato, escalado con permiso
+  - [x] Captura de pantalla de verificación
+- [x] Shell Tauri (`src-tauri`): ventana transparente, siempre encima, sin decoración
+  - [x] Esqueleto escrito
   - [ ] **Validado en Windows** ← requiere máquina Windows del usuario
-- [ ] ADRs en `docs/adr/`
-  - [ ] 0001 Monorepo y límites de paquetes
-  - [ ] 0002 Sidecar TypeScript + shell Tauri fino; IPC local con token
-  - [ ] 0003 Abstracción de proveedores y `ModelCapabilities`
-  - [ ] 0004 `OrchestratorEvent` como flujo único (UI + telemetría)
-  - [ ] 0005 Policy engine determinista fuera del LLM; taint tracking
-  - [ ] 0006 Esquema de traza con `propensity` para evaluación off-policy
-  - [ ] 0007 SQLite + sqlite-vec en MVP (Postgres diferido)
-- [ ] `CLAUDE.md` en la raíz que apunta a estos documentos
+- [x] ADRs en `docs/adr/`
+  - [x] 0001 Monorepo y límites de paquetes
+  - [x] 0002 Sidecar TypeScript + shell Tauri fino; IPC local con token
+  - [x] 0003 Abstracción de proveedores y `ModelCapabilities`
+  - [x] 0004 `OrchestratorEvent` como flujo único (UI + telemetría)
+  - [x] 0005 Policy engine determinista fuera del LLM; taint tracking
+  - [x] 0006 Esquema de traza con `propensity` para evaluación off-policy
+  - [x] 0007 SQLite + sqlite-vec en MVP (Postgres diferido)
+- [x] `CLAUDE.md` en la raíz que apunta a estos documentos
 
 ### Criterio de salida
 1. `pnpm typecheck` y `pnpm test` en verde.
@@ -126,3 +126,4 @@ exista algo visible, no solo logs.
 |---|---|
 | 2026-10-03 | Revisión de arquitectura inicial. Cambios propuestos: SQLite en vez de Postgres en MVP; núcleo TS como sidecar; IPC local sin puertos; MCP como adaptador; voz al final. |
 | 2026-10-03 | Inicio de Fase 0; añadidos `PROJECT_CONTEXT.md`, `ROADMAP.md` y demo visual temprana al alcance. |
+| 2026-10-03 | Fase 0 casi cerrada: monorepo, `packages/protocol` (7 tests), demo de isla + cuervo (`pnpm dev`, 9 tests de reducer y player, verificada con capturas en Chromium), 7 ADRs, esqueleto Tauri. **Pendiente:** spike de overlay en Windows (`docs/SPIKE_OVERLAY.md`), no compilado ni probado. |
