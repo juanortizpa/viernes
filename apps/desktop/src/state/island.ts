@@ -26,6 +26,8 @@ export interface IslandState {
   level?: number;
   /** The speech synthesiser is really playing audio. */
   speaking?: boolean;
+  /** The model's answer of the current attempt, as streamed; shown when the task finishes without a summary. */
+  answer?: string;
   /** Hands-free listening: what the always-on loop is really doing. Undefined/off = the microphone is closed. */
   wake?: { state: "off" | "idle" | "verifying" | "command" | "busy" | "followUp"; /** ms left in the follow-up window */ followUpMs?: number };
 }
@@ -118,6 +120,7 @@ export function islandReducer(state: IslandState, action: IslandAction): IslandS
         model: e.decision.model,
         headline: e.decision.model ? `Usando ${e.decision.model}` : state.headline,
         detail: e.decision.rationale,
+        answer: undefined,
       };
 
     case "progress":
@@ -152,6 +155,7 @@ export function islandReducer(state: IslandState, action: IslandAction): IslandS
         mode: "thinking",
         headline: "Respondiendo…",
         detail: ((state.headline === "Respondiendo…" ? (state.detail ?? "") : "") + e.text).slice(-140),
+        answer: ((state.answer ?? "") + e.text).slice(0, 4000),
       };
 
     case "model.completed":
@@ -177,10 +181,12 @@ export function islandReducer(state: IslandState, action: IslandAction): IslandS
         detail: e.reason,
         model: e.to,
         escalations: state.escalations + 1,
+        answer: undefined, // the abandoned attempt's text is not the answer
       };
 
     case "task.finished":
-      if (e.outcome === "success") return { ...state, mode: "success", headline: "Listo", detail: e.summary, fraction: undefined, pending: undefined };
+      // Model answers carry no summary: the island keeps showing what was really answered instead of going blank.
+      if (e.outcome === "success") return { ...state, mode: "success", headline: "Listo", detail: e.summary ?? (state.answer?.trim() || undefined), fraction: undefined, pending: undefined };
       if (e.outcome === "failure") return { ...state, mode: "error", headline: "No pude completarlo", detail: e.summary, pending: undefined };
       return { ...state, mode: "idle", headline: "Cancelado", detail: e.summary, pending: undefined };
 

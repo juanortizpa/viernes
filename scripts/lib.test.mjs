@@ -1,8 +1,8 @@
-import { mkdirSync, mkdtempSync, rmSync as rmSyncQuiet, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync as rmSyncQuiet, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildConfig, describeAssets, explainExitCode, findFile, isDeprecatedWhisperStub, nodeOk, parseEnvFile, pickFromReleases, pickWhisperAsset, serializeEnv } from "./lib.mjs";
+import { buildConfig, describeAssets, explainExitCode, findFile, isDeprecatedWhisperStub, islandNeedsBuild, newestMtime, nodeOk, parseEnvFile, pickFromReleases, pickWhisperAsset, serializeEnv } from "./lib.mjs";
 
 const base = {
   defaultModel: "openai/gpt-oss-20b", router: "rules", freeOnly: true,
@@ -106,5 +106,32 @@ describe("whisper binary choice and diagnostics", () => {
     expect(isDeprecatedWhisperStub("C:/t/whisper-cli.exe")).toBe(false);
     expect(explainExitCode(3221225781)).toMatch(/0xC0000135.*DLL/);
     expect(explainExitCode(1)).toBe("0x1");
+  });
+});
+
+describe("island build check", () => {
+  it("finds the newest source and skips build outputs", () => {
+    const dir = mkdtempSync(join(tmpdir(), "jarvis-island-"));
+    try {
+      mkdirSync(join(dir, "src/deep"), { recursive: true });
+      mkdirSync(join(dir, "node_modules"));
+      writeFileSync(join(dir, "src/a.ts"), "");
+      writeFileSync(join(dir, "src/deep/b.ts"), "");
+      writeFileSync(join(dir, "node_modules/x.js"), "");
+      utimesSync(join(dir, "src/a.ts"), 1000, 1000);
+      utimesSync(join(dir, "src/deep/b.ts"), 2000, 2000);
+      utimesSync(join(dir, "node_modules/x.js"), 9000, 9000);
+      expect(newestMtime([dir, join(dir, "missing")])).toBe(2_000_000);
+      expect(newestMtime([join(dir, "missing")])).toBe(0);
+    } finally {
+      rmSyncQuiet(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rebuilds when missing, stale or forced, and only then", () => {
+    expect(islandNeedsBuild({ exeMtime: 0, sourcesMtime: 5 })).toMatch(/no está compilada/);
+    expect(islandNeedsBuild({ exeMtime: 10, sourcesMtime: 11 })).toMatch(/cambió/);
+    expect(islandNeedsBuild({ exeMtime: 10, sourcesMtime: 9, force: true })).toMatch(/rebuild/);
+    expect(islandNeedsBuild({ exeMtime: 10, sourcesMtime: 9 })).toBeUndefined();
   });
 });

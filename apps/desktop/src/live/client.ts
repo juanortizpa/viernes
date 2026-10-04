@@ -19,14 +19,15 @@ export type VoiceNotice =
 export interface SocketLike {
   onopen: (() => void) | null;
   onmessage: ((e: { data: unknown }) => void) | null;
-  onerror: (() => void) | null;
-  onclose: (() => void) | null;
+  /** `message`/`reason` are optional: a WebSocket gives neither useful text, the Tauri relay explains what failed. */
+  onerror: ((e?: { message?: string }) => void) | null;
+  onclose: ((e?: { reason?: string }) => void) | null;
   send(data: string): void;
   close(): void;
 }
 
 export interface LiveClientOptions {
-  /** Both default to the same-origin dev bridge. */
+  /** Both default to the same-origin dev bridge; inside Tauri they come from `tauriTransport()`. */
   fetchToken?: () => Promise<string>;
   openSocket?: () => SocketLike;
 }
@@ -86,13 +87,14 @@ export class LiveClient {
     this.setStatus("connecting");
     try {
       const token = await (this.opts.fetchToken ?? defaultFetchToken)();
+      this.detachSocket(); // a retry: the old connection must not be able to fail the new one when it finally closes
       const socket = (this.opts.openSocket ?? defaultOpenSocket)();
       this.socket = socket;
       socket.onopen = () => socket.send(encodeLine({ type: "hello", token, protocol: IPC_VERSION }));
       socket.onmessage = (e) => this.handle(String(e.data));
-      socket.onerror = () => this.fail("conexión con el sidecar fallida");
-      socket.onclose = () => {
-        if (this.status !== "unavailable") this.fail("sidecar desconectado");
+      socket.onerror = (e) => this.fail(e?.message || "conexión con el sidecar fallida");
+      socket.onclose = (e) => {
+        if (this.status !== "unavailable") this.fail(e?.reason ? `sidecar desconectado (${e.reason})` : "sidecar desconectado");
       };
     } catch (e) {
       this.fail(e instanceof Error ? e.message : String(e));
@@ -128,6 +130,14 @@ export class LiveClient {
 
   close(): void {
     this.socket?.close();
+  }
+
+  private detachSocket(): void {
+    const old = this.socket;
+    if (!old) return;
+    old.onopen = old.onmessage = old.onerror = old.onclose = null;
+    this.socket = undefined;
+    old.close();
   }
 
   private send(msg: unknown): void {

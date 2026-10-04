@@ -1,0 +1,13 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "The island window: core APIs (incl. events for the global push-to-talk), resizing itself to the island's size, and the app's own commands (sidecar relay, hit regions, shell info).",
+  "windows": [
+    "island"
+  ],
+  "permissions": [
+    "core:default",
+    "core:window:allow-set-size",
+    "core:window:allow-hide"
+  ]
+}

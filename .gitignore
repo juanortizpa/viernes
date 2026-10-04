@@ -9,3 +9,4 @@ jarvis.env
 tools
 .jarvis
 jarvis.config.json.bak
+apps/desktop/src-tauri/gen

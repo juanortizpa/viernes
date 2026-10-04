@@ -63,9 +63,12 @@ Prueba «qué hora es?» (intent local, sin modelo), «hola» (modelo) y «usa t
 
 **Sidecar empaquetado:** `pnpm --filter @jarvis/sidecar build` genera `apps/sidecar/dist/sidecar.mjs` (corre con `node`).
 
-**Shell Tauri** (`cd apps/desktop; pnpm tauri dev`): sirve para el spike del overlay (transparencia, siempre encima,
-clic-through). **Aún no lanza el sidecar** (el relevo Tauri↔sidecar está pendiente en el [ROADMAP](docs/ROADMAP.md)),
-así que dentro de Tauri solo verás la isla con los escenarios guionados.
+**Isla flotante (Tauri)**: doble clic en `island.bat` (o `node scripts/island.mjs`). El shell lanza el sidecar real y lo
+conecta a la isla por stdio ([ADR-0021](docs/adr/0021-tauri-sidecar-relay.md)): órdenes, voz, economía y permisos, sin navegador.
+La primera vez compila la isla (necesita Rust, varios minutos); después arranca en un segundo y solo recompila si cambió el código.
+Fuera de la isla los clics pasan a las apps de abajo; **Ctrl+Alt+Espacio** (mantener) habla desde cualquier app; ⚙ abre los ajustes de voz;
+el icono de la bandeja la oculta o la cierra ([ADR-0022](docs/adr/0022-overlay-click-through-shortcut-tray.md)).
+`island.bat --dev` usa `tauri dev` con recarga en caliente. Probado en Linux; **sin probar en Windows** (ver [docs/SPIKE_OVERLAY.md](docs/SPIKE_OVERLAY.md)).
 
 Pruebas contra la API real (opcional, gasta fracciones de centavo): `$env:JARVIS_LIVE = "1"; pnpm test`.
 
