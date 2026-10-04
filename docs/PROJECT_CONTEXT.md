@@ -62,7 +62,7 @@ Reglas duras:
 | Almacenamiento MVP | SQLite + sqlite-vec detrás de una interfaz (Postgres en V2/sync) | propuesto |
 | Herramientas | Registro interno único; MCP como adaptador (consumir/exponer) | propuesto |
 | Proveedores MVP | Anthropic + OpenRouter + Ollama (3 adaptadores para probar la abstracción) | propuesto |
-| Respuesta inmediata | R1 plantillas ES/EN + acuse como evento (MVP); R2 caché semántico con embedding local <100 MB (V2); R3 modelo de estilo solo si hay datos (ADR-0015) | propuesto |
+| Respuesta inmediata | R1 plantillas ES/EN + acuse como evento (MVP); R2 caché semántico con embedding local <100 MB (V2); R3 perfil de estilo por contadores, sin modelo propio (ADR-0015) | propuesto |
 | Voz | Último: push-to-talk → wake word (openWakeWord/Porcupine), whisper.cpp | diferido |
 
 ## 5. Niveles de permiso
@@ -76,11 +76,11 @@ disparar SENSITIVE/CRITICAL sin confirmación.
 - **MVP-0 (spine, texto primero):** barra de comandos + isla mínima (3 estados) + proveedores +
   intent router local + registro de herramientas + policy engine + router v1 + evaluador de código +
   escalado con checkpoints + telemetría completa.
-- **MVP-0.5 (respuesta inmediata R1):** saludos/cortesías por reglas y acuse rápido en tareas largas (ADR-0015).
+- **MVP-0.5 (respuesta inmediata R1–R3, hecho):** saludos por reglas, acuse rápido, caché semántico de respuestas verificadas y perfil de estilo (ADR-0015).
 - **MVP-1:** memoria, router aprendido (bandit), panel AI Economy, animaciones del cuervo.
 - **MVP-2:** voz (push-to-talk primero), consciencia de contexto.
-- **V2:** caché semántico (R2), bóveda de credenciales, visión, multiagente, proactividad, sync, grafo de conocimiento.
-- **Investigación:** modelo de estilo/preferencias (R3), tabla contrafactual, brazos A–D + oráculo + baseline tipo RouteLLM, curva de
+- **V2:** bóveda de credenciales, visión, multiagente, proactividad, sync, grafo de conocimiento.
+- **Investigación:** tabla contrafactual, brazos A–D + oráculo + baseline tipo RouteLLM, curva de
   aprendizaje, test de deriva.
 
 ## 7. Riesgos vigilados (resumen)

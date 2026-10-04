@@ -1,6 +1,6 @@
 # ADR-0015: Capa de respuesta inmediata (acuse + respuestas locales + caché semántico)
 
-**Estado:** aceptado · 2026-10-04 (R1 y R2 implementados y verificados; R3 en curso)
+**Estado:** aceptado · 2026-10-04 (R1, R2 y R3 implementados y verificados)
 
 ## Contexto
 Hoy toda consulta que no es un intent local espera al modelo (0,5–40 s según el proveedor, ver informe del arnés).
@@ -15,8 +15,9 @@ responda al instante lo repetitivo y, ante algo largo, acuse rápido ("ya me pon
   orquestador (`instant.issued`, con `kind: reply|ack`) emitido por el mismo camino que el resto, y declara que solo confirma recepción.
 - **R2 — Caché semántico.** Implementado con un embedder sin dependencias (n-gramas hasheados, 512 dim) detrás de la interfaz `Embedder`, más una
   guarda de contenido; un embedding neuronal (≈20–80 MB) queda como sustituto solo si los datos lo justifican. Almacenamiento en SQLite (`node:sqlite`).
-- **R3 — Modelo de estilo/preferencias (Investigación).** Solo si R2 muestra valor medible. Por defecto, las
-  preferencias viven como memoria de Fase 5 inyectada al prompt, no como un modelo entrenado.
+- **R3 — Estilo y preferencias.** Decisión: **no se entrena ningún modelo**. Un perfil determinista de contadores (`StyleTracker`) aprende el
+  registro (voseo/tuteo/usted) y la preferencia por respuestas breves y los inyecta como una línea fija en el prompt. Un modelo propio solo se
+  reconsidera si hay datos de uso real que muestren que el perfil por contadores no alcanza.
 
 ## Reglas duras (no negociables)
 1. **Una sola puerta, determinista:** la decisión de servir desde la capa inmediata la toma código, no un LLM.
@@ -62,3 +63,15 @@ responda al instante lo repetitivo y, ante algo largo, acuse rápido ("ya me pon
 - **Lo que NO está probado:** el conjunto de evaluación lo escribí yo mientras ajustaba el guard (riesgo de sobreajuste); no hay datos de uso real.
   El evaluador heurístico no verifica la verdad de una respuesta (7 falsos positivos en 301 celdas del arnés), así que **una respuesta errónea puede
   quedar guardada**; mitigaciones: `minSeen`, TTL, y que el usuario pueda verlas y borrarlas. Idiomas distintos de ES/EN no se clasifican bien.
+
+## Implementación R3 (hecho)
+- `packages/core/src/style-profile.ts`: `StyleTracker`. Cuenta marcadores (vos/tenés, tú/tienes, usted; "resumen/breve/brief") sobre cada mensaje del
+  usuario, **sin guardar texto** (solo contadores agregados) y **sin mirar mensajes con secretos** (`detectSensitive`). El hint se construye con
+  frases fijas, así que nada escrito por el usuario llega al prompt del sistema por esta vía. Se aplica solo con ≥8 mensajes y ≥3 marcadores con
+  ≥60 % de dominancia; sin evidencia clara no hace nada.
+- Se guarda en el mismo archivo SQLite que el caché (`instant_meta`). Control del usuario: "cómo es mi estilo", "olvida mi estilo",
+  "desactiva/activa el aprendizaje de estilo"; opción `styleProfile` en la config.
+- Verificación con Groq real (1 muestra por rama, anecdótica): tras 8 mensajes en voseo, la respuesta usó voseo ("agregá", "dejá") y fue más breve;
+  sin perfil usó tuteo y tablas largas.
+- **Lo que NO está probado:** que el usuario prefiera esas respuestas (no hay señal de satisfacción); el perfil no detecta dialecto más allá de
+  esos marcadores, ni temas ni tono. El interés del usuario por "preguntas frecuentes" lo cubre R2, no R3.

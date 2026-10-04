@@ -10,6 +10,7 @@ import type { FollowUp, IntentRouter } from "./intent";
 import { runEvaluators, toolPostconditionVerdict, type Evaluator } from "./evaluator";
 import { escalationLadder, estimateCostUsd, premiumModel, type ModelRouter, type RouteRequest } from "./model-router";
 import { detectSensitive } from "./sensitivity";
+import type { StyleTracker } from "./style-profile";
 import { routeRequestFor } from "./route-request";
 import { classifyTask } from "./task-classifier";
 import { TaskMachine } from "./task-state";
@@ -32,6 +33,8 @@ export interface OrchestratorDeps {
   instant?: InstantResponder;
   /** Optional semantic cache of verified answers to repeated questions (ADR-0015, R2). */
   cache?: InstantCache;
+  /** Optional learned speaking style (ADR-0015, R3): observes user messages and adds a fixed-phrase hint to the system prompt. */
+  style?: Pick<StyleTracker, "observe" | "hint">;
   router: ModelRouter;
   providers: ProviderRegistry;
   tools: ToolRegistry;
@@ -119,6 +122,11 @@ export class Orchestrator {
     };
 
     out.emit({ type: "task.started", input, modality: opts.modality ?? "text" });
+    try {
+      this.deps.style?.observe(input);
+    } catch {
+      /* the profile must never fail a task */
+    }
     let summary: string | undefined;
     try {
       machine.to("routing");
@@ -371,6 +379,7 @@ export class Orchestrator {
     const specs = useTools
       ? this.deps.tools.list().map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema }))
       : undefined;
+    const styleHint = this.deps.style?.hint();
     const messages: ChatMessage[] = [{ role: "user", content: input }];
     const total: Usage = { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, estimatedCostUsd: 0, latencyMs: 0 };
     let finalText = "";
@@ -382,7 +391,7 @@ export class Orchestrator {
         const calls: ToolCall[] = [];
         for await (const chunk of provider.generate({
           model: decision.model,
-          system: useTools ? SYSTEM_PROMPT + TOOLS_PROMPT : SYSTEM_PROMPT,
+          system: (useTools ? SYSTEM_PROMPT + TOOLS_PROMPT : SYSTEM_PROMPT) + (styleHint ? ` ${styleHint}` : ""),
           messages,
           tools: specs,
           signal,

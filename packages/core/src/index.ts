@@ -9,6 +9,7 @@ export * from "./model-router";
 export * from "./orchestrator";
 export * from "./route-request";
 export * from "./sensitivity";
+export * from "./style-profile";
 export * from "./task-classifier";
 export * from "./task-state";
 export * from "./trace-store";

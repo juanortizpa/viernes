@@ -26,6 +26,8 @@ export const Config = z.object({
       ttlDays: z.number().min(1).default(30),
     })
     .default({}),
+  /** Learn how the user talks (register, preference for brevity) from aggregate counts and add a fixed-phrase hint to the prompt (ADR-0015, R3). */
+  styleProfile: z.boolean().default(true),
   /** Refuse to start if any configured model has a non-zero price. */
   freeOnly: z.boolean().default(false),
   /** Discover installed apps (Windows Start Menu) so "abre X" works without hand-written aliases. */

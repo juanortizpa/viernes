@@ -11,7 +11,7 @@
 | 1 | Columna vertebral (orquestador, proveedores, herramientas, policy) | ✅ completa en lo que no requiere Windows (quedan relevo Tauri y herramientas de Windows) | Tarea de texto de punta a punta, sin UI compleja |
 | 2 | Router y evaluador, escalado | ✅ (dry-run y plan→aprobación diferidos a V2; evaluador de tests sin runner en vivo) | Escalado automático con evaluador de tests |
 | 3 | Arnés de experimento | 🟦 tabla completa para 7 modelos (Groq + Google); faltan tareas más difíciles | Primer resultado de brazos A–D (¡temprano!) |
-| R | Respuesta inmediata (acuse, saludos, caché) | 🟦 R1 y R2 hechos y medidos (acuse 1 ms vs 1 s; caché 1 ms vs ~500 ms, 0 falsos positivos) | Saludos y acuses <50 ms, sin progreso falso |
+| R | Respuesta inmediata (acuse, saludos, caché) | ✅ R1–R3 hechos y medidos (acuse 1 ms vs 1 s; caché 1 ms vs ~500 ms, 0 falsos positivos; perfil de estilo) | Saludos y acuses <50 ms, sin progreso falso |
 | 4 | Shell y UI completos | ⬜ | Isla con estados reales, permisos, panel Economy |
 | 5 | Memoria + optimización de contexto | ⬜ | Recuperación medida con ablación |
 | 6 | Router aprendido + experimento final | ⬜ | Frontera de Pareto costo vs éxito |
@@ -114,7 +114,7 @@ exista algo visible, no solo logs.
 - [ ] Cargadores HumanEval/MBPP/SWE-bench-Lite (requieren sandbox real, contenedor)
 - [ ] Baseline RouteLLM real (Fase 6); varias muestras por celda para la varianza de muestreo
 
-## Fase R — Respuesta inmediata (ADR-0015) 🟦 R1 y R2 hechos; R3 en curso
+## Fase R — Respuesta inmediata (ADR-0015) ✅ R1, R2 y R3 hechos (falta validar con uso real)
 **Meta:** que lo repetitivo responda al instante y lo largo acuse recibo al instante, sin progreso falso y sin falsos positivos.
 **Entregable de validación:** latencia al primer mensaje <50 ms en saludos y acuses, 0 respuestas servidas fuera de la lista permitida.
 
@@ -131,8 +131,10 @@ exista algo visible, no solo logs.
 - [x] Control del usuario: listar, borrar, desactivar (herramientas `instant.*` + frases locales; se integra con Fase 5)
 - [ ] Embedding neuronal (≈20–80 MB) solo si el real-world hit rate lo justifica
 
-### R3 — Estilo y preferencias (Investigación, ⏸)
-- [ ] Decidir con datos de R2 si hace falta un modelo propio; por defecto, preferencias como memoria en el prompt
+### R3 — Estilo y preferencias ✅
+- [x] `StyleTracker` (contadores, sin texto guardado, frases fijas al prompt), controles del usuario, verificado con Groq real
+- [x] Decisión: no se entrena un modelo; se reconsidera solo con datos de uso real
+- [ ] Medir si el usuario prefiere las respuestas con perfil (necesita señal de satisfacción: Fase 4/5)
 
 ## Fase 4 — Shell y UI (3–4 semanas) ⬜
 - [ ] Isla con todos los estados reales; prompts de permiso; panel AI Economy
@@ -188,3 +190,4 @@ exista algo visible, no solo logs.
 | 2026-10-04 | Contexto actualizado: capa de respuesta inmediata como Fase R (R1 acuse/saludos MVP, R2 caché semántico V2, R3 estilo investigación), ADR-0015 con reglas duras (lista de exclusión, `source: instant`, control del usuario). Nada implementado aún. |
 | 2026-10-04 | Fase R1 hecha: `RuleInstantResponder`, evento `instant.issued`, `ExecutionTrace.instant`, reducer de la isla, opción `instantResponses`. 181 tests. Medido con Groq real: acuse a 1 ms frente a ~1 s del primer token; saludos sin red. Tests antiguos que usaban "hola" como prompt de modelo se cambiaron. |
 | 2026-10-04 | Fase R2 hecha: `SemanticCache`, `SqliteInstantStore`, guarda `sameContent`, aprendizaje solo tras veredicto de éxito sin herramientas/taint/sensibles, controles del usuario, `harness instant-eval`. 196 tests. Bugs que atrapó la validación: el coseno podía dar 1.0000002 y el esquema `confidence ≤ 1` lo rechazaba; mi lista de exclusión bloqueaba "tell me"/"más grande". Verificado con Groq real (1 ms vs ~500 ms; Francia ≠ Italia). Riesgo abierto: una respuesta errónea aprobada por el evaluador heurístico puede guardarse. |
+| 2026-10-04 | Fase R3 hecha: `StyleTracker` (registro voseo/tuteo/usted y preferencia por brevedad, solo contadores), hint de frases fijas en el prompt, controles del usuario, opción `styleProfile`. 202 tests. A/B con Groq real (1 muestra): con perfil respondió en voseo y más breve. Un 429 de Groq (8000 tokens/min) durante la prueba se reportó correctamente como `task.error`. Decisión: no se entrena un modelo propio. |

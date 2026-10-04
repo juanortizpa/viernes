@@ -9,7 +9,7 @@ import {
   ProviderRegistry,
   type FetchLike,
 } from "@jarvis/providers";
-import { AlwaysCheapestRouter, AlwaysPremiumRouter, AppCatalog, IntentRouter, MemoryTraceStore, Orchestrator, ResponseHeuristicEvaluator, RuleInstantResponder, SemanticCache, instantControlRules, RulesRouter, StaticRouter, type AliasStore, type InstantStore, type EventBus, type ModelRouter, type PermissionResolver, type TraceStore } from "@jarvis/core";
+import { AlwaysCheapestRouter, AlwaysPremiumRouter, AppCatalog, IntentRouter, MemoryTraceStore, Orchestrator, ResponseHeuristicEvaluator, RuleInstantResponder, SemanticCache, StyleTracker, instantControlRules, styleControlRules, RulesRouter, StaticRouter, type AliasStore, type InstantStore, type EventBus, type ModelRouter, type PermissionResolver, type TraceStore } from "@jarvis/core";
 import {
   ToolRegistry,
   filesRead,
@@ -21,6 +21,9 @@ import {
   makeInstantForget,
   makeInstantList,
   makeInstantToggle,
+  makeStyleReset,
+  makeStyleShow,
+  makeStyleToggle,
   makeAppsOpen,
   timeDate,
   timeNow,
@@ -120,6 +123,8 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
     maxEntries: config.instantCache.maxEntries,
     ttlMs: config.instantCache.ttlDays * 86_400_000,
   });
+  // The profile shares the cache's store (aggregate counters only) so one data file holds what the assistant has learned.
+  const style = new StyleTracker({ store: deps.instantStore, enabled: config.styleProfile });
   const tools = new ToolRegistry()
     .register(timeNow)
     .register(timeDate)
@@ -132,7 +137,10 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
     .register(makeInstantList(cache))
     .register(makeInstantForget(cache))
     .register(makeInstantClear(cache))
-    .register(makeInstantToggle(cache));
+    .register(makeInstantToggle(cache))
+    .register(makeStyleShow(style))
+    .register(makeStyleReset(style))
+    .register(makeStyleToggle(style));
   const makeRouter = (): ModelRouter =>
     config.router === "always_premium"
       ? new AlwaysPremiumRouter()
@@ -150,8 +158,9 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
     createOrchestrator: ({ bus, askPermission }) =>
       new Orchestrator({
         bus,
-        intents: new IntentRouter({ apps: catalog, rules: instantControlRules }),
+        intents: new IntentRouter({ apps: catalog, rules: [...instantControlRules, ...styleControlRules] }),
         ...(config.instantResponses ? { instant: new RuleInstantResponder(), cache } : {}),
+        style,
         router: makeRouter(),
         providers,
         tools,
