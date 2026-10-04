@@ -21,7 +21,26 @@ body { background: var(--bg); color: var(--fg); }
     radial-gradient(700px 500px at 100% 0%, #6a2bd855, transparent 60%),
     var(--bg);
 }
-.stage--tauri { background: transparent; display: flex; justify-content: center; padding-top: 8px; min-height: 0; }
+/* Tauri: the window itself is transparent, so the page must be too; only the island and its dock are painted. */
+html.tauri, html.tauri body { background: transparent; overflow: hidden; }
+.stage--tauri { background: transparent; display: flex; flex-direction: column; align-items: center; gap: 6px; padding-top: 8px; min-height: 0; }
+.dock {
+  display: flex; align-items: center; gap: 6px; width: 320px; padding: 5px; border-radius: 18px;
+  background: rgba(16, 19, 40, 0.62); backdrop-filter: blur(22px) saturate(160%); -webkit-backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+  transition: opacity 0.2s;
+}
+/* Out of the way until the pointer or the keyboard is on the island; problems (dock--status) always stay visible. */
+.stage--tauri:not(:hover):not(:focus-within) .dock:not(.dock--status) { opacity: 0.35; }
+.dock--status { justify-content: space-between; padding: 6px 6px 6px 12px; }
+.dock__input { flex: 1; min-width: 0; padding: 7px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,.1); background: rgba(0,0,0,.25); color: inherit; font: inherit; font-size: 13px; }
+.dock__btn { flex: none; height: 32px; min-width: 32px; padding: 0 8px; border-radius: 12px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.06); color: inherit; font: inherit; font-size: 13px; cursor: pointer; }
+.dock__btn.mic { width: 36px; font-size: 15px; }
+.dock__btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.dock__btn--on { background: rgba(93, 225, 255, 0.18); border-color: rgba(93, 225, 255, 0.5); }
+.dock__btn:focus-visible, .dock__input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.dock__note { font-size: 12px; color: var(--muted); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.dock__note--float { width: 320px; margin: 0; padding: 0 8px; text-shadow: 0 1px 3px #000; }
 /* Floats over the content, like the real overlay: expanding never reflows the page. */
 .stage__island { position: fixed; top: 18px; left: 0; right: 0; display: flex; justify-content: center; z-index: 10; pointer-events: none; }
 .stage__island > * { pointer-events: auto; }
@@ -45,7 +64,8 @@ body { background: var(--bg); color: var(--fg); }
 .island__raven { display: grid; place-items: center; flex: none; }
 .island__text { min-width: 0; }
 .island__title { font-weight: 600; font-size: 14px; letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.island__detail { font-size: 12.5px; color: var(--muted); line-height: 1.35; overflow: hidden; }
+/* At most 4 lines: a long answer or error must not grow the island past its window (the Tauri window has a fixed height). */
+.island__detail { font-size: 12.5px; color: var(--muted); line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
 
 .island__bar { position: relative; height: 6px; margin: 10px 4px 2px; background: rgba(255,255,255,.08); border-radius: 99px; }
 .island__bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), #8a7bff); }

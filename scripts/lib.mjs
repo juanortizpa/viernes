@@ -114,3 +114,30 @@ export const WHISPER_MODELS = {
   base: { file: "ggml-base.bin", minBytes: 130e6 },
   small: { file: "ggml-small.bin", minBytes: 440e6 },
 };
+
+const SKIP_DIRS = new Set(["node_modules", "target", "dist", "gen", ".git"]);
+
+/** Newest modification time (ms) under `paths` (files or folders, recursive; build outputs skipped). 0 if none exist. */
+export function newestMtime(paths) {
+  let newest = 0;
+  const visit = (p) => {
+    let st;
+    try {
+      st = statSync(p);
+    } catch {
+      return;
+    }
+    if (!st.isDirectory()) return void (newest = Math.max(newest, st.mtimeMs));
+    for (const e of readdirSync(p)) if (!SKIP_DIRS.has(e)) visit(join(p, e));
+  };
+  paths.forEach(visit);
+  return newest;
+}
+
+/** The island executable embeds the UI, so it must be rebuilt whenever any of its sources is newer than it. */
+export function islandNeedsBuild({ exeMtime, sourcesMtime, force = false }) {
+  if (force) return "se pidió --rebuild";
+  if (!exeMtime) return "aún no está compilada";
+  if (sourcesMtime > exeMtime) return "el código cambió desde la última compilación";
+  return undefined;
+}

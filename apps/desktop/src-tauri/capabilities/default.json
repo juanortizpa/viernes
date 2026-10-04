@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "The island window: core APIs, resizing itself to the island's size, and the app's own commands (sidecar relay, click-through).",
+  "windows": [
+    "island"
+  ],
+  "permissions": [
+    "core:default",
+    "core:window:allow-set-size"
+  ]
+}

@@ -1,20 +1,18 @@
 # Spike: overlay de la isla en Windows (Fase 0)
 
-**Estado:** esqueleto escrito, **sin validar**. El entorno de desarrollo es Linux; esto requiere una
-máquina Windows 10/11. El código está en `apps/desktop/src-tauri/` y no se ha compilado.
+**Estado:** la isla compila y corre en Linux (WebKitGTK) **con el sidecar real** (ADR-0021). En Windows
+**sin validar**: esta tabla requiere una máquina Windows 10/11. El código está en `apps/desktop/src-tauri/`.
 
 ## Cómo correrlo (Windows)
 
-Requisitos: Rust (MSVC), WebView2 (viene con Windows 11), Node 22, pnpm.
+Requisitos: Rust (MSVC), WebView2 (viene con Windows 11), Node 22.13+, pnpm. Haber pasado `setup.bat`.
 
 ```powershell
-pnpm install
-cd apps/desktop
-pnpm tauri dev
+island.bat          # compila la isla la primera vez y la deja corriendo
+island.bat --dev    # tauri dev, con logs y recarga en caliente
 ```
 
-(Puede hacer falta `pnpm add -D @tauri-apps/cli` en `apps/desktop` y generar iconos con
-`pnpm tauri icon`.)
+Los iconos (`src-tauri/icons`, el cuervo) y `@tauri-apps/cli` ya están en el repo.
 
 ## Qué hay que comprobar
 
@@ -42,8 +40,10 @@ pnpm tauri dev
 
 - El comando `set_click_through` existe para alternar el modo. El plan es: la ventana ignora el ratón
   por defecto y la UI la activa cuando el cursor entra al rectángulo de la isla.
-- La ventana mide 420×240 y la isla se dibuja dentro; el resto es transparente.
-- Dentro de Tauri, el frontend detecta `__TAURI_INTERNALS__` y muestra solo la isla (sin el panel de demo).
+- La ventana mide 420 px de ancho y su alto sigue a la isla (`WindowFitter`), así la zona transparente es mínima.
+  Aun así esa zona sigue tapando clics hasta resolver la prueba 4.
+- Dentro de Tauri, el frontend detecta `__TAURI_INTERNALS__` y muestra la isla con su dock (orden, 🎙, 👂), conectada al
+  sidecar que lanza el shell (sin panel de demo ni puente de Vite).
 
 ## Pruebas adicionales de Fase 4 y voz (Windows)
 

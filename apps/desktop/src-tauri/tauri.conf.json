@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "identifier": "dev.jarvis.desktop",
   "build": {
-    "beforeDevCommand": "pnpm dev",
-    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "pnpm dev:tauri",
+    "devUrl": "http://127.0.0.1:5173",
     "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist"
   },
@@ -16,7 +16,7 @@
         "label": "island",
         "title": "JARVIS",
         "width": 420,
-        "height": 240,
+        "height": 120,
         "x": null,
         "y": 0,
         "center": false,
@@ -29,7 +29,18 @@
         "focus": false
       }
     ],
-    "security": { "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:" }
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+    }
   },
-  "bundle": { "active": false }
+  "bundle": {
+    "active": false,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
 }

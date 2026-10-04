@@ -8,11 +8,11 @@
 | Fase | Objetivo | Estado | Entregable de validación |
 |---|---|---|---|
 | 0 | Reducir riesgos, contratos, demo visual mínima | 🟦 casi listo (falta spike en Windows) | Demo de isla + cuervo sobre eventos del protocolo |
-| 1 | Columna vertebral (orquestador, proveedores, herramientas, policy) | ✅ completa en lo que no requiere Windows (quedan relevo Tauri y herramientas de Windows) | Tarea de texto de punta a punta, sin UI compleja |
+| 1 | Columna vertebral (orquestador, proveedores, herramientas, policy) | ✅ completa en lo que no requiere Windows (relevo Tauri hecho y probado en Linux; quedan herramientas de Windows) | Tarea de texto de punta a punta, sin UI compleja |
 | 2 | Router y evaluador, escalado | ✅ (dry-run y plan→aprobación diferidos a V2; evaluador de tests sin runner en vivo) | Escalado automático con evaluador de tests |
 | 3 | Arnés de experimento | 🟦 tabla completa para 7 modelos (Groq + Google); faltan tareas más difíciles | Primer resultado de brazos A–D (¡temprano!) |
 | R | Respuesta inmediata (acuse, saludos, caché) | ✅ R1–R3 hechos y medidos (acuse 1 ms vs 1 s; caché 1 ms vs ~500 ms, 0 falsos positivos; perfil de estilo) | Saludos y acuses <50 ms, sin progreso falso |
-| 4 | Shell y UI completos | 🟦 hecho en navegador/dev; falta Windows (overlay, pantalla completa, multi-monitor, DPI real) | Isla con estados reales, permisos, panel Economy |
+| 4 | Shell y UI completos | 🟦 la isla Tauri ya usa el sidecar real (`island.bat`, ADR-0021; probado en Linux); falta Windows (overlay, pantalla completa, multi-monitor, DPI real, atajo global) | Isla con estados reales, permisos, panel Economy |
 | 5 | Memoria + optimización de contexto | ⬜ | Recuperación medida con ablación |
 | 6 | Router aprendido + experimento final | ⬜ | Frontera de Pareto costo vs éxito |
 | 7 | Voz | 🟦 push-to-talk + STT local (probado en Windows), TTS y wake word de dos etapas (estos dos solo con audio simulado) | Push-to-talk → respuesta hablada |
@@ -44,6 +44,7 @@ exista algo visible, no solo logs.
   - [x] Captura de pantalla de verificación
 - [x] Shell Tauri (`src-tauri`): ventana transparente, siempre encima, sin decoración
   - [x] Esqueleto escrito
+  - [x] Compila y corre en Linux (WebKitGTK sobre Xvfb) con el sidecar real (ADR-0021)
   - [ ] **Validado en Windows** ← requiere máquina Windows del usuario
 - [x] ADRs en `docs/adr/`
   - [x] 0001 Monorepo y límites de paquetes
@@ -79,7 +80,7 @@ exista algo visible, no solo logs.
 - [x] Policy engine: 4 niveles, confirmación, taint, deny/allow lists, log de auditoría (`packages/policy`)
 - [x] Bucle de herramientas propuesto por el LLM (ADR-0009): `invokeTool` único para intents locales y llamadas del modelo, máx. 5 pasos, salida no confiable acotada y etiquetada, taint a nivel de tarea. Verificado con modelo real
 - [x] Sidecar + IPC (`packages/ipc`, `apps/sidecar`, ADR-0008): NDJSON sobre stdio, token en handshake, permisos con timeout; la demo envía órdenes reales (verificado en Chromium)
-- [ ] Relevo del sidecar en el shell Tauri (spawn + stdio↔eventos); requiere Windows
+- [x] Relevo del sidecar en el shell Tauri (spawn + stdio↔`Channel`, token, generaciones, cierre limpio; ADR-0021). Probado en Linux; **falta Windows**
 - [x] Empaquetar el sidecar: `pnpm --filter @jarvis/sidecar build` → `dist/sidecar.mjs` (un solo archivo, corre con `node` sin `tsx`; probado en e2e)
 - [ ] Binario autocontenido del sidecar para distribuir (Node SEA o similar); requiere host Windows
 - [x] Telemetría persistida: `SqliteTraceStore` (`packages/storage`, `node:sqlite`, sin dependencias nativas); el sidecar la usa con `JARVIS_DATA_DIR` o `traceDb` en la config
@@ -143,7 +144,11 @@ exista algo visible, no solo logs.
 - [x] **Panel AI Economy** (`economy.get`): tareas, éxito, gasto, tokens, tareas sin LLM (locales/rápidas/caché), escaladas, latencias y modelos más usados, calculado desde las trazas. Sin precios configurados **no inventa ahorro** (lo dice). Se abre con clic en la isla
 - [x] Cuervo: aros de escucha con el nivel real del micrófono; `prefers-reduced-motion` respetado (`MotionConfig reducedMotion="user"`)
 - [x] Diseño verificado en Chromium a DPR 1/1.25/1.5/2 en una ventana de 420 px (sin desbordes)
-- [ ] **Relevo del sidecar en Tauri** (sin él, la app Tauri no tiene voz, economía ni órdenes reales) — Windows
+- [x] **Relevo del sidecar en Tauri** (ADR-0021): la isla flotante usa el sidecar real. En la app real (Linux, release): órdenes locales, saludo, cascada y reintento; permisos solo en simulación de Chromium; voz sin probar (no hay micrófono). **Falta Windows**
+- [x] `island.bat` → `scripts/island.mjs`: empaqueta el sidecar, compila la isla solo si cambió el código y la deja corriendo sin consola (`--dev` para `tauri dev`)
+- [x] Dock de la isla (orden escrita, push-to-talk, manos libres; estado del sidecar con Reintentar) y ventana que mide lo que la isla (`WindowFitter`)
+- [x] La respuesta del modelo se queda visible al terminar (antes «Listo» la borraba) y el detalle se limita a 4 líneas
+- [ ] Ajustes de voz dentro de la isla (registro de «jarvis», modo de habla, calibración): hoy solo en el panel del navegador
 - [ ] Pruebas de pantalla completa, multi-monitor y DPI reales — Windows (lista en `docs/SPIKE_OVERLAY.md`)
 - [ ] Atajo global de push-to-talk (la ventana de la isla no tiene foco) — Tauri/Windows
 - [x] Cuervo "hablando" (pico animado, solo cuando el sintetizador informa que habla)
@@ -216,3 +221,4 @@ exista algo visible, no solo logs.
 | 2026-10-04 | Wake word (ADR-0018): `TemplateSpotter` (MFCC+DTW sobre tu voz), `Endpointer`, `matchWakeWord`, `WakeController` con ventana de 10 s, `wake.verify` en el sidecar (descarta sin rastro lo que no es para él), escucha continua con registro de voz, sensibilidad, indicador ● y cuenta atrás real, pausa mientras habla, setup descarga whisper tiny. 318 tests. Validado end-to-end en Chromium con una línea de tiempo de audio sintético (palabra → orden → orden sin palabra → vuelta a reposo; 2 verificaciones, 0 por frases ajenas). **Sin voz real**: el umbral automático quedó justo ante audio distinto del de registro, por eso hay sensibilidad y un indicador de calibración. |
 | 2026-10-04 | Feedback: la voz funciona pero la transcripción exige hablar despacio. Causas encontradas en mi propio pipeline y corregidas (ADR-0019): audio perdido durante la verificación de «jarvis», frases cortadas a 600 ms de pausa (ahora 900), remuestreo sin filtro (ahora FIR pasa-bajos), audio sin nivelar ni margen, push-to-talk que decía «Escuchando» antes de abrir el micrófono, prompt repetitivo; `setup.bat` descarga `small`. Nueva herramienta de calibración con tu voz (`check-stt.bat` + «Prueba de transcripción» en la UI) y selector «Audio del navegador». 334 tests. **Mejora real sin medir con voz real.** |
 | 2026-10-04 | ADR-0020: corpus de 20 frases rioplatenses con 8 voces (TTS de Gemini), limpio y degradado. Medido: whisper-turbo 15/20 acciones correctas; Gemini 3.5 flash-lite (oído+entendido) 18–19/20; **carrera Groq+Gemini en producción 20/20 y 19/20, mediana 1,2 s**. Descubierto midiendo: el prompt de vocabulario hacía que whisper regurgitara la lista de apps ("abre paint" → "abre la calculadora…"); Gemini 3.1 varía hasta 19 s; los TTS leen las instrucciones de estilo. Añadido: `GroqTranscriber`, `GeminiTranscriber` (heard/meant con salvaguarda), `RaceTranscriber`, `FallbackTranscriber`, limpieza de habla y coincidencia fonética de apps, aviso de voz al LLM, `stt-eval`. Bug atrapado por test: se ejecutaba la transcripción rápida en vez de la buena. 369 tests. **Sin probar con la voz real del usuario.** |
+| 2026-10-04 | **Relevo del sidecar en Tauri (ADR-0021):** el shell lanza `node sidecar.mjs` con token, reenvía stdio por un `Channel` (generaciones: un proceso viejo nunca toca al nuevo), cierre limpio y log en `.jarvis/sidecar.log`; `tauriTransport()` adapta `LiveClient` sin cambiar el protocolo. `island.bat` arranca la isla real; dock con orden/voz/manos libres; ventana ajustada a la isla; iconos del cuervo. Probado en Linux (WebKitGTK/Xvfb, release): local, saludo, cascada real OpenRouter 429 → Groq, matar sidecar → Reintentar, recarga sin sidecars duplicados, sin huérfanos al matar el shell; `tauri dev` con el puente de Vite apagado. Bug encontrado al probar: la isla borraba la respuesta del modelo al terminar. 381 tests TS + 4 Rust. **Sin probar en Windows** (compilación MSVC, WebView2, micrófono, overlay). |

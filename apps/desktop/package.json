@@ -5,25 +5,28 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5173",
+    "dev:tauri": "vite --host 127.0.0.1 --port 5173 --strictPort",
     "build": "vite build",
     "typecheck": "tsc -p tsconfig.json",
     "tauri": "tauri"
   },
   "dependencies": {
+    "@jarvis/ipc": "workspace:*",
     "@jarvis/protocol": "workspace:*",
+    "@jarvis/voice": "workspace:*",
+    "@tauri-apps/api": "^2.12.1",
     "framer-motion": "^11.11.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "@jarvis/ipc": "workspace:*",
-    "@jarvis/voice": "workspace:*"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.12.1",
+    "@types/node": "^22.0.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
+    "@types/ws": "^8.5.0",
     "@vitejs/plugin-react": "^4.3.0",
     "vite": "^5.4.0",
-    "@types/node": "^22.0.0",
-    "@types/ws": "^8.5.0",
     "ws": "^8.18.0"
   }
 }

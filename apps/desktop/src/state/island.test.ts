@@ -21,6 +21,25 @@ describe("islandReducer", () => {
     expect(s.costUsd).toBe(0);
   });
 
+  it("a model answer stays visible when the task finishes (only the final attempt's text)", () => {
+    const usage = { inputTokens: 10, outputTokens: 5, cachedInputTokens: 0, estimatedCostUsd: 0, latencyMs: 300 };
+    const s = run([
+      { type: "task.started", input: "por qué el cielo es azul", modality: "text" },
+      { type: "response.delta", text: "respuesta " },
+      { type: "response.delta", text: "abandonada" },
+      { type: "escalated", from: "a", to: "b", reason: "HTTP 429" },
+      { type: "response.delta", text: "Por la dispersión " },
+      { type: "response.delta", text: "de Rayleigh." },
+      { type: "model.completed", model: "b", usage },
+      { type: "eval.completed", verdict: { outcome: "success", confidence: 0.6, evaluator: "heuristic", evidence: "non-empty" } },
+      { type: "task.finished", outcome: "success" },
+    ]);
+    expect(s.headline).toBe("Listo");
+    expect(s.detail).toBe("Por la dispersión de Rayleigh.");
+    // An explicit summary (local actions, cached answers) still wins.
+    expect(run([{ type: "task.finished", outcome: "success", summary: "abrí paint" }], s).detail).toBe("abrí paint");
+  });
+
   it("permission request sets pending and mode; denial warns and clears it", () => {
     const asked = run([
       { type: "task.started", input: "x", modality: "text" },

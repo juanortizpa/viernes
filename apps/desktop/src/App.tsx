@@ -4,6 +4,10 @@ import { DemoPlayer } from "./demo/player";
 import { scenarios } from "./demo/scenarios";
 import { Island } from "./island/Island";
 import { LiveClient } from "./live/client";
+import { isTauri, tauriTransport } from "./live/tauri-transport";
+import { IslandDock } from "./island/IslandDock";
+import { fitWindowTo } from "./shell/window-fit";
+import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { MicUnavailable, startMic, type MicSession } from "./voice/mic";
 import { toBase64 } from "./voice/pcm-buffer";
 import { WakeSession } from "./voice/wake-session";
@@ -18,8 +22,8 @@ import { EconomyPanel } from "./economy/EconomyPanel";
 import { Raven } from "./raven/Raven";
 import type { Mode } from "./state/island";
 
-/** Inside the Tauri window the page is just the island on a transparent background. */
-const inTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+/** Inside the Tauri window the page is just the island (and its dock) on a transparent background. */
+const inTauri = isTauri();
 const GALLERY: Mode[] = ["idle", "listening", "thinking", "executing", "permission", "success", "error", "warning"];
 
 export default function App() {
@@ -29,7 +33,8 @@ export default function App() {
   const stateRef = useRef(state);
   stateRef.current = state;
   const player = useMemo(() => new DemoPlayer(), []);
-  const live = useMemo(() => new LiveClient(), []);
+  // Browser: the Vite dev bridge spawns the sidecar. Tauri: the shell spawns it and relays its stdio (ADR-0021).
+  const live = useMemo(() => new LiveClient(inTauri ? tauriTransport() : {}), []);
   const collapseTimer = useRef<ReturnType<typeof setTimeout>>();
   const source = useRef<"demo" | "live">("demo");
   const [sourceLabel, setSourceLabel] = useState<"demo" | "live">("demo");
@@ -153,7 +158,7 @@ export default function App() {
         scheduleReset(4500);
       }
     });
-    if (!inTauri) void live.connect();
+    void live.connect();
     return () => {
       offDemo();
       offLive();
@@ -207,6 +212,13 @@ export default function App() {
     [live, wakeEnabled],
   );
   useEffect(() => () => void wakeRef.current?.stop(), []);
+
+  // Tauri: the window follows the island's real size (nothing clipped, no oversized transparent area blocking clicks).
+  const tauriStage = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!inTauri || !tauriStage.current) return;
+    return fitWindowTo(tauriStage.current, 420, (w, h) => getCurrentWindow().setSize(new LogicalSize(w, h)));
+  }, []);
 
   const toggleEconomy = () => {
     setShowEconomy((open) => {
@@ -307,8 +319,31 @@ export default function App() {
 
   if (inTauri) {
     return (
-      <div className="stage stage--tauri">
-        <Island state={state} onPermission={answerPermission} economy={economy} showEconomy={showEconomy} onToggleEconomy={toggleEconomy} />
+      <div className="stage stage--tauri" ref={tauriStage}>
+        <Island
+          state={state}
+          onPermission={answerPermission}
+          onCancel={sourceLabel === "live" && live.status === "ready" ? cancel : undefined}
+          economy={economy}
+          showEconomy={showEconomy}
+          onToggleEconomy={live.status === "ready" ? toggleEconomy : undefined}
+          onStopSpeaking={speech ? () => speech.cancel() : undefined}
+        />
+        <IslandDock
+          status={live.status}
+          lastError={live.lastError}
+          voice={live.info?.voice === true}
+          talking={state.mode === "listening" && mic.current.busy}
+          input={input}
+          onInput={setInput}
+          onSubmit={submit}
+          onTalkStart={() => void startTalk()}
+          onTalkStop={(discard) => void stopTalk(discard)}
+          wakeEnabled={wakeEnabled}
+          onToggleWake={chooseWake}
+          onRetry={() => void live.connect()}
+        />
+        {wakeNote && <p className="dock__note dock__note--float">{wakeNote}</p>}
       </div>
     );
   }

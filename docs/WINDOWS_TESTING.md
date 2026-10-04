@@ -9,6 +9,8 @@
    Opciones: `setup.bat --model tiny` (más rápido) o `--model small` (mejor), `--no-voice` (sin voz), `--test` (corre los tests).
 4. **Doble clic en `start.bat`.** Arranca y abre `http://localhost:5173`. Solo escucha en tu propio PC (127.0.0.1), nadie de tu red puede entrar.
 5. Sigue las tablas **B2** y **C** de abajo. Para repetir: cierra la ventana negra y vuelve a abrir `start.bat`.
+6. **La isla flotante:** instala Rust (https://rustup.rs, opción por defecto) y haz **doble clic en `island.bat`**. La primera vez compila (varios minutos);
+   luego aparece la isla arriba al centro, siempre encima, conectada al sidecar real (sin navegador). Sigue la sección **D**.
 
 **Si la voz dice "No pude transcribir el audio":** haz `git pull`, ejecuta `setup.bat` otra vez y luego **doble clic en `check-voice.bat`**: comprueba el binario, el modelo y ejecuta whisper de verdad, mostrando el error real (DLL faltante, `main.exe` obsoleto, modelo incompleto…). Copia su salida.
 
@@ -103,23 +105,36 @@ Para los modelos reales: escribe una pregunta normal (`explica qué es un closur
 
 **Si falla:** el mensaje corto sale en la UI y el detalle en la terminal (`transcription failed: …`). Casos típicos: ruta mal escrita, un modelo `.en`, o que `whisper-cli.exe` necesite una DLL que esté en otra carpeta.
 
-## D. Shell Tauri (solo el overlay) **[SIN PROBAR]**
+## D. La isla flotante (Tauri + sidecar real) **[SIN PROBAR en Windows; probada en Linux]**
 
-Instala Rust (MSVC) con https://rustup.rs y comprueba WebView2. Luego:
+Instala Rust con https://rustup.rs (opción por defecto: MSVC; si lo pide, las "Build Tools" de Visual Studio con C++). WebView2 ya viene con Windows 11.
+Cierra y vuelve a abrir la consola para que `cargo` esté en el PATH. Luego **doble clic en `island.bat`** (o `node scripts\island.mjs`).
 
-```powershell
-cd apps\desktop
-pnpm add -D @tauri-apps/cli
-pnpm tauri icon ruta\a\cualquier-imagen-1024.png    # genera los iconos que exige el build
-pnpm tauri dev
-```
-Recuerda: **Tauri aún no arranca el sidecar**, así que aquí solo existen los escenarios guionados (etiquetados DEMO); no hay voz ni economía real. Esta parte sirve para la tabla de `docs/SPIKE_OVERLAY.md` (transparencia, siempre encima, clic que atraviesa, pantalla completa, DPI, dos monitores). Si no compila, copia el error completo.
+- La primera vez compila la isla en release (varios minutos). Después arranca en un segundo y solo recompila si cambiaste el código (o con `island.bat --rebuild`).
+- La isla queda corriendo aunque cierres la consola. Para cerrarla: Administrador de tareas › `jarvis-desktop.exe` (aún no hay bandeja ni menú).
+- Los logs del sidecar van a `.jarvis\sidecar.log`. `island.bat --dev` arranca `tauri dev` con logs en la consola y recarga en caliente.
+
+| # | Haz | Esperado |
+|---|---|---|
+| T1 | Doble clic en `island.bat` | Arriba al centro: el cuervo «JARVIS» y debajo una barra con «Escribe una orden…», 🎙 y 👂. **No** aparece ninguna consola extra detrás |
+| T2 | Clic en la barra, escribe «qué hora es» + Enter | La isla dice «Listo» con la fecha y hora, «0 tokens · sin LLM» |
+| T3 | «abre la calculadora» | Se abre la calculadora |
+| T4 | «en una frase, por qué el cielo es azul» | «Pensando…» → la respuesta del modelo **se queda visible** en la isla (máx. 4 líneas) con tokens y modelo |
+| T5 | «escribe hola en el archivo prueba.txt» | Prompt de permiso; `Esc` o Denegar lo deniega |
+| T6 | Clic en la isla en reposo | Se abre AI Economy con datos reales |
+| T7 | Mantén 🎙 y di «abre paint» | Windows pide permiso de micrófono la primera vez; luego «Escuchando…» → «Escuché…» → se abre Paint |
+| T8 | 👂 (manos libres) y di «jarvis, qué hora es» | Responde (sin tu voz registrada verifica cada frase; el registro sigue en el panel de `start.bat`) |
+| T9 | Administrador de tareas › termina `node.exe` del sidecar | La barra dice «Sidecar no disponible… terminó» y ofrece **Reintentar**; al pulsarlo vuelve a funcionar |
+| T10 | Cierra `jarvis-desktop.exe` | No queda ningún `node.exe` del sidecar vivo |
+
+Después, la tabla de `docs/SPIKE_OVERLAY.md` (transparencia, siempre encima, clic que atraviesa, pantalla completa, DPI, dos monitores).
+Si no compila, copia el error completo. Si la isla dice que no encuentra el sidecar o Node, copia ese texto.
 
 ## Qué me tienes que devolver
-1. Resultado de A (¿pasan los 231 tests?).
+1. Resultado de A (¿pasan todos los tests?).
 2. La tabla B2 con ✅/❌ y, en las ❌, lo que viste y el texto de la terminal.
 3. La tabla C con los tiempos de V10 y si el reconocimiento en español fue bueno.
-4. La tabla de `SPIKE_OVERLAY.md` (D) si llegas a ella.
+4. La tabla T1–T10 de la sección D y la de `SPIKE_OVERLAY.md`.
 5. Nunca pegues tus claves; si pegas la config, bórralas antes.
 
 ## E. Respuestas habladas (TTS) **[SIN PROBAR con audio real]**

@@ -2,7 +2,10 @@ import { MotionConfig } from "framer-motion";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { isTauri } from "./live/tauri-transport";
 import "./styles.css";
+
+if (isTauri()) document.documentElement.classList.add("tauri");
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
