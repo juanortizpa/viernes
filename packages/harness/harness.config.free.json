@@ -1,0 +1,54 @@
+{
+  "openrouter": {
+    "models": [
+      {
+        "model": "liquid/lfm-2.5-2.6b:free",
+        "provider": "openrouter",
+        "supportsVision": false,
+        "supportsTools": true,
+        "supportsStreaming": true,
+        "contextWindow": 65536,
+        "estimatedInputCost": 0,
+        "estimatedOutputCost": 0,
+        "expectedLatency": 1500,
+        "isLocal": false
+      },
+      {
+        "model": "qwen/qwen3.8-27b:free",
+        "provider": "openrouter",
+        "supportsVision": true,
+        "supportsTools": true,
+        "supportsStreaming": true,
+        "contextWindow": 262144,
+        "estimatedInputCost": 0,
+        "estimatedOutputCost": 0,
+        "expectedLatency": 3000,
+        "isLocal": false
+      },
+      {
+        "model": "nvidia/nemotron-3-super-120b-a12b:free",
+        "provider": "openrouter",
+        "supportsVision": false,
+        "supportsTools": true,
+        "supportsStreaming": true,
+        "contextWindow": 262144,
+        "estimatedInputCost": 0,
+        "estimatedOutputCost": 0,
+        "expectedLatency": 4000,
+        "isLocal": false
+      },
+      {
+        "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+        "provider": "openrouter",
+        "supportsVision": false,
+        "supportsTools": true,
+        "supportsStreaming": true,
+        "contextWindow": 1000000,
+        "estimatedInputCost": 0,
+        "estimatedOutputCost": 0,
+        "expectedLatency": 6000,
+        "isLocal": false
+      }
+    ]
+  }
+}

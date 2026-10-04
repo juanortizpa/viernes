@@ -9,8 +9,8 @@
 |---|---|---|---|
 | 0 | Reducir riesgos, contratos, demo visual mínima | 🟦 casi listo (falta spike en Windows) | Demo de isla + cuervo sobre eventos del protocolo |
 | 1 | Columna vertebral (orquestador, proveedores, herramientas, policy) | ✅ completa en lo que no requiere Windows (quedan relevo Tauri y herramientas de Windows) | Tarea de texto de punta a punta, sin UI compleja |
-| 2 | Router y evaluador, escalado | ⬜ | Escalado automático con evaluador de tests |
-| 3 | Arnés de experimento | ⬜ | Primer resultado de brazos A–D (¡temprano!) |
+| 2 | Router y evaluador, escalado | ✅ (dry-run y plan→aprobación diferidos a V2; evaluador de tests sin runner en vivo) | Escalado automático con evaluador de tests |
+| 3 | Arnés de experimento | 🟦 maquinaria lista; faltan datos (cuota gratis diaria) | Primer resultado de brazos A–D (¡temprano!) |
 | 4 | Shell y UI completos | ⬜ | Isla con estados reales, permisos, panel Economy |
 | 5 | Memoria + optimización de contexto | ⬜ | Recuperación medida con ablación |
 | 6 | Router aprendido + experimento final | ⬜ | Frontera de Pareto costo vs éxito |
@@ -83,26 +83,34 @@ exista algo visible, no solo logs.
 - [x] Telemetría persistida: `SqliteTraceStore` (`packages/storage`, `node:sqlite`, sin dependencias nativas); el sidecar la usa con `JARVIS_DATA_DIR` o `traceDb` en la config
 - [x] Probar un adaptador contra una API real (OpenRouter, ver arriba)
 
-## Fase 2 — Router y evaluador (3 semanas) 🟨 (evaluadores y cascada hechos; faltan checkpoints y datos sensibles)
+## Fase 2 — Router y evaluador (3 semanas) ✅
 - [x] Estrategias de router intercambiables (siempre-premium, siempre-barato, reglas) — `router` en la config, ADR-0011
 - [x] Filtrado por capacidades (visión, herramientas, contexto, sensibilidad de datos) con motivo de rechazo en la traza
 - [x] Clasificador de tarea por reglas (tipo + complejidad) y `baselineCostUsd` (baseline always-premium) en cada traza
-- [ ] Detectar datos sensibles (hoy `sensitive` existe en el contrato pero nada lo activa) y exigir `supportsTools` cuando se ofrezcan herramientas
+- [x] Detectar datos sensibles en el input (`detectSensitive`: solo modelos locales, o falla) y exigir `supportsTools` (modelo + adaptador) cuando la tarea toca archivos/proyectos (`needsTools`)
 - [x] Evaluadores (ADR-0012): heurísticas de respuesta, evaluador de código con runner inyectado (sin runner en vivo: requiere sandbox, Fase 3), postcondición de herramienta
 - [x] Cascada: escalado al siguiente modelo elegible (orden de config débil→fuerte si todo es gratis), también ante errores del proveedor
 - [x] Escalado seguro mínimo: no se escala tras una herramienta con efectos secundarios
-- [ ] Checkpoints completos (snapshot / dry-run / plan→aprobación) para poder escalar tras acciones con efectos
+- [x] Checkpoints: `Tool.checkpoint` + rollback antes de escalar (hoy `files.write`); evento `checkpoint.restored`
+- [ ] ⏸ V2: dry-run y plan→aprobación para herramientas sin checkpoint (p. ej. `apps.open`, que sigue sin escalar)
 - [x] Contabilidad de costo incluyendo costo del evaluador (suma `verdict.usage`; hoy los evaluadores son gratis)
 - [x] Todo gratis: `freeOnly` + `jarvis.config.free.example.json` (OpenRouter `:free`); sin juez LLM de pago
-- [ ] Validar la escalada con un modelo gratuito real (la prueba en vivo solo cubrió el camino sin fallo: ruteo + veredicto)
+- [x] Escalada validada con modelos gratuitos reales (`live.cascade.test.ts`, opt-in `JARVIS_LIVE=1`): dos saltos reales (400 de modelo inexistente → 429 de Gemma gratis → Nemotron) y salto por veredicto; costo 0
 - [x] ADR: cascada vs ruteo predictivo (provisional: reglas → cascada con evaluador → predictivo solo con datos del arnés)
 
-## Fase 3 — Arnés de experimento (3 semanas) ⬜
-- [ ] Suite de tareas con ground truth (HumanEval/MBPP, subconjunto SWE-bench-Lite, QA, tareas propias ES/EN)
-- [ ] **Tabla contrafactual**: cada modelo × cada tarea, una vez
-- [ ] Simulador de replay offline
-- [ ] Baselines: A premium, B barato, C reglas, oráculo, tipo RouteLLM
-- [ ] Primer análisis (Pareto, IC por bootstrap pareado)
+## Fase 3 — Arnés de experimento (3 semanas) 🟦 (ADR-0013)
+- [x] `packages/harness`: suite semilla de 43 tareas ES/EN con ground truth determinista (exact, contains, regex, number, código JS con tests); cada tarea trae una respuesta de referencia que debe pasar su propio check (test)
+- [x] Sandbox de código con `node --permission` (sin fs fuera del tmp, sin procesos, timeout). **Sin aislamiento de red**: no sirve para código arbitrario de herramientas
+- [x] **Tabla contrafactual**: modelo × tarea, una vez; JSONL reanudable; tokens (no costo); errores de transporte no cuentan como evidencia; cuota diaria detiene la corrida limpiamente; orden aleatorio con semilla
+- [x] Simulador de replay offline que reutiliza `RulesRouter`, `escalationLadder`, `routeRequestFor` y el evaluador heurístico reales
+- [x] Baselines: A premium, B barato, C reglas, oráculo, cascada (evaluador heurístico real y evaluador perfecto), `learned_cv_simplified` (**no** es RouteLLM)
+- [x] Análisis: bootstrap pareado (IC 95 %, semilla fija), Δ éxito y ahorro vs A, frontera de Pareto, calibración del evaluador contra ground truth
+- [x] CLI: `pnpm --filter @jarvis/harness harness run|report`; guard que se niega a usar modelos de pago sin `--allow-paid`
+- [ ] **Completar la tabla** (68 de 172 celdas, 66 válidas): OpenRouter gratis permite 50 peticiones/día → ~3 días más con `run` (o 10 créditos para 1000/día; decisión del usuario)
+- [ ] Primer análisis con la tabla completa (hoy solo hay 15 tareas completas y son las fáciles: todos los modelos aciertan 100 %, sin discriminación)
+- [ ] Ampliar la suite (tareas más difíciles; hoy no hay separación entre modelos en las fáciles)
+- [ ] Cargadores HumanEval/MBPP/SWE-bench-Lite (requieren sandbox real, contenedor)
+- [ ] Baseline RouteLLM real (Fase 6); varias muestras por celda para la varianza de muestreo
 
 ## Fase 4 — Shell y UI (3–4 semanas) ⬜
 - [ ] Isla con todos los estados reales; prompts de permiso; panel AI Economy
@@ -150,3 +158,5 @@ exista algo visible, no solo logs.
 | 2026-10-04 | Windows: Teams y otras apps de la Store no aparecían porque no tienen `.lnk`. El escáner ahora también lee `Get-StartApps` y las lanza con `explorer.exe shell:AppsFolder\<AppID>` (argv, sin shell). **Sin probar en Windows real.** |
 | 2026-10-04 | Inicio de Fase 2 (ADR-0011): estrategias de router, filtrado por capacidades, clasificador de tarea, `baselineCostUsd`. 120 tests. Pendiente de la fase: evaluadores, cascada con escalado, costo del evaluador, detección de datos sensibles. |
 | 2026-10-04 | Fase 2, evaluadores y cascada (ADR-0012): `Evaluator`s deterministas gratuitos, bucle de intentos con escalado por veredicto o error del proveedor, no escala tras efectos secundarios, `freeOnly`, config de ejemplo con modelos `:free`. Prueba en vivo con OpenRouter gratis: ruteo y veredicto correctos (fácil→modelo pequeño, código→el más fuerte, costo 0); la escalada solo está probada con proveedores falsos. UI: una respuesta nueva ya no se concatena a la razón/intento anterior. 136 tests. |
+| 2026-10-04 | Cierre de Fase 2: `detectSensitive` + `needsTools` como restricciones duras del ruteo, `Tool.checkpoint` con rollback antes de escalar (`files.write`), prueba en vivo de la cascada con modelos gratis. Hallazgo real: un error del proveedor no escalaba si los evaluadores abstenían o ignoraban `failure`; ahora un intento roto es siempre un fallo. |
+| 2026-10-04 | Inicio de Fase 3 (ADR-0013): `packages/harness` (suite semilla, sandbox, tabla contrafactual, replay, baselines, bootstrap, CLI). 163 tests. Corrida real con 4 modelos gratuitos (2.6B–550B): OpenRouter gratis corta a 50 peticiones/día, así que la tabla va en 68/172 celdas; el informe parcial no discrimina (tareas fáciles, 100 % en todos), lo cual es resultado de la muestra, no del router. Gemma gratis está limitada de forma persistente (429) y quedó fuera de la escalera del arnés. |

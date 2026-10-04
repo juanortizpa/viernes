@@ -5,6 +5,7 @@ export * from "./evaluator";
 export * from "./intent";
 export * from "./model-router";
 export * from "./orchestrator";
+export * from "./route-request";
 export * from "./sensitivity";
 export * from "./task-classifier";
 export * from "./task-state";

@@ -1,0 +1,68 @@
+{"taskId":"seed-001","model":"qwen/qwen3.8-27b:free","response":"Canberra","pass":true,"detail":"exact","inputTokens":85,"outputTokens":34,"latencyMs":453,"ts":1791078146933}
+{"taskId":"seed-001","model":"liquid/lfm-2.5-2.6b:free","response":"Canberra","pass":true,"detail":"exact","inputTokens":46,"outputTokens":45,"latencyMs":503,"ts":1791078146972}
+{"taskId":"seed-001","model":"nvidia/nemotron-3-super-120b-a12b:free","response":"Canberra","pass":true,"detail":"exact","inputTokens":49,"outputTokens":33,"latencyMs":762,"ts":1791078147243}
+{"taskId":"seed-002","model":"liquid/lfm-2.5-2.6b:free","response":"Au","pass":true,"detail":"exact","inputTokens":46,"outputTokens":43,"latencyMs":462,"ts":1791078147434}
+{"taskId":"seed-002","model":"qwen/qwen3.8-27b:free","response":"Au","pass":true,"detail":"exact","inputTokens":84,"outputTokens":38,"latencyMs":461,"ts":1791078147704}
+{"taskId":"seed-002","model":"nvidia/nemotron-3-super-120b-a12b:free","response":"Au","pass":true,"detail":"exact","inputTokens":47,"outputTokens":68,"latencyMs":638,"ts":1791078148073}
+{"taskId":"seed-003","model":"liquid/lfm-2.5-2.6b:free","response":"6","pass":true,"detail":"number ok","inputTokens":50,"outputTokens":41,"latencyMs":332,"ts":1791078148406}
+{"taskId":"seed-002","model":"nvidia/nemotron-3-ultra-550b-a55b:free","response":"Au","pass":true,"detail":"exact","inputTokens":47,"outputTokens":61,"latencyMs":864,"ts":1791078148568}
+{"taskId":"seed-003","model":"qwen/qwen3.8-27b:free","response":"6","pass":true,"detail":"number ok","inputTokens":88,"outputTokens":53,"latencyMs":540,"ts":1791078148946}
+{"taskId":"seed-001","model":"nvidia/nemotron-3-ultra-550b-a55b:free","response":"Canberra","pass":true,"detail":"exact","inputTokens":49,"outputTokens":62,"latencyMs":2288,"ts":1791078149222}
+{"taskId":"seed-004","model":"liquid/lfm-2.5-2.6b:free","response":"Cervantes","pass":true,"detail":"exact","inputTokens":46,"outputTokens":70,"latencyMs":361,"ts":1791078149584}
+{"taskId":"seed-003","model":"nvidia/nemotron-3-super-120b-a12b:free","response":"6","pass":true,"detail":"number ok","inputTokens":51,"outputTokens":47,"latencyMs":1073,"ts":1791078149641}
+{"taskId":"seed-004","model":"qwen/qwen3.8-27b:free","response":"Cervantes","pass":true,"detail":"exact","inputTokens":84,"outputTokens":50,"latencyMs":423,"ts":1791078150007}
+{"taskId":"seed-004","model":"nvidia/nemotron-3-super-120b-a12b:free","response":"Cervantes","pass":true,"detail":"exact","inputTokens":48,"outputTokens":38,"latencyMs":492,"ts":1791078150133}
+{"taskId":"seed-005","model":"liquid/lfm-2.5-2.6b:free","response":"1969","pass":true,"detail":"number ok","inputTokens":51,"outputTokens":78,"latencyMs":485,"ts":1791078150618}
+{"taskId":"seed-004","model":"nvidia/nemotron-3-ultra-550b-a55b:free","response":"Cervantes","pass":true,"detail":"exact","inputTokens":48,"outputTokens":133,"latencyMs":1950,"ts":1791078151957}
+{"taskId":"seed-005","model":"nvidia/nemotron-3-super-120b-a12b:free","response":"1969","pass":true,"detail":"number ok","inputTokens":52,"outputTokens":74,"latencyMs":587,"ts":1791078152544}
+{"taskId":"seed-003","model":"nvidia/nemotron-3-ultra-550b-a55b:free","response":"6","pass":true,"detail":"number ok","inputTokens":51,"outputTokens":42,"latencyMs":4185,"ts":1791078153131}
+{"taskId":"seed-006","model":"liquid/lfm-2.5-2.6b:free","response":"Jupiter","pass":true,"detail":"exact","inputTokens":45,"outputTokens":51,"latencyMs":453,"ts":1791078153584}
+{"taskId":"seed-005","model":"nvidia/nemotron-3-ultra-550b-a55b:free","response":"1969","pass":true,"detail":"number ok","inputTokens":52,"outputTokens":79,"latencyMs":1288,"ts":1791078153833}
+{"taskId":"seed-005","model":"qwen/qwen3.8-27b:free","response":"1969","pass":true,"detail":"number ok","inputTokens":89,"outputTokens":263,"latencyMs":3413,"ts":1791078154031}
+{"taskId":"seed-006","model":"nvidia/nemotron-3-super-120b-a12b:free","response":"Jupiter","pass":true,"detail":"exact","inputTokens":46,"outputTokens":36,"latencyMs":575,"ts":1791078154408}
+{"taskId":"seed-006","model":"nvidia/nemotron-3-ultra-550b-a55b:free","response":"Jupiter","pass":true,"detail":"exact","inputTokens":46,"outputTokens":57,"latencyMs":1130,"ts":1791078155162}
+{"taskId":"seed-007","model":"liquid/lfm-2.5-2.6b:free","response":"Río Amazonas","pass":true,"detail":"matches","inputTokens":49,"outputTokens":289,"latencyMs":777,"ts":1791078155185}
+{"taskId":"seed-006","model":"qwen/qwen3.8-27b:free","response":"Jupiter","pass":true,"detail":"exact","inputTokens":83,"outputTokens":218,"latencyMs":2097,"ts":1791078155682}
+{"taskId":"seed-007","model":"nvidia/nemotron-3-super-120b-a12b:free","response":"Amazonas","pass":true,"detail":"matches","inputTokens":52,"outputTokens":78,"latencyMs":806,"ts":1791078155991}
+{"taskId":"seed-007","model":"nvidia/nemotron-3-ultra-550b-a55b:free","response":"Amazonas","pass":true,"detail":"matches","inputTokens":52,"outputTokens":78,"latencyMs":1472,"ts":1791078157154}
+{"taskId":"seed-008","model":"qwen/qwen3.8-27b:free","response":"Carbon dioxide","pass":true,"detail":"matches","inputTokens":87,"outputTokens":55,"latencyMs":359,"ts":1791078157514}
+{"taskId":"seed-007","model":"qwen/qwen3.8-27b:free","response":"Río Amazonas","pass":true,"detail":"matches","inputTokens":88,"outputTokens":297,"latencyMs":2437,"ts":1791078157600}
+{"taskId":"seed-008","model":"nvidia/nemotron-3-super-120b-a12b:free","response":"carbon dioxide","pass":true,"detail":"matches","inputTokens":49,"outputTokens":23,"latencyMs":442,"ts":1791078157956}
+{"taskId":"seed-009","model":"liquid/lfm-2.5-2.6b:free","response":"391","pass":true,"detail":"number ok","inputTokens":46,"outputTokens":88,"latencyMs":452,"ts":1791078158409}
+{"taskId":"seed-008","model":"liquid/lfm-2.5-2.6b:free","response":"Carbon dioxide","pass":true,"detail":"matches","inputTokens":48,"outputTokens":116,"latencyMs":572,"ts":1791078158773}
+{"taskId":"seed-009","model":"qwen/qwen3.8-27b:free","response":"391","pass":true,"detail":"number ok","inputTokens":87,"outputTokens":59,"latencyMs":404,"ts":1791078158813}
+{"taskId":"seed-009","model":"nvidia/nemotron-3-super-120b-a12b:free","response":"391","pass":true,"detail":"number ok","inputTokens":50,"outputTokens":52,"latencyMs":492,"ts":1791078159265}
+{"taskId":"seed-010","model":"liquid/lfm-2.5-2.6b:free","response":"36","pass":true,"detail":"number ok","inputTokens":47,"outputTokens":54,"latencyMs":348,"ts":1791078159613}
+{"taskId":"seed-010","model":"qwen/qwen3.8-27b:free","response":"36","pass":true,"detail":"number ok","inputTokens":88,"outputTokens":51,"latencyMs":306,"ts":1791078159919}
+{"taskId":"seed-009","model":"nvidia/nemotron-3-ultra-550b-a55b:free","response":"391","pass":true,"detail":"number ok","inputTokens":50,"outputTokens":54,"latencyMs":1330,"ts":1791078160144}
+{"taskId":"seed-010","model":"nvidia/nemotron-3-super-120b-a12b:free","response":"36","pass":true,"detail":"number ok","inputTokens":51,"outputTokens":45,"latencyMs":483,"ts":1791078160403}
+{"taskId":"seed-010","model":"nvidia/nemotron-3-ultra-550b-a55b:free","response":"36","pass":true,"detail":"number ok","inputTokens":51,"outputTokens":64,"latencyMs":904,"ts":1791078161048}
+{"taskId":"seed-008","model":"nvidia/nemotron-3-ultra-550b-a55b:free","response":"Carbon dioxide","pass":true,"detail":"matches","inputTokens":49,"outputTokens":76,"latencyMs":3638,"ts":1791078161239}
+{"taskId":"seed-011","model":"nvidia/nemotron-3-super-120b-a12b:free","response":"155","pass":true,"detail":"number ok","inputTokens":68,"outputTokens":88,"latencyMs":817,"ts":1791078162056}
+{"taskId":"seed-011","model":"liquid/lfm-2.5-2.6b:free","response":"155","pass":true,"detail":"number ok","inputTokens":63,"outputTokens":645,"latencyMs":1813,"ts":1791078162216}
+{"taskId":"seed-011","model":"qwen/qwen3.8-27b:free","response":"155","pass":true,"detail":"number ok","inputTokens":105,"outputTokens":96,"latencyMs":1355,"ts":1791078162403}
+{"taskId":"seed-012","model":"qwen/qwen3.8-27b:free","response":"12","pass":true,"detail":"number ok","inputTokens":94,"outputTokens":69,"latencyMs":729,"ts":1791078163132}
+{"taskId":"seed-012","model":"liquid/lfm-2.5-2.6b:free","response":"12","pass":true,"detail":"number ok","inputTokens":55,"outputTokens":166,"latencyMs":1426,"ts":1791078163643}
+{"taskId":"seed-012","model":"nvidia/nemotron-3-super-120b-a12b:free","response":"12","pass":true,"detail":"number ok","inputTokens":57,"outputTokens":74,"latencyMs":711,"ts":1791078163843}
+{"taskId":"seed-011","model":"nvidia/nemotron-3-ultra-550b-a55b:free","response":"155","pass":true,"detail":"number ok","inputTokens":68,"outputTokens":128,"latencyMs":1855,"ts":1791078163912}
+{"taskId":"seed-012","model":"nvidia/nemotron-3-ultra-550b-a55b:free","response":"12","pass":true,"detail":"number ok","inputTokens":57,"outputTokens":106,"latencyMs":1370,"ts":1791078165013}
+{"taskId":"seed-013","model":"qwen/qwen3.8-27b:free","response":"5","pass":true,"detail":"number ok","inputTokens":107,"outputTokens":141,"latencyMs":1168,"ts":1791078165080}
+{"taskId":"seed-013","model":"liquid/lfm-2.5-2.6b:free","response":"5","pass":true,"detail":"number ok","inputTokens":69,"outputTokens":627,"latencyMs":2001,"ts":1791078165845}
+{"taskId":"seed-014","model":"liquid/lfm-2.5-2.6b:free","response":"5050","pass":true,"detail":"number ok","inputTokens":49,"outputTokens":84,"latencyMs":402,"ts":1791078166247}
+{"taskId":"seed-014","model":"qwen/qwen3.8-27b:free","response":"5050","pass":true,"detail":"number ok","inputTokens":89,"outputTokens":67,"latencyMs":501,"ts":1791078166749}
+{"taskId":"seed-013","model":"nvidia/nemotron-3-super-120b-a12b:free","response":"5","pass":true,"detail":"number ok","inputTokens":70,"outputTokens":125,"latencyMs":1975,"ts":1791078166988}
+{"taskId":"seed-014","model":"nvidia/nemotron-3-super-120b-a12b:free","response":"5050","pass":true,"detail":"number ok","inputTokens":52,"outputTokens":28,"latencyMs":708,"ts":1791078167458}
+{"taskId":"seed-013","model":"nvidia/nemotron-3-ultra-550b-a55b:free","response":"5","pass":true,"detail":"number ok","inputTokens":70,"outputTokens":139,"latencyMs":2707,"ts":1791078167787}
+{"taskId":"seed-014","model":"nvidia/nemotron-3-ultra-550b-a55b:free","response":"5050","pass":true,"detail":"number ok","inputTokens":52,"outputTokens":82,"latencyMs":1435,"ts":1791078168424}
+{"taskId":"seed-015","model":"liquid/lfm-2.5-2.6b:free","response":"12","pass":true,"detail":"number ok","inputTokens":67,"outputTokens":299,"latencyMs":1014,"ts":1791078168472}
+{"taskId":"seed-015","model":"qwen/qwen3.8-27b:free","response":"12","pass":true,"detail":"number ok","inputTokens":105,"outputTokens":136,"latencyMs":1183,"ts":1791078168972}
+{"taskId":"seed-015","model":"nvidia/nemotron-3-super-120b-a12b:free","response":"12","pass":true,"detail":"number ok","inputTokens":68,"outputTokens":132,"latencyMs":1094,"ts":1791078169518}
+{"taskId":"seed-016","model":"liquid/lfm-2.5-2.6b:free","response":"30","pass":true,"detail":"number ok","inputTokens":52,"outputTokens":268,"latencyMs":668,"ts":1791078169640}
+{"taskId":"seed-016","model":"qwen/qwen3.8-27b:free","response":"30","pass":true,"detail":"number ok","inputTokens":89,"outputTokens":103,"latencyMs":843,"ts":1791078170361}
+{"taskId":"seed-016","model":"nvidia/nemotron-3-super-120b-a12b:free","response":"30","pass":true,"detail":"number ok","inputTokens":53,"outputTokens":107,"latencyMs":1822,"ts":1791078171462}
+{"taskId":"seed-016","model":"nvidia/nemotron-3-ultra-550b-a55b:free","response":"30","pass":true,"detail":"number ok","inputTokens":53,"outputTokens":100,"latencyMs":3606,"ts":1791078173967}
+{"taskId":"seed-017","model":"qwen/qwen3.8-27b:free","response":"645498","pass":true,"detail":"number ok","inputTokens":88,"outputTokens":164,"latencyMs":932,"ts":1791078174899}
+{"taskId":"seed-017","model":"liquid/lfm-2.5-2.6b:free","response":"645498","pass":true,"detail":"number ok","inputTokens":45,"outputTokens":462,"latencyMs":2802,"ts":1791078176317}
+{"taskId":"seed-017","model":"nvidia/nemotron-3-super-120b-a12b:free","response":"645498","pass":true,"detail":"number ok","inputTokens":51,"outputTokens":247,"latencyMs":2281,"ts":1791078177180}
+{"taskId":"seed-017","model":"nvidia/nemotron-3-ultra-550b-a55b:free","response":"","pass":false,"detail":"transport error","inputTokens":0,"outputTokens":0,"latencyMs":0,"error":"HTTP 429: {\"error\":{\"message\":\"Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day\",\"code\":429,\"metadata\":{\"headers\":{\"X-RateLimit-Limit\":\"50\",\"X-RateLimit-Remaining\":\"0\",\"X-RateLimit-Reset\":\"1791158400000\"},\"limit_source\":\"openrouter_free_tier_daily\",","ts":1791078190874}
+{"taskId":"seed-018","model":"liquid/lfm-2.5-2.6b:free","response":"","pass":false,"detail":"transport error","inputTokens":0,"outputTokens":0,"latencyMs":0,"error":"HTTP 429: {\"error\":{\"message\":\"Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day\",\"code\":429,\"metadata\":{\"headers\":{\"X-RateLimit-Limit\":\"50\",\"X-RateLimit-Remaining\":\"0\",\"X-RateLimit-Reset\":\"1791158400000\"},\"limit_source\":\"openrouter_free_tier_daily\",","ts":1791078191501}

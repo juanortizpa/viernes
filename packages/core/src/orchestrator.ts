@@ -6,9 +6,9 @@ import type { AnyTool, Checkpoint, ToolRegistry } from "@jarvis/tools";
 import { EventBus, TaskEmitter } from "./bus";
 import type { FollowUp, IntentRouter } from "./intent";
 import { runEvaluators, toolPostconditionVerdict, type Evaluator } from "./evaluator";
-import { blendedCost, estimateCostUsd, filterCandidates, premiumModel, type ModelRouter, type RouteRequest } from "./model-router";
+import { escalationLadder, estimateCostUsd, premiumModel, type ModelRouter, type RouteRequest } from "./model-router";
 import { detectSensitive } from "./sensitivity";
-import { classifyTask } from "./task-classifier";
+import { routeRequestFor } from "./route-request";
 import { TaskMachine } from "./task-state";
 import type { TraceStore } from "./trace-store";
 
@@ -218,11 +218,10 @@ export class Orchestrator {
     const caps = this.deps.providers
       .capabilities()
       .map((c) => ({ ...c, supportsTools: c.supportsTools && this.deps.providers.get(c.provider)?.supportsToolCalls === true }));
-    const cls = classifyTask(input);
+    const req = routeRequestFor(input);
+    const cls = { taskType: req.taskType, complexity: req.complexity };
     trace.taskType = cls.taskType;
-    const sens = detectSensitive(input);
-    if (sens.sensitive) out.emit({ type: "progress", stage: "Datos sensibles detectados: solo modelos locales", detail: sens.reasons.join(", ") });
-    const req: RouteRequest = { input, ...cls, inputTokens: trace.inputTokensEstimate, sensitive: sens.sensitive };
+    if (req.sensitive) out.emit({ type: "progress", stage: "Datos sensibles detectados: solo modelos locales", detail: detectSensitive(input).reasons.join(", ") });
     let decision: RoutingDecision = this.deps.router.route(req, caps);
     out.emit({ type: "route.decided", decision });
 
@@ -291,10 +290,7 @@ export class Orchestrator {
 
   /** Next more expensive eligible model after `current` (ties keep configuration order). */
   private nextModel(req: RouteRequest, caps: ModelCapabilities[], current: string): ModelCapabilities | undefined {
-    const ladder = filterCandidates(req, caps)
-      .eligible.map((c, i) => ({ c, i }))
-      .sort((a, b) => blendedCost(a.c) - blendedCost(b.c) || a.i - b.i)
-      .map((x) => x.c);
+    const ladder = escalationLadder(req, caps);
     const idx = ladder.findIndex((c) => c.model === current);
     return idx >= 0 ? ladder[idx + 1] : undefined;
   }
