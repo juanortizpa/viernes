@@ -34,6 +34,9 @@ import {
 import type { ModelCapabilities } from "@jarvis/protocol";
 import type { ScannedApp } from "./app-scanner";
 import { Config } from "./config";
+import { tmpdir as tmpdirOs } from "node:os";
+import { codingIntentRule, makeCodeAgentTool } from "./coding";
+import { join as joinPath } from "node:path";
 
 /** Launches only what the catalog knows, accepting either the raw command or a name a person would say. */
 export function makeCatalogLauncher(catalog: Pick<AppCatalog, "hasCommand" | "lookup" | "suggest">, launch: AppLauncher): AppLauncher {
@@ -79,6 +82,10 @@ export interface RuntimeDeps {
   aliases?: AliasStore;
   /** Where the semantic cache persists; in-memory when omitted. */
   instantStore?: InstantStore;
+  /** Folder for agent work that belongs to no project (scripts). Defaults to the OS temp dir. */
+  workspace?: string;
+  /** Overrides agent discovery (tests). */
+  codingAgents?: () => import("@jarvis/agents").CodingAgent[];
   /** Overrides the configured speech-to-text engine (tests). */
   transcriber?: Transcriber;
   /** Apps discovered on the machine; lowest-priority aliases. */
@@ -172,7 +179,8 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
     .register(makeInstantToggle(cache))
     .register(makeStyleShow(style))
     .register(makeStyleReset(style))
-    .register(makeStyleToggle(style));
+    .register(makeStyleToggle(style))
+    .register(makeCodeAgentTool(config.coding, deps.workspace ?? joinPath(tmpdirOs(), "jarvis-workspace"), deps.codingAgents));
   const makeRouter = (): ModelRouter =>
     config.router === "always_premium"
       ? new AlwaysPremiumRouter()
@@ -234,7 +242,7 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
     createOrchestrator: ({ bus, askPermission }) =>
       new Orchestrator({
         bus,
-        intents: new IntentRouter({ apps: catalog, rules: [...instantControlRules, ...styleControlRules] }),
+        intents: new IntentRouter({ apps: catalog, rules: [...instantControlRules, ...styleControlRules, codingIntentRule] }),
         ...(config.instantResponses ? { instant: new RuleInstantResponder(), cache } : {}),
         style,
         router: makeRouter(),

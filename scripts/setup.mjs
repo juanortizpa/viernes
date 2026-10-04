@@ -1,4 +1,4 @@
-// One-shot setup: node scripts/setup.mjs [--no-voice] [--model tiny|base|small] [--lang es|en|auto] [--no-wake-model] [--test]
+// One-shot setup: node scripts/setup.mjs [--no-voice] [--model tiny|base|small] [--lang es|en|auto] [--no-wake-model] [--install-agents] [--test]
 import { spawnSync } from "node:child_process";
 import { createWriteStream, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -145,18 +145,38 @@ if (!flag("no-voice")) {
   }
 }
 
-// 4. Config
+// 4. Coding agents (free first: Gemini CLI with a Google login; then Claude Code with the user's Pro plan). Never required.
+step("Agentes de programación");
+const onPath = (bin) => spawnSync(win ? "where" : "which", [bin], { encoding: "utf8" }).status === 0;
+if (flag("install-agents") && !onPath("gemini")) {
+  say("  Instalando Gemini CLI (npm i -g @google/gemini-cli)…");
+  run("npm", ["i", "-g", "@google/gemini-cli"]);
+}
+const hasGemini = onPath("gemini");
+const hasClaude = onPath("claude");
+say(`  Gemini CLI: ${hasGemini ? "sí" : "no"} · Claude Code: ${hasClaude ? "sí" : "no"}`);
+if (!hasGemini) say("  → Gratis: npm i -g @google/gemini-cli  y luego ejecuta «gemini» una vez para iniciar sesión con tu cuenta de Google (o vuelve a correr setup con --install-agents).");
+else say("  → Si nunca lo usaste, ejecuta «gemini» una vez para iniciar sesión.");
+if (!hasClaude) say("  → Opcional (usa tu plan Pro): instala Claude Code y ejecuta «claude» una vez para iniciar sesión.");
+
+// 5. Config
 step("Escribiendo jarvis.config.json");
 const base = JSON.parse(readFileSync(join(root, "jarvis.config.free-multi.example.json"), "utf8"));
-const cfg = buildConfig({ base, env: keys, voice });
 const cfgPath = join(root, "jarvis.config.json");
+let previous;
+try {
+  previous = existsSync(cfgPath) ? JSON.parse(readFileSync(cfgPath, "utf8")) : undefined;
+} catch {
+  previous = undefined; // a broken config is backed up below and replaced
+}
+const cfg = buildConfig({ base, env: keys, voice, previous, root });
 if (existsSync(cfgPath) && readFileSync(cfgPath, "utf8") !== JSON.stringify(cfg, null, 2) + "\n") {
   renameSync(cfgPath, `${cfgPath}.bak`);
   say("  (tu config anterior quedó en jarvis.config.json.bak)");
 }
 writeFileSync(cfgPath, JSON.stringify(cfg, null, 2) + "\n");
 const used = Object.keys(PROVIDER_KEYS).filter((s) => cfg[s]);
-say(`  Proveedores: ${used.join(", ") || "ninguno (offline)"} · Voz: ${cfg.voice ? "sí" : "no"}`);
+say(`  Proveedores: ${used.join(", ") || "ninguno (offline)"} · Voz: ${cfg.voice ? "sí" : "no"} · Proyectos: ${Object.keys(cfg.coding?.projects ?? {}).join(", ") || "ninguno"}`);
 
 if (flag("test")) {
   step("Pruebas");

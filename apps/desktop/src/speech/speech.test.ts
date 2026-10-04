@@ -39,6 +39,11 @@ describe("localConfirmation", () => {
     expect(localConfirmation("time.now", true, "domingo, 4 de octubre de 2026, 3:02:56")).toMatch(/domingo/);
     expect(localConfirmation("apps.open", true, "opened calc", "en")).toBe("Done.");
   });
+
+  it("reads the coding agent's own report, success or failure, without the trailing stats", () => {
+    expect(localConfirmation("code.agent", true, "Gemini: Corregí la suma en app.js. (cambios: 1 archivo · comprobación OK)")).toBe("Gemini: Corregí la suma en app.js.");
+    expect(localConfirmation("code.agent", false, "No conozco el proyecto «web».")).toBe("No conozco el proyecto «web».");
+  });
 });
 
 describe("pickVoice", () => {

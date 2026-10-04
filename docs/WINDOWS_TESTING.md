@@ -214,3 +214,30 @@ Mientras tanto, prueba también: habla a ~20–30 cm del micrófono, sin fondo d
 | N6 | Desconecta internet y di "abre paint" | Funciona igual con el whisper local (más lento) |
 
 Dime en cuáles falla y qué mostró la isla en "Entendí/Escuché". Si quieres privacidad total: en `jarvis.config.json` pon `"voice": { "engine": "local", … }`.
+
+## I. Agente de programación: "en el proyecto X, …" (ADR-0023) **[SIN PROBAR en Windows]**
+
+1. `git pull` y ejecuta `setup.bat --install-agents` (instala Gemini CLI gratis si no está). Al final dice `Gemini CLI: sí · Claude Code: sí/no` y `Proyectos: jarvis`.
+2. Abre una terminal y ejecuta `gemini` **una vez** para iniciar sesión con tu cuenta de Google (elige "Login with Google"). Cierra con `/quit`. Si tienes Claude Code, haz lo mismo con `claude`.
+3. Para tus proyectos, edita `jarvis.config.json`:
+   ```json
+   "coding": {
+     "projects": {
+       "jarvis": { "path": "C:/ruta/a/viernes", "verify": "pnpm test" },
+       "web":    { "path": "D:/mis-proyectos/web", "verify": "npm test" }
+     },
+     "defaultProject": "jarvis"
+   }
+   ```
+   `verify` es opcional pero recomendado: es lo que decide si el trabajo quedó bien (si falla, pasa a Claude).
+4. `start.bat` y prueba (escrito o por voz):
+
+| # | Di / escribe | Esperado |
+|---|---|---|
+| P1 | "en el proyecto jarvis, explicame qué hace packages/agents en dos frases" | Pide permiso → isla con etapas reales ("Gemini: Leyendo …") → responde (y lo dice en voz alta si hablaste) |
+| P2 | En una carpeta de prueba con un bug: "en el proyecto prueba, arreglá el test que falla" | "Gemini: Editando …" → "Comprobando con «…»" → resumen con "comprobación OK" |
+| P3 | Lanza P2 y pulsa **Cancelar** en la isla | Se detiene; en el Administrador de tareas no queda ningún `node`/`gemini` colgado |
+| P4 | "en el proyecto inventado, hacé algo" | "No conozco el proyecto «inventado»…" sin ejecutar nada |
+| P5 | Deniega el permiso | No se toca ningún archivo |
+
+Devuélveme: qué etapas mostró la isla, cuánto tardó, si escaló a Claude (el resumen empieza con "Claude Code:") y cualquier error textual.

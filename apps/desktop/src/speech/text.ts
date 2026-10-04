@@ -47,7 +47,7 @@ export function speakable(markdown: string, lang: Lang = detectLang(markdown)): 
     .trim();
   if (!t) return { text: skipped ? SKIP_NOTE[lang] : "", truncated: false, skippedStructured: skipped };
 
-  const sentences = t.match(/[^.!?…]+[.!?…]*/g)?.map((s) => s.trim()).filter(Boolean) ?? [t];
+  const sentences = t.match(/.+?(?:[.!?…]+(?=\s|$)|$)/g)?.map((s) => s.trim()).filter(Boolean) ?? [t];
   let out = "";
   let n = 0;
   for (const s of sentences) {
@@ -63,6 +63,8 @@ export function speakable(markdown: string, lang: Lang = detectLang(markdown)): 
 
 /** Local tools return English machine summaries ("opened calc"); say something a person would. */
 export function localConfirmation(intent: string | undefined, ok: boolean, summary: string | undefined, lang: Lang = "es"): string | undefined {
+  // The coding agent's summary is already a short Spanish report, and on failure it says why: worth hearing either way.
+  if (intent === "code.agent" && summary) return speakable(summary.replace(/\s*\([^)]*\)\s*$/, ""), lang).text;
   if (!ok) return lang === "es" ? "No pude completarlo." : "I couldn't do that.";
   switch (intent) {
     case "time.now":

@@ -60,6 +60,23 @@ export const Config = z.object({
       timeoutMs: z.number().int().min(1_000).max(300_000).default(60_000),
     })
     .optional(),
+  /**
+   * Coding agents (ADR-0023): JARVIS delegates programming to CLIs the user already has, cheapest first — Gemini CLI (free with a
+   * Google account), then Claude Code (the user's Claude plan). A project's `verify` command decides whether the work is done.
+   */
+  coding: z
+    .object({
+      agents: z.array(z.enum(["gemini", "claude"])).min(1).default(["gemini", "claude"]),
+      gemini: z.object({ binary: z.string().min(1).default("gemini"), model: z.string().min(1).optional(), approval: z.enum(["auto_edit", "yolo"]).default("auto_edit") }).default({}),
+      claude: z.object({ binary: z.string().min(1).default("claude"), model: z.string().min(1).optional(), permissionMode: z.enum(["acceptEdits", "default", "bypassPermissions"]).default("acceptEdits") }).default({}),
+      /** alias -> folder (and optional command whose success means "done", e.g. "pnpm test"). Agents never work outside these. */
+      projects: z.record(z.object({ path: z.string().min(1), verify: z.string().min(1).optional() })).default({}),
+      /** Used when the request names no project. Without it, a scratch workspace inside the data folder is used. */
+      defaultProject: z.string().min(1).optional(),
+      timeoutMs: z.number().int().min(10_000).default(900_000),
+      idleTimeoutMs: z.number().int().min(10_000).default(180_000),
+    })
+    .default({}),
   /** Refuse to start if any configured model has a non-zero price. */
   freeOnly: z.boolean().default(false),
   /** Discover installed apps (Windows Start Menu) so "abre X" works without hand-written aliases. */

@@ -4,6 +4,8 @@ import type { PermissionLevel, Provenance, ToolDescriptor } from "@jarvis/protoc
 export interface ToolContext {
   taskId: string;
   signal?: AbortSignal;
+  /** Report REAL intermediate progress (it becomes a `progress` OrchestratorEvent). Never call it for work not yet done. */
+  progress?: (stage: string, detail?: string) => void;
 }
 
 export interface ToolResult<O = unknown> {

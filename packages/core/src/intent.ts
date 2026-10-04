@@ -22,7 +22,7 @@ export interface IntentRouterOptions {
   /** Known apps. A plain record is treated as fixed config aliases. Only known apps match, so "abre un debate" goes to the LLM. */
   apps: Record<string, string> | AppCatalog;
   /** Extra deterministic rules, tried after the built-ins. Return undefined to pass. */
-  rules?: ((normalizedText: string) => Intent | undefined)[];
+  rules?: ((normalizedText: string, original: string) => Intent | undefined)[];
 }
 
 // Spoken requests are wordier than typed ones: "puedes abrir la calculadora por favor", "open the notepad".
@@ -95,7 +95,7 @@ export class IntentRouter {
     }
 
     for (const rule of this.opts.rules ?? []) {
-      const hit = rule(text);
+      const hit = rule(text, input);
       if (hit) return hit;
     }
 

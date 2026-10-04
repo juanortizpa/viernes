@@ -29,7 +29,16 @@ export function nodeOk(version) {
  * Keeps only the providers whose key is present (a section without its key would stop the sidecar from starting),
  * points defaultModel at a model that still exists, and adds the voice block when whisper is available.
  */
-export function buildConfig({ base, env, voice }) {
+/**
+ * Coding projects survive re-running setup (they are the user's own list); a fresh install gets JARVIS itself as the first
+ * project so "en el proyecto jarvis, …" works out of the box.
+ */
+export function codingSection(previous, root) {
+  if (previous?.coding) return previous.coding;
+  return root ? { projects: { jarvis: { path: root.replaceAll("\\", "/"), verify: "pnpm test" } }, defaultProject: "jarvis" } : undefined;
+}
+
+export function buildConfig({ base, env, voice, previous, root }) {
   const cfg = structuredClone(base);
   for (const [section, key] of Object.entries(PROVIDER_KEYS)) {
     const have = Boolean(env[key]) || (section === "google" && Boolean(env.GOOGLE_API_KEY));
@@ -39,6 +48,8 @@ export function buildConfig({ base, env, voice }) {
   if (models.length === 0) delete cfg.defaultModel;
   else if (!models.includes(cfg.defaultModel)) cfg.defaultModel = models[0];
   if (voice) cfg.voice = { binary: voice.binary.replaceAll("\\", "/"), model: voice.model.replaceAll("\\", "/"), language: voice.language ?? "es", threads: voice.threads ?? 4, ...(voice.wakeModel ? { wakeModel: voice.wakeModel.replaceAll("\\", "/") } : {}) };
+  const coding = codingSection(previous, root);
+  if (coding) cfg.coding = coding;
   return cfg;
 }
 

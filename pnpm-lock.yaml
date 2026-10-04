@@ -66,6 +66,9 @@ importers:
 
   apps/sidecar:
     dependencies:
+      '@jarvis/agents':
+        specifier: workspace:*
+        version: link:../../packages/agents
       '@jarvis/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -103,6 +106,12 @@ importers:
       tsx:
         specifier: ^4.19.0
         version: 4.23.15
+
+  packages/agents:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.5
 
   packages/core:
     dependencies:

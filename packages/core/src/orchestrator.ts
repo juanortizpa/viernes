@@ -74,6 +74,8 @@ interface ToolOutcome {
 
 interface ToolRunCtx {
   taskId: string;
+  /** The task's cancellation: long tools (coding agents) must stop with it. */
+  signal?: AbortSignal;
   out: TaskEmitter;
   machine: TaskMachine;
   trace: ExecutionTrace;
@@ -175,7 +177,7 @@ export class Orchestrator {
 
       const result: { outcome: "success" | "failure"; summary?: string; learn?: string } =
         intent.route === "local"
-          ? await this.runLocal(taskId, intent.tool, intent.args, intent.then, out, machine, trace)
+          ? await this.runLocal(taskId, intent.tool, intent.args, intent.then, out, machine, trace, opts.signal)
           : await this.runModel(taskId, input, out, machine, trace, opts.signal, opts.modality === "voice");
       trace.finalOutcome = opts.signal?.aborted ? "cancelled" : result.outcome;
       summary = result.summary;
@@ -208,13 +210,14 @@ export class Orchestrator {
     out: TaskEmitter,
     machine: TaskMachine,
     trace: ExecutionTrace,
+    signal?: AbortSignal,
   ): Promise<{ outcome: "success" | "failure"; summary?: string }> {
     trace.usedLocalIntent = true;
     trace.taskType = "local_action";
 
     const tool = this.deps.tools.get(toolName);
     if (!tool) return { outcome: "failure", summary: `unknown tool ${toolName}` };
-    const ctx = { taskId, out, machine, trace, taint: new TaintTracker() };
+    const ctx = { taskId, out, machine, trace, taint: new TaintTracker(), signal };
     const r = await this.invokeTool(ctx, tool, rawArgs);
     const next = r.ok && then ? this.deps.tools.get(then.tool) : undefined;
     if (next && then) await this.invokeTool(ctx, next, then.args);
@@ -255,7 +258,7 @@ export class Orchestrator {
       if (checkpoint) ctx.attempt.checkpoints.push({ tool: tool.name, checkpoint });
       else ctx.attempt.irreversible = true;
     }
-    const result = await tool.run(parsed.data, { taskId });
+    const result = await tool.run(parsed.data, { taskId, signal: ctx.signal, progress: (stage, detail) => out.emit({ type: "progress", stage, ...(detail ? { detail } : {}) }) });
     taint.observe(result.provenance);
     out.emit({ type: "tool.completed", tool: tool.name, ok: result.ok, summary: result.summary });
 
@@ -295,7 +298,7 @@ export class Orchestrator {
 
     for (;;) {
       const state: AttemptState = { sideEffects: false, irreversible: false, usedTools: false, checkpoints: [] };
-      const attempt = await this.runAttempt(taskId, input, decision, caps, { out, machine, trace, taint, attempt: state }, signal, maxEscalations > 0, voice);
+      const attempt = await this.runAttempt(taskId, input, decision, caps, { out, machine, trace, taint, attempt: state, signal }, signal, maxEscalations > 0, voice);
       let verdict = await runEvaluators(evaluators, { input, taskType: cls.taskType, response: attempt.text, failure: attempt.failure });
       // A broken attempt is a failure whatever the evaluators say (some skip, some only read the text).
       if (attempt.failure !== undefined && verdict?.outcome !== "failure") {

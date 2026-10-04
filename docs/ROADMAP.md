@@ -15,6 +15,7 @@
 | 4 | Shell y UI completos | 🟦 la isla Tauri usa el sidecar real, deja pasar clics fuera de ella, tiene atajo global, bandeja y ajustes (ADR-0021/0022; probado en Linux); falta Windows (overlay real, pantalla completa, multi-monitor, DPI) | Isla con estados reales, permisos, panel Economy |
 | 5 | Memoria + optimización de contexto | ⬜ | Recuperación medida con ablación |
 | 6 | Router aprendido + experimento final | ⬜ | Frontera de Pareto costo vs éxito |
+| P | Agente de programación (ADR-0023) | 🟦 Gemini CLI → Claude Code con comprobación del proyecto; Gemini probado en real (91 s, sin escalar); falta Windows y Claude real | "en el proyecto X, arregla…" edita, comprueba y lo cuenta por voz |
 | 7 | Voz | 🟦 push-to-talk + STT local (probado en Windows), TTS y wake word de dos etapas (estos dos solo con audio simulado) | Push-to-talk → respuesta hablada |
 
 ---
@@ -183,6 +184,16 @@ exista algo visible, no solo logs.
 - [ ] Cancelación de eco real y barge-in por voz (hoy se ignora el micrófono mientras habla)
 - [ ] STT en streaming (V2)
 
+## Fase P — Agente de programación (ADR-0023) 🟦
+- [x] `packages/agents`: adaptadores Gemini CLI y Claude Code (stream-json, tarea por stdin, límite total e inactividad, corte del árbol de procesos), etapas en español, cadena el-más-barato-primero con comprobación del proyecto y contexto del intento anterior
+- [x] Herramienta `code.agent` (sensible, salida no confiable, cancelable, progreso real), proyectos por alias (`coding.projects`), orden directa "en el proyecto X, …", resumen hablado
+- [x] `setup`: detecta Gemini CLI / Claude Code (`--install-agents` instala Gemini CLI), siembra JARVIS como proyecto y conserva la lista
+- [x] Prueba real con Gemini CLI 0.62 (bug arreglado y comprobado en 91 s)
+- [ ] Probar en Windows (shims `.cmd`, `taskkill`, login de Gemini)
+- [ ] Probar Claude Code real con la sesión de Claude Pro
+- [ ] Que el LLM elija `code.agent` por sí solo en peticiones de programación sin "en el proyecto…" (hoy puede, vía herramientas; sin medir)
+- [ ] Usar el agente para manejar otras apps (scripts de automatización) — V2
+
 ---
 
 ## Preguntas abiertas (necesitan respuesta del usuario)
@@ -230,3 +241,4 @@ exista algo visible, no solo logs.
 | 2026-10-04 | Primer `island.bat` en Windows: fallaba con «"tauri" no se reconoce» porque `@tauri-apps/cli` se añadió a las dependencias pero `node_modules` era anterior. `island.mjs` ahora ejecuta `pnpm install --frozen-lockfile` si falta el CLI (cualquier `git pull` que añada dependencias ya no rompe el arranque) y deja de usar `shell: true` con argumentos (aviso DEP0190). Probado quitando el CLI en Linux. |
 | 2026-10-04 | **Primer uso en Windows: la isla se congelaba («No responde») al pulsarla dos veces.** Interbloqueo mío en el clic que atraviesa: el sondeo mantenía el cerrojo de las regiones mientras preguntaba el cursor a la ventana (en Windows espera al hilo principal) y `set_hit_regions`, síncrono en el hilo principal, esperaba ese cerrojo. Ahora el sondeo usa una copia (`snapshot`) y nunca llama a la ventana con un cerrojo tomado. En Linux no se reproducía (esas consultas no pasan por el hilo principal), así que la corrección se razonó desde el código y se comprobó que no regresa (25 clics rápidos, sigue respondiendo); **falta confirmarlo en Windows**. 7 tests Rust. |
 | 2026-10-04 | Respuestas del usuario: producto personal, 100 % gratis (APIs gratuitas + Claude Pro y Gemini por suscripción), solo español, asistente general con foco en programar. Como la isla real en Tauri ya existe (ADR-0021/0022), el orden propuesto pasa a ser: (1) agente de programación delegando en Claude Code / Gemini CLI locales, (2) memoria, (3) cerrar la validación de la isla en Windows. Fases 3/6 (experimento) en segundo plano. |
+| 2026-10-04 | **Agente de programación (ADR-0023):** `packages/agents` (Gemini CLI → Claude Code, el más barato primero; escala si falla, se queda sin cuota o falla la comprobación del proyecto), herramienta `code.agent` sensible y no confiable con progreso real y cancelación, orden directa "en el proyecto X, …", proyectos en `coding.projects`, resumen hablado, `setup` detecta los CLIs. Hallazgos reales: Gemini CLI sin interfaz rechaza carpetas no confiables (se pasa `GEMINI_CLI_TRUST_WORKSPACE`) y se cuelga reintentando 503 (corte por inactividad + comprobación igual). Prueba real: bug arreglado en 91 s sin escalar. De paso: el TTS cortaba oraciones en "app.js" (corregido). 405 tests. |

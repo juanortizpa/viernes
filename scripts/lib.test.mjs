@@ -40,6 +40,12 @@ describe("buildConfig", () => {
     expect(none.groq ?? none.openrouter ?? none.google).toBeUndefined();
     expect(none.defaultModel).toBeUndefined();
   });
+  it("keeps the user's coding projects across re-runs and seeds JARVIS itself on a fresh install", () => {
+    expect(buildConfig({ base, env: {}, root: "C:\\dev\\viernes" }).coding).toEqual({ projects: { jarvis: { path: "C:/dev/viernes", verify: "pnpm test" } }, defaultProject: "jarvis" });
+    const mine = { projects: { web: { path: "D:/web" } } };
+    expect(buildConfig({ base, env: {}, root: "C:/x", previous: { coding: mine } }).coding).toEqual(mine);
+    expect(buildConfig({ base, env: {} }).coding).toBeUndefined();
+  });
   it("adds the lighter wake-word verification model when given", () => {
     const c = buildConfig({ base, env: { GROQ_API_KEY: "k" }, voice: { binary: "C:\\x\\w.exe", model: "C:\\x\\base.bin", wakeModel: "C:\\x\\tiny.bin" } });
     expect(c.voice.wakeModel).toBe("C:/x/tiny.bin");
