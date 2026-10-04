@@ -180,10 +180,10 @@ exista algo visible, no solo logs.
 
 | # | Pregunta | Por qué importa | Respuesta |
 |---|---|---|---|
-| 1 | ¿Es tesis con fecha límite o producto abierto? | Define cuánto recortar | _pendiente_ |
-| 2 | ¿Qué proveedores/keys y presupuesto hay? ¿GPU para Ollama? | Define brazos del experimento | _pendiente_ |
-| 3 | ¿Mezcla ES/EN desde el día 1? | Intent router, STT, dataset | _pendiente_ |
-| 4 | ¿El caso de uso dominante es programar? | Evaluador y experimento mucho más simples | _pendiente_ |
+| 1 | ¿Es tesis con fecha límite o producto abierto? | Define cuánto recortar | **Producto personal** (2026-10-04): prioridad = utilidad diaria; el experimento (Fases 3/6) pasa a segundo plano |
+| 2 | ¿Qué proveedores/keys y presupuesto hay? ¿GPU para Ollama? | Define brazos del experimento | **100 % gratis.** APIs gratuitas (Groq, Gemini, OpenRouter) + suscripciones **Claude Pro** y **Gemini (plan de pago de la app)**. Las suscripciones no dan API: se aprovechan vía **Claude Code** y **Gemini CLI** locales |
+| 3 | ¿Mezcla ES/EN desde el día 1? | Intent router, STT, dataset | **Solo español** |
+| 4 | ¿El caso de uso dominante es programar? | Evaluador y experimento mucho más simples | **Asistente general que sirva para programar**, y apoyarse en esa capacidad para manejar las demás apps |
 
 ## Registro de decisiones y cambios
 
@@ -216,3 +216,4 @@ exista algo visible, no solo logs.
 | 2026-10-04 | Wake word (ADR-0018): `TemplateSpotter` (MFCC+DTW sobre tu voz), `Endpointer`, `matchWakeWord`, `WakeController` con ventana de 10 s, `wake.verify` en el sidecar (descarta sin rastro lo que no es para él), escucha continua con registro de voz, sensibilidad, indicador ● y cuenta atrás real, pausa mientras habla, setup descarga whisper tiny. 318 tests. Validado end-to-end en Chromium con una línea de tiempo de audio sintético (palabra → orden → orden sin palabra → vuelta a reposo; 2 verificaciones, 0 por frases ajenas). **Sin voz real**: el umbral automático quedó justo ante audio distinto del de registro, por eso hay sensibilidad y un indicador de calibración. |
 | 2026-10-04 | Feedback: la voz funciona pero la transcripción exige hablar despacio. Causas encontradas en mi propio pipeline y corregidas (ADR-0019): audio perdido durante la verificación de «jarvis», frases cortadas a 600 ms de pausa (ahora 900), remuestreo sin filtro (ahora FIR pasa-bajos), audio sin nivelar ni margen, push-to-talk que decía «Escuchando» antes de abrir el micrófono, prompt repetitivo; `setup.bat` descarga `small`. Nueva herramienta de calibración con tu voz (`check-stt.bat` + «Prueba de transcripción» en la UI) y selector «Audio del navegador». 334 tests. **Mejora real sin medir con voz real.** |
 | 2026-10-04 | ADR-0020: corpus de 20 frases rioplatenses con 8 voces (TTS de Gemini), limpio y degradado. Medido: whisper-turbo 15/20 acciones correctas; Gemini 3.5 flash-lite (oído+entendido) 18–19/20; **carrera Groq+Gemini en producción 20/20 y 19/20, mediana 1,2 s**. Descubierto midiendo: el prompt de vocabulario hacía que whisper regurgitara la lista de apps ("abre paint" → "abre la calculadora…"); Gemini 3.1 varía hasta 19 s; los TTS leen las instrucciones de estilo. Añadido: `GroqTranscriber`, `GeminiTranscriber` (heard/meant con salvaguarda), `RaceTranscriber`, `FallbackTranscriber`, limpieza de habla y coincidencia fonética de apps, aviso de voz al LLM, `stt-eval`. Bug atrapado por test: se ejecutaba la transcripción rápida en vez de la buena. 369 tests. **Sin probar con la voz real del usuario.** |
+| 2026-10-04 | Respuestas del usuario: producto personal, 100 % gratis (APIs gratuitas + Claude Pro y Gemini por suscripción), solo español, asistente general con foco en programar. Nuevo orden propuesto: (1) agente de programación delegando en Claude Code / Gemini CLI locales, (2) isla real en Tauri + atajo global, (3) memoria. Fases 3/6 (experimento) en segundo plano. |
