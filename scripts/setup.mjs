@@ -6,7 +6,7 @@ import { createInterface } from "node:readline/promises";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
-import { PROVIDER_KEYS, WHISPER_MODELS, buildConfig, findFile, nodeOk, parseEnvFile, pickWhisperAsset, serializeEnv } from "./lib.mjs";
+import { PINNED_WHISPER_ZIP, PROVIDER_KEYS, WHISPER_MODELS, buildConfig, describeAssets, findFile, nodeOk, parseEnvFile, pickFromReleases, serializeEnv } from "./lib.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -89,19 +89,38 @@ if (!flag("no-voice")) {
     let bin = findFile(dir, ["whisper-cli.exe", "main.exe"]);
     if (!win) say("  ⚠ No es Windows: salto la descarga del binario (whisper-cli.exe). Usa --no-voice o configura voice a mano.");
     else {
+      // Options: --whisper-bin <whisper-cli.exe you already have>, --whisper-zip <local zip or https URL>
+      if (opt("whisper-bin") && existsSync(opt("whisper-bin"))) bin = opt("whisper-bin");
       if (!bin) {
-        say("  Buscando la última versión de whisper.cpp…");
-        const rel = await (await fetch("https://api.github.com/repos/ggml-org/whisper.cpp/releases/latest", { headers: { "user-agent": "jarvis-setup" } })).json();
-        const asset = pickWhisperAsset(rel);
-        if (!asset) throw new Error("no encontré whisper-bin-x64.zip en la última release");
-        say(`  Descargando ${asset.name} (${rel.tag_name})…`);
         const zip = join(dir, "whisper.zip");
-        await download(asset.browser_download_url, zip);
+        let source = opt("whisper-zip");
+        if (!source) {
+          say("  Buscando una versión de whisper.cpp con binarios para Windows…");
+          let releases;
+          try {
+            const res = await fetch("https://api.github.com/repos/ggml-org/whisper.cpp/releases?per_page=20", { headers: { "user-agent": "jarvis-setup" } });
+            releases = res.ok ? await res.json() : undefined;
+          } catch {
+            /* offline or rate limited: use the pinned fallback below */
+          }
+          const found = pickFromReleases(releases);
+          if (found) {
+            say(`  Usando ${found.asset.name} de ${found.tag}`);
+            source = found.asset.browser_download_url;
+          } else {
+            say(`  La API no listó un zip de Windows utilizable. Archivos que vi:\n    ${describeAssets(releases) || "(nada: ¿sin internet o límite de GitHub?)"}`);
+            say("  Pruebo la versión fija v1.7.5…");
+            source = PINNED_WHISPER_ZIP;
+          }
+        }
+        if (/^https?:/i.test(source)) await download(source, zip);
+        else if (existsSync(source)) writeFileSync(zip, readFileSync(source));
+        else throw new Error(`no existe ${source}`);
         const t = spawnSync("tar", ["-xf", zip, "-C", dir], { encoding: "utf8" }); // bsdtar ships with Windows 10+
         if (t.status !== 0) throw new Error(`no pude descomprimir el zip: ${t.stderr}`);
         rmSync(zip, { force: true });
         bin = findFile(dir, ["whisper-cli.exe", "main.exe"]);
-        if (!bin) throw new Error("el zip no contiene whisper-cli.exe");
+        if (!bin) throw new Error("el zip no contiene whisper-cli.exe ni main.exe");
       } else say("  Binario ya presente.");
       const modelPath = join(dir, model.file);
       if (!existsSync(modelPath) || statSync(modelPath).size < model.minBytes) {

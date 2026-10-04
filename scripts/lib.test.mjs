@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildConfig, findFile, nodeOk, parseEnvFile, pickWhisperAsset, serializeEnv } from "./lib.mjs";
+import { buildConfig, describeAssets, findFile, nodeOk, parseEnvFile, pickFromReleases, pickWhisperAsset, serializeEnv } from "./lib.mjs";
 
 const base = {
   defaultModel: "openai/gpt-oss-20b", router: "rules", freeOnly: true,
@@ -45,6 +45,26 @@ describe("buildConfig", () => {
     expect(c.voice).toEqual({ binary: "C:/x/whisper-cli.exe", model: "C:/x/ggml-base.bin", language: "auto", threads: 4 });
     expect(base.openrouter).toBeDefined();
     expect(c.defaultModel).toBe("openai/gpt-oss-20b");
+  });
+});
+
+describe("pickFromReleases", () => {
+  const rel = (tag, ...names) => ({ tag_name: tag, assets: names.map((name) => ({ name, browser_download_url: `https://x/${tag}/${name}` })) });
+  it("skips a newer release that has no Windows build and falls back to an older one", () => {
+    const r = pickFromReleases([rel("v9", "whisper-v9-xcframework.zip"), rel("v8"), rel("v7", "whisper-bin-x64.zip", "whisper-bin-Win32.zip")]);
+    expect(r?.tag).toBe("v7");
+    expect(r?.asset.name).toBe("whisper-bin-x64.zip");
+  });
+  it("accepts renamed Windows zips, rejects other platforms/GPU builds, skips drafts, and survives garbage", () => {
+    expect(pickFromReleases([rel("v2", "whisper-2.0-bin-win64.zip")])?.asset.name).toBe("whisper-2.0-bin-win64.zip");
+    expect(pickFromReleases([rel("v2", "whisper-cublas-bin-x64.zip", "whisper-macos-arm64.zip", "whisper-linux-x64.tar.gz")])).toBeUndefined();
+    expect(pickFromReleases([{ ...rel("v3", "whisper-bin-x64.zip"), draft: true }])).toBeUndefined();
+    expect(pickFromReleases({ message: "rate limited" })).toBeUndefined();
+    expect(pickFromReleases(undefined)).toBeUndefined();
+  });
+  it("describes what it saw so the user can report it", () => {
+    expect(describeAssets([rel("v1", "a.zip", "b.zip"), rel("v0")])).toBe("v1: a.zip, b.zip\n    v0: (sin archivos)");
+    expect(describeAssets(undefined)).toBe("");
   });
 });
 

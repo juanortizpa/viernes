@@ -42,14 +42,37 @@ export function buildConfig({ base, env, voice }) {
   return cfg;
 }
 
-/** Windows build of whisper.cpp in a GitHub release: prefer the plain CPU x64 zip, never the CUDA/BLAS ones. */
+const BAD_FLAVOUR = /cublas|blas|cuda|vulkan|arm|xcframework|ios|macos|android|wasm|jni/i;
+
+/** Windows CPU x64 build in one release's assets, from the exact known name to progressively looser matches. Never a CUDA/BLAS/other-OS build. */
 export function pickWhisperAsset(release) {
-  const assets = release?.assets ?? [];
+  const assets = (release?.assets ?? []).filter((a) => /\.zip$/i.test(a.name) && !BAD_FLAVOUR.test(a.name));
   return (
     assets.find((a) => a.name === "whisper-bin-x64.zip") ??
-    assets.find((a) => /x64/i.test(a.name) && /\.zip$/i.test(a.name) && !/cublas|blas|cuda|vulkan|arm/i.test(a.name))
+    assets.find((a) => /bin/i.test(a.name) && /x64|win64|amd64/i.test(a.name)) ??
+    assets.find((a) => /win/i.test(a.name) && /x64|win64|amd64/i.test(a.name))
   );
 }
+
+/** Newest release (list order) that ships a usable Windows build; the "latest" release may only carry other platforms. */
+export function pickFromReleases(releases) {
+  for (const r of Array.isArray(releases) ? releases : []) {
+    if (r.draft) continue;
+    const asset = pickWhisperAsset(r);
+    if (asset) return { tag: r.tag_name, asset };
+  }
+  return undefined;
+}
+
+/** What the user can paste back when nothing matched. */
+export const describeAssets = (releases, n = 5) =>
+  (Array.isArray(releases) ? releases : [])
+    .slice(0, n)
+    .map((r) => `${r.tag_name}: ${(r.assets ?? []).map((a) => a.name).join(", ") || "(sin archivos)"}`)
+    .join("\n    ");
+
+/** Last resort if the API is unreachable or lists nothing usable. */
+export const PINNED_WHISPER_ZIP = "https://github.com/ggml-org/whisper.cpp/releases/download/v1.7.5/whisper-bin-x64.zip";
 
 /** First file with one of `names` under `dir` (depth-first). */
 export function findFile(dir, names) {
