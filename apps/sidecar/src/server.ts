@@ -128,7 +128,7 @@ export class SidecarServer {
         const m = matchWakeWord(t.text, this.opts.wakeWords);
         if (!m.matched) return result(false, false); // not for the assistant: the text is dropped here
         if (!m.rest) return result(true, false);
-        this.opts.send({ type: "voice.transcribed", text: m.rest, audioMs: t.audioMs, latencyMs: t.latencyMs, ...(t.language ? { language: t.language } : {}) });
+        this.opts.send({ type: "voice.transcribed", text: m.rest, audioMs: clip.audioMs, latencyMs: t.latencyMs, ...(t.language ? { language: t.language } : {}) });
         result(true, true);
         this.submit(m.rest.slice(0, 10_000), "voice");
       } catch (e) {
@@ -155,7 +155,7 @@ export class SidecarServer {
         const t = await transcriber.transcribe(clip.wav, { language, signal: ac.signal });
         if (ac.signal.aborted) return reject("cancelled", "Cancelado");
         if (!t.text) return reject("empty", "No entendí nada");
-        this.opts.send({ type: "voice.transcribed", text: t.text, audioMs: t.audioMs, latencyMs: t.latencyMs, ...(t.language ? { language: t.language } : {}) });
+        this.opts.send({ type: "voice.transcribed", text: t.text, audioMs: clip.audioMs, latencyMs: t.latencyMs, ...(t.language ? { language: t.language } : {}) });
         this.submit(t.text.slice(0, 10_000), "voice");
       } catch (e) {
         if (ac.signal.aborted) return reject("cancelled", "Cancelado");

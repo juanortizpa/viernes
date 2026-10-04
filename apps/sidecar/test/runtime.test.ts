@@ -142,7 +142,7 @@ describe("opening apps by the name a person (or a model) says", () => {
   });
 
   it("builds a short vocabulary prompt for speech recognition, only from plain app names", () => {
-    expect(defaultVoicePrompt(["vs code", "calculadora", "otra pestana"], "es")).toBe("Abre vs code, abre calculadora, abre otra pestana. ¿Qué hora es?");
+    expect(defaultVoicePrompt(["vs code", "calculadora", "otra pestana"], "es")).toBe("Jarvis, abre vs code, calculadora, otra pestana.");
     expect(defaultVoicePrompt(["a;b", "x".repeat(40)], "es")).toBeUndefined();
     expect(defaultVoicePrompt(["paint"], "en")).toBeUndefined();
   });

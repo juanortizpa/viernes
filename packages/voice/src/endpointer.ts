@@ -52,6 +52,11 @@ export class Endpointer {
     this.state = "silence";
   }
 
+  /** Change how much silence ends an utterance (e.g. be more patient while a command is being dictated). */
+  setEndSilence(ms: number): void {
+    this.o.endSilenceMs = ms;
+  }
+
   /** True once speech has begun in the current utterance. */
   get inSpeech(): boolean {
     return this.speaking;

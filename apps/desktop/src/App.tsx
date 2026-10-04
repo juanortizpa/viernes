@@ -227,7 +227,7 @@ export default function App() {
     player.stop();
     source.current = "live"; // a real microphone and a real sidecar: never label this as a demo
     setSourceLabel("live");
-    dispatch({ kind: "voice.recording" });
+    dispatch({ kind: "voice.preparing" });
     try {
       m.session = await startMic((level) => dispatch({ kind: "voice.level", level }), () => void stopTalk());
     } catch (e) {
@@ -235,6 +235,7 @@ export default function App() {
       return warn(e instanceof MicUnavailable ? e.message : "No se pudo abrir el micrófono");
     }
     if (m.wantStop) void stopTalk(); // released while the mic was still opening
+    else dispatch({ kind: "voice.recording" }); // only now is the microphone really capturing
   };
   const stopTalk = async (discard = false) => {
     const m = mic.current;

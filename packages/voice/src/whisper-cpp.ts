@@ -40,8 +40,10 @@ export interface WhisperCppOptions {
   /** ISO 639-1 code or "auto". */
   language?: string;
   threads?: number;
-  /** Initial prompt (vocabulary hint). */
+  /** Initial prompt (vocabulary hint). Empty/undefined = none. */
   prompt?: string;
+  /** Beam-search width (1 = greedy: fastest). */
+  beamSize?: number;
   timeoutMs?: number;
   run?: RunProcess;
 }
@@ -79,6 +81,7 @@ export class WhisperCppTranscriber implements Transcriber {
       await writeFile(file, wav, { mode: 0o600 });
       const args = ["-m", this.opts.model, "-f", file, "-l", lang, "-nt", "-np"];
       if (this.opts.threads) args.push("-t", String(this.opts.threads));
+      if (this.opts.beamSize && this.opts.beamSize >= 1) args.push("-bs", String(Math.min(10, Math.floor(this.opts.beamSize))));
       if (this.opts.prompt) args.push("--prompt", this.opts.prompt.slice(0, 300));
       const r = await this.run(this.opts.binary, args, { signal, timeoutMs: this.opts.timeoutMs ?? 60_000 });
       if (r.code !== 0) throw new Error(`whisper exited with code ${r.code}: ${r.stderr.trim().slice(-300)}`);

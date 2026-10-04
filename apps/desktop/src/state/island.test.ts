@@ -84,6 +84,12 @@ describe("islandReducer", () => {
 });
 
 describe("islandReducer voice states (real mic / STT, not orchestrator progress)", () => {
+  it("does not say 'listening' until the microphone is really open", () => {
+    const s = islandReducer(initialState, { kind: "voice.preparing" });
+    expect(s).toMatchObject({ mode: "thinking", headline: "Preparando micrófono…" });
+    expect(islandReducer(s, { kind: "voice.recording" })).toMatchObject({ mode: "listening", headline: "Escuchando…" });
+  });
+
   it("listening follows the real input level and a new task clears it", () => {
     let s = islandReducer(initialState, { kind: "voice.recording" });
     expect(s).toMatchObject({ mode: "listening", level: 0 });

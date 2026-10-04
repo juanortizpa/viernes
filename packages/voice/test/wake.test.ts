@@ -71,8 +71,10 @@ describe("StreamResampler", () => {
         i += n;
       }
       const streamed = concat(parts);
-      expect(Math.abs(streamed.length - batch.length)).toBeLessThanOrEqual(1);
-      for (let i = 0; i < Math.min(batch.length, streamed.length) - 1; i++) expect(streamed[i]).toBeCloseTo(batch[i]!, 5);
+      // The filter needs a few future samples, so the stream is a few samples shorter; every sample it does emit must equal the batch result.
+      expect(batch.length - streamed.length).toBeGreaterThanOrEqual(0);
+      expect(batch.length - streamed.length).toBeLessThanOrEqual(8);
+      for (let i = 0; i < streamed.length; i++) expect(streamed[i]).toBeCloseTo(batch[i]!, 5);
     }
   });
 });
@@ -310,6 +312,63 @@ describe("WakeController", () => {
     r.feed(say(JARVIS, { seed: 65 }));
     r.wait(1500);
     expect(r.take("verify")).toHaveLength(0);
+  });
+
+  it("does not lose a command spoken while the wake word is still being verified (people do not wait)", () => {
+    const r = rig({ enrolled: false });
+    r.log.push(...r.ctl.start());
+    r.wait(500);
+    r.feed(say(JARVIS, { seed: 70 }));
+    r.wait(1000); // utterance ends -> verify goes out
+    expect(r.ctl.state).toBe("verifying");
+    r.feed(say(COMMAND, { seed: 71 })); // the user already says the command; the verdict has not come back
+    r.wait(1200);
+    expect(r.take("command")).toHaveLength(0); // held, not sent before the wake word is confirmed
+    r.log.push(...r.ctl.onVerified({ detected: true, commandRan: false }));
+    expect(r.take("command").map((c) => c.source)).toEqual(["wake"]);
+    expect(r.ctl.state).toBe("busy");
+  });
+
+  it("verdict arriving mid-command: keeps what was captured and finishes the sentence", () => {
+    const r = rig({ enrolled: false });
+    r.log.push(...r.ctl.start());
+    r.wait(500);
+    r.feed(say(JARVIS, { seed: 72 }));
+    r.wait(1000);
+    const cmd = say(COMMAND, { seed: 73 });
+    r.feed(cmd.subarray(0, Math.floor(cmd.length / 2))); // halfway through the command
+    r.log.push(...r.ctl.onVerified({ detected: true, commandRan: false }));
+    expect(r.ctl.state).toBe("command");
+    r.feed(cmd.subarray(Math.floor(cmd.length / 2)));
+    r.wait(1500);
+    const sent = r.take("command");
+    expect(sent).toHaveLength(1);
+    // The sentence arrived whole: first half included (it would be ~half the length if it had been dropped).
+    expect(sent[0]!.wav.length / 2 / RATE).toBeGreaterThan((cmd.length / RATE) * 0.9);
+  });
+
+  it("not the wake word: whatever was captured during verification is thrown away", () => {
+    const r = rig({ enrolled: false });
+    r.log.push(...r.ctl.start());
+    r.wait(500);
+    r.feed(say(OTHER, { seed: 74 }));
+    r.wait(1000);
+    r.feed(say(COMMAND, { seed: 75 }));
+    r.wait(1200);
+    r.log.push(...r.ctl.onVerified({ detected: false, commandRan: false }));
+    expect(r.take("command")).toHaveLength(0);
+    expect(r.ctl.state).toBe("idle");
+  });
+
+  it("a thinking pause inside a command (700 ms) does not split the sentence, but a real end does", () => {
+    const r = rig();
+    r.log.push(...r.ctl.start(), ...r.ctl.onTaskStarted(), ...r.ctl.onTaskDone({ fromVoice: true }));
+    const half = say(COMMAND, { seed: 76 });
+    r.feed(half);
+    r.feed(silence(700));
+    r.feed(say(COMMAND, { seed: 77 }));
+    r.wait(1500);
+    expect(r.take("command")).toHaveLength(1);
   });
 
   it("recovers from a lost verification answer", () => {

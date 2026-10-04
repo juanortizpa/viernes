@@ -32,6 +32,8 @@ export interface WakeControllerOptions {
   followUpMs?: number;
   /** After the wake word alone, how long to wait for the user to start the command. */
   commandWaitMs?: number;
+  /** Silence that ends a command/follow-up utterance. Longer than for the wake word, so a thinking pause does not split a sentence. */
+  commandEndSilenceMs?: number;
   /** Safety valves. */
   verifyTimeoutMs?: number;
   busyTimeoutMs?: number;
@@ -44,6 +46,7 @@ export class WakeController {
   private readonly spotter: TemplateSpotter | undefined;
   private readonly ep: Endpointer;
   private readonly now: () => number;
+  private readonly commandEnd: number;
   private readonly o: Required<Pick<WakeControllerOptions, "followUpMs" | "commandWaitMs" | "verifyTimeoutMs" | "busyTimeoutMs">>;
   private firedAtMs = -Infinity;
   private deadline = 0;
@@ -51,11 +54,14 @@ export class WakeController {
   private followUpPending = false;
   private lastCountdown = 0;
   private counters = { verified: 0, notForMe: 0 };
+  /** A command spoken while the wake word was still being verified (the user does not wait for us). */
+  private pending: Uint8Array | undefined;
 
   constructor(private readonly opts: WakeControllerOptions = {}) {
     this.spotter = opts.enrollment ? new TemplateSpotter(opts.enrollment, { sensitivity: opts.sensitivity }) : undefined;
     this.ep = new Endpointer({ endSilenceMs: 600, maxMs: 10_000, ...opts.endpointer });
     this.now = opts.now ?? Date.now;
+    this.commandEnd = opts.commandEndSilenceMs ?? 900;
     this.o = { followUpMs: opts.followUpMs ?? 10_000, commandWaitMs: opts.commandWaitMs ?? 6_000, verifyTimeoutMs: opts.verifyTimeoutMs ?? 20_000, busyTimeoutMs: opts.busyTimeoutMs ?? 90_000 };
   }
 
@@ -80,6 +86,7 @@ export class WakeController {
 
   private goto(state: WakeState, extra: { followUpMs?: number } = {}): WakeAction[] {
     this.state = state;
+    this.pending = undefined;
     this.ep.reset();
     this.spotter?.reset();
     this.firedAtMs = -Infinity;
@@ -89,7 +96,9 @@ export class WakeController {
   /** Feed 16 kHz mono audio (any chunk size). */
   onAudio(chunk: Float32Array): WakeAction[] {
     const actions = this.tick();
-    if (this.speaking || this.state === "off" || this.state === "verifying" || this.state === "busy") return actions;
+    if (this.speaking || this.state === "off" || this.state === "busy") return actions;
+    // Keep listening WHILE the wake word is being verified: people do not wait for the assistant before giving the command.
+    this.ep.setEndSilence(this.state === "idle" ? this.opts.endpointer?.endSilenceMs ?? 600 : this.commandEnd);
     const before = this.ep.elapsedMs;
     this.ep.push(chunk);
     if (this.state === "idle" && this.spotter) {
@@ -106,6 +115,10 @@ export class WakeController {
     if (!samples || samples.length < TARGET_SAMPLE_RATE * 0.25) return actions;
     const wav = encodeWav({ samples, sampleRate: TARGET_SAMPLE_RATE });
 
+    if (this.state === "verifying") {
+      this.pending = wav; // hold it until the verdict arrives
+      return actions;
+    }
     if (this.state === "idle") {
       if (!liked) {
         this.counters.notForMe++;
@@ -128,12 +141,24 @@ export class WakeController {
   /** The sidecar's answer to `verify`. `commandRan`: the utterance also contained the command and the sidecar already ran it. */
   onVerified(r: { detected: boolean; commandRan: boolean }): WakeAction[] {
     if (this.state !== "verifying") return [];
+    const pending = this.pending;
+    this.pending = undefined;
     if (!r.detected) return this.goto("idle");
     if (r.commandRan) {
       this.deadline = this.now() + this.o.busyTimeoutMs;
       return this.goto("busy");
     }
+    if (pending) {
+      // The command was already spoken while we verified: send it now.
+      this.deadline = this.now() + this.o.busyTimeoutMs;
+      return [...this.goto("busy"), { type: "command", wav: pending, source: "wake" }];
+    }
     this.deadline = this.now() + this.o.commandWaitMs;
+    if (this.ep.inSpeech) {
+      // Mid-command right now: keep what has been captured and carry on to the end of the sentence.
+      this.state = "command";
+      return [{ type: "state", state: "command" }];
+    }
     return this.goto("command");
   }
 

@@ -42,6 +42,7 @@ export const initialState: IslandState = {
 export type IslandAction =
   | { kind: "event"; event: OrchestratorEvent }
   | { kind: "reset" }
+  | { kind: "voice.preparing" }
   | { kind: "voice.recording" }
   | { kind: "voice.level"; level: number }
   | { kind: "voice.transcribing" }
@@ -72,6 +73,9 @@ export function islandReducer(state: IslandState, action: IslandAction): IslandS
     }
     case "speech":
       return { ...state, speaking: action.speaking };
+    case "voice.preparing":
+      // The microphone is still opening: anything said now would be lost, so do not claim to be listening yet.
+      return { ...initialState, mode: "thinking", headline: "Preparando micrófono…", detail: "Espera a ver «Escuchando…» para hablar", speaking: state.speaking, wake: state.wake };
     case "voice.recording":
       return { ...initialState, mode: "listening", headline: "Escuchando…", detail: "Suelta para enviar", level: 0, speaking: state.speaking, wake: state.wake };
     case "voice.level":

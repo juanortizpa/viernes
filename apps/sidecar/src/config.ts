@@ -42,7 +42,9 @@ export const Config = z.object({
       wakeWords: z.array(z.string().min(2).max(30)).min(1).max(5).default(["jarvis"]),
       /** Smaller/faster model for wake-word verification (e.g. ggml-tiny.bin); defaults to `model`. */
       wakeModel: z.string().min(1).optional(),
-      /** Initial prompt that biases recognition toward your vocabulary. Default: built from your app names. */
+      /** Beam-search width: 5 is more accurate, 1 (greedy) is faster. */
+      beamSize: z.number().int().min(1).max(10).default(5),
+      /** Initial prompt that biases recognition toward your vocabulary. Default: built from your app names; "" turns it off. */
       prompt: z.string().max(300).optional(),
       timeoutMs: z.number().int().min(1_000).max(300_000).default(60_000),
     })

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  FakeTranscriber, MAX_CLIP_MS, VoiceRejected, WhisperCppTranscriber, cleanWhisperOutput, decodeWav, durationMs, encodeWav, hasSpeech, prepareClip, resample, rms,
+  FakeTranscriber, MAX_CLIP_MS, normalizeLoudness, padSilence, VoiceRejected, WhisperCppTranscriber, cleanWhisperOutput, decodeWav, durationMs, encodeWav, hasSpeech, prepareClip, resample, rms,
 } from "../src";
 
 const tone = (ms: number, rate = 16_000, amp = 0.3, hz = 220): { samples: Float32Array; sampleRate: number } => ({
@@ -139,5 +139,62 @@ describe("WhisperCppTranscriber (real process spawn against a stand-in binary)",
     const p = t.transcribe(wav, { signal: ac.signal });
     setTimeout(() => ac.abort(), 100);
     await expect(p).rejects.toThrow();
+  });
+});
+
+describe("signal quality before recognition", () => {
+  const sine = (hz: number, ms: number, rate: number, amp = 0.5): Float32Array => Float32Array.from({ length: Math.round((ms / 1000) * rate) }, (_, i) => amp * Math.sin((2 * Math.PI * hz * i) / rate));
+  const rmsOf = (x: Float32Array): number => rms(x.subarray(Math.floor(x.length * 0.2), Math.floor(x.length * 0.8)));
+
+  it("downsampling removes what a plain average lets alias into the speech band", () => {
+    // 10 kHz at 48 kHz is above the 8 kHz Nyquist of 16 kHz: a good low-pass removes it, a box average folds it down to 6 kHz.
+    const x = sine(10_000, 500, 48_000);
+    const box = Float32Array.from({ length: Math.floor(x.length / 3) }, (_, i) => (x[3 * i]! + x[3 * i + 1]! + x[3 * i + 2]!) / 3);
+    const good = resample({ samples: x, sampleRate: 48_000 }, 16_000).samples;
+    expect(rmsOf(good)).toBeLessThan(0.02); // >28 dB below the input
+    expect(rmsOf(good)).toBeLessThan(rmsOf(box) / 3); // and far better than the old method
+  });
+
+  it("keeps speech-band content intact (1 kHz passes at ~full level, 44.1 kHz too)", () => {
+    for (const rate of [48_000, 44_100]) {
+      const out = resample({ samples: sine(1000, 500, rate), sampleRate: rate }, 16_000).samples;
+      expect(rmsOf(out)).toBeGreaterThan(0.33); // 0.5 amplitude -> 0.354 RMS
+      expect(rmsOf(out)).toBeLessThan(0.37);
+    }
+  });
+
+  it("levels a quiet voice up and a loud one down without clipping, and leaves noise alone", () => {
+    const quiet = { samples: sine(300, 600, 16_000, 0.02), sampleRate: 16_000 };
+    const up = normalizeLoudness(quiet);
+    expect(rms(up.samples)).toBeGreaterThan(rms(quiet.samples) * 3);
+    expect(Math.max(...up.samples.map(Math.abs))).toBeLessThanOrEqual(0.97);
+    const loud = { samples: sine(300, 600, 16_000, 0.95), sampleRate: 16_000 };
+    expect(Math.max(...normalizeLoudness(loud).samples.map(Math.abs))).toBeLessThanOrEqual(0.97);
+    const noise = { samples: Float32Array.from({ length: 16_000 }, (_, i) => 0.0008 * Math.sin(i)), sampleRate: 16_000 };
+    expect(normalizeLoudness(noise)).toBe(noise);
+  });
+
+  it("pads silence on both sides, and prepareClip delivers a levelled, padded 16 kHz clip", () => {
+    const p = padSilence({ samples: new Float32Array(1600).fill(0.1), sampleRate: 16_000 }, 300);
+    expect(p.samples.length).toBe(1600 + 2 * 4800);
+    expect(p.samples[0]).toBe(0);
+    expect(p.samples[4800]).toBeCloseTo(0.1);
+    const clip = prepareClip(encodeWav({ samples: sine(250, 800, 48_000, 0.03), sampleRate: 48_000 }));
+    const dec = decodeWav(clip.wav);
+    expect(dec.sampleRate).toBe(16_000);
+    expect(dec.samples.length).toBeGreaterThan(16_000 * 0.8 + 2 * 4800 - 10);
+    expect(Math.max(...dec.samples.map(Math.abs))).toBeGreaterThan(0.1); // was 0.03
+    expect(dec.samples[10]).toBe(0);
+  });
+
+  it("passes the beam size to whisper only when set", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "jarvis-bs-"));
+    const p = join(dir, "w.mjs");
+    writeFileSync(p, '#!/usr/bin/env node\nconst a = process.argv.slice(2);\nconsole.log(a.includes("-bs") ? "bs=" + a[a.indexOf("-bs") + 1] : "nobs");\n');
+    chmodSync(p, 0o755);
+    const wav = encodeWav({ samples: sine(220, 500, 16_000, 0.3), sampleRate: 16_000 });
+    expect((await new WhisperCppTranscriber({ binary: p, model: "m", beamSize: 5 }).transcribe(wav)).text).toBe("bs=5");
+    expect((await new WhisperCppTranscriber({ binary: p, model: "m" }).transcribe(wav)).text).toBe("nobs");
+    expect((await new WhisperCppTranscriber({ binary: p, model: "m", beamSize: 99 }).transcribe(wav)).text).toBe("bs=10");
   });
 });

@@ -67,20 +67,43 @@ export function decodeWav(bytes: Uint8Array): PcmAudio {
   throw new Error("WAV has no data chunk");
 }
 
-/** Box-filter downsampling (cheap anti-aliasing) or linear interpolation when upsampling. */
+const sinc = (x: number): number => (x === 0 ? 1 : Math.sin(Math.PI * x) / (Math.PI * x));
+
+/** Windowed-sinc kernel half-width, in input samples, for a given decimation ratio. */
+const halfWidth = (ratio: number): number => Math.ceil(5 * ratio);
+
+/**
+ * One output sample of a low-pass decimator: windowed-sinc FIR with its cut-off at 90 % of the OUTPUT Nyquist, so energy above it
+ * (which a plain average lets through and folds back into the speech band as aliasing) is removed. `get(i)` returns input sample i (0 outside).
+ */
+function decimateAt(get: (i: number) => number, center: number, ratio: number): number {
+  const W = halfWidth(ratio);
+  const fc = 0.9 / ratio;
+  let acc = 0;
+  let norm = 0;
+  for (let k = Math.ceil(center - W); k <= Math.floor(center + W); k++) {
+    const t = k - center;
+    const w = sinc(fc * t) * 0.5 * (1 + Math.cos((Math.PI * t) / W));
+    acc += w * get(k);
+    norm += w;
+  }
+  return norm ? acc / norm : 0;
+}
+
+/** Position (in input samples) of output sample n: the centre of the input interval it represents. */
+const centerOf = (n: number, ratio: number): number => (n + 0.5) * ratio - 0.5;
+
+/** Anti-aliased downsampling (windowed-sinc low-pass), or linear interpolation when upsampling. */
 export function resample({ samples, sampleRate }: PcmAudio, to = TARGET_SAMPLE_RATE): PcmAudio {
   if (sampleRate === to) return { samples, sampleRate };
   const ratio = sampleRate / to;
   const n = Math.floor(samples.length / ratio);
   const out = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    if (ratio > 1) {
-      const start = Math.floor(i * ratio);
-      const end = Math.min(samples.length, Math.floor((i + 1) * ratio));
-      let sum = 0;
-      for (let j = start; j < end; j++) sum += samples[j]!;
-      out[i] = end > start ? sum / (end - start) : 0;
-    } else {
+  if (ratio > 1) {
+    const get = (i: number): number => (i >= 0 && i < samples.length ? samples[i]! : 0);
+    for (let i = 0; i < n; i++) out[i] = decimateAt(get, centerOf(i, ratio), ratio);
+  } else {
+    for (let i = 0; i < n; i++) {
       const pos = i * ratio;
       const j = Math.floor(pos);
       const f = pos - j;
@@ -88,6 +111,40 @@ export function resample({ samples, sampleRate }: PcmAudio, to = TARGET_SAMPLE_R
     }
   }
   return { samples: out, sampleRate: to };
+}
+
+/**
+ * Level an utterance for the recogniser: whisper's features are amplitude-sensitive, so a quiet voice transcribes worse than the
+ * same words louder. Brings the voiced part to ~-22 dBFS RMS (at most +24 dB of gain, never clipping) and never amplifies pure noise.
+ */
+export function normalizeLoudness(a: PcmAudio, opts: { targetRms?: number; maxGainDb?: number } = {}): PcmAudio {
+  const target = opts.targetRms ?? 0.08;
+  const maxGain = 10 ** ((opts.maxGainDb ?? 24) / 20);
+  const frame = Math.max(1, Math.round(a.sampleRate * 0.03));
+  const voiced: number[] = [];
+  let peakFrame = 0;
+  const rmsFrames: number[] = [];
+  for (let i = 0; i + frame <= a.samples.length; i += frame) {
+    const r = rms(a.samples.subarray(i, i + frame));
+    rmsFrames.push(r);
+    peakFrame = Math.max(peakFrame, r);
+  }
+  for (const r of rmsFrames) if (r >= peakFrame * 0.25) voiced.push(r * r);
+  if (voiced.length === 0 || peakFrame < 0.002) return a; // silence/noise floor: leave it alone
+  const current = Math.sqrt(voiced.reduce((s, x) => s + x, 0) / voiced.length);
+  let peak = 0;
+  for (const x of a.samples) peak = Math.max(peak, Math.abs(x));
+  const gain = Math.min(maxGain, target / current, 0.97 / Math.max(peak, 1e-9));
+  if (Math.abs(gain - 1) < 0.02) return a;
+  return { samples: a.samples.map((x) => x * gain), sampleRate: a.sampleRate };
+}
+
+/** Silence around the clip: a recogniser cuts the first phoneme of audio that starts abruptly. */
+export function padSilence(a: PcmAudio, ms = 300): PcmAudio {
+  const pad = Math.round((a.sampleRate * ms) / 1000);
+  const out = new Float32Array(a.samples.length + 2 * pad);
+  out.set(a.samples, pad);
+  return { samples: out, sampleRate: a.sampleRate };
 }
 
 export const durationMs = (a: PcmAudio): number => Math.round((a.samples.length / a.sampleRate) * 1000);
@@ -112,7 +169,7 @@ export function hasSpeech(a: PcmAudio, opts: { threshold?: number; minFrames?: n
   return loud >= minFrames;
 }
 
-/** Streaming box-filter resampler for live microphone chunks: output n averages input samples [floor(n*r), floor((n+1)*r)). */
+/** Streaming version of `resample` (same filter, no state lost at chunk boundaries). Output lags the input by the filter half-width. */
 export class StreamResampler {
   private buf: number[] = [];
   /** Global index of buf[0]. */
@@ -125,18 +182,20 @@ export class StreamResampler {
   push(chunk: Float32Array): Float32Array {
     if (this.fromRate === this.toRate) return chunk;
     const ratio = this.fromRate / this.toRate;
+    const W = halfWidth(ratio);
     for (const x of chunk) this.buf.push(x);
+    const get = (i: number): number => {
+      const j = i - this.base;
+      return j >= 0 && j < this.buf.length ? this.buf[j]! : 0;
+    };
     const out: number[] = [];
     for (;;) {
-      const start = Math.floor(this.n * ratio);
-      const end = Math.floor((this.n + 1) * ratio);
-      if (end - this.base > this.buf.length) break;
-      let sum = 0;
-      for (let i = start; i < end; i++) sum += this.buf[i - this.base]!;
-      out.push(end > start ? sum / (end - start) : 0);
+      const c = centerOf(this.n, ratio);
+      if (Math.floor(c + W) >= this.base + this.buf.length) break; // wait for the samples the kernel still needs
+      out.push(decimateAt(get, c, ratio));
       this.n++;
     }
-    const keepFrom = Math.floor(this.n * ratio) - this.base;
+    const keepFrom = Math.floor(centerOf(this.n, ratio) - W) - this.base;
     if (keepFrom > 0) {
       this.buf = this.buf.slice(keepFrom);
       this.base += keepFrom;

@@ -1,4 +1,4 @@
-import { decodeWav, durationMs, hasSpeech, resample, TARGET_SAMPLE_RATE, encodeWav, type PcmAudio } from "./wav";
+import { decodeWav, durationMs, hasSpeech, normalizeLoudness, padSilence, resample, TARGET_SAMPLE_RATE, encodeWav, type PcmAudio } from "./wav";
 
 export const MIN_CLIP_MS = 300;
 /** Push-to-talk clips are short; the cap also keeps one IPC line under its size limit. */
@@ -46,7 +46,8 @@ export function prepareClip(wav: Uint8Array): { wav: Uint8Array; audio: PcmAudio
   if (ms < MIN_CLIP_MS) throw new VoiceRejected("too_short", "El audio es demasiado corto");
   if (ms > MAX_CLIP_MS) throw new VoiceRejected("too_long", `El audio supera ${MAX_CLIP_MS / 1000} s`);
   if (!hasSpeech(audio)) throw new VoiceRejected("silence", "No se detectó voz");
-  const norm = resample(audio, TARGET_SAMPLE_RATE);
+  // 16 kHz (anti-aliased), levelled, with a little silence around it: what the recogniser does best with.
+  const norm = padSilence(normalizeLoudness(resample(audio, TARGET_SAMPLE_RATE)));
   return { wav: encodeWav(norm), audio: norm, audioMs: ms };
 }
 

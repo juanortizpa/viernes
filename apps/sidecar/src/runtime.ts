@@ -49,9 +49,10 @@ export function makeCatalogLauncher(catalog: Pick<AppCatalog, "hasCommand" | "lo
  * instead of as a phonetically similar word. Kept short, since long prompts get regurgitated on noise.
  */
 export function defaultVoicePrompt(aliases: readonly string[], language: string): string | undefined {
-  const names = aliases.filter((a) => /^[\p{L}\p{N} ]{2,25}$/u.test(a)).slice(0, 6);
+  const names = aliases.filter((a) => /^[\p{L}\p{N} ]{2,25}$/u.test(a)).slice(0, 4);
   if (names.length === 0 || language === "en") return undefined;
-  return `Abre ${names.join(", abre ")}. ¿Qué hora es?`;
+  // One natural sentence (a list that repeats "abre" invites the model to loop on it).
+  return `Jarvis, abre ${names.join(", ")}.`;
 }
 
 export const OFFLINE_MODEL = "offline-echo";
@@ -184,12 +185,12 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
   const transcriber =
     deps.transcriber ??
     (config.voice
-      ? new WhisperCppTranscriber({ binary: config.voice.binary, model: config.voice.model, language: config.voice.language, threads: config.voice.threads, timeoutMs: config.voice.timeoutMs, prompt: config.voice.prompt ?? defaultVoicePrompt(Object.keys(config.apps), config.voice.language) })
+      ? new WhisperCppTranscriber({ binary: config.voice.binary, model: config.voice.model, language: config.voice.language, threads: config.voice.threads, timeoutMs: config.voice.timeoutMs, beamSize: config.voice.beamSize, prompt: config.voice.prompt ?? defaultVoicePrompt(Object.keys(config.apps), config.voice.language) })
       : undefined);
 
   const wakeTranscriber =
     config.voice?.wakeModel && !deps.transcriber
-      ? new WhisperCppTranscriber({ binary: config.voice.binary, model: config.voice.wakeModel, language: config.voice.language, threads: config.voice.threads, timeoutMs: config.voice.timeoutMs, prompt: "Jarvis." })
+      ? new WhisperCppTranscriber({ binary: config.voice.binary, model: config.voice.wakeModel, language: config.voice.language, threads: config.voice.threads, timeoutMs: config.voice.timeoutMs, beamSize: 1, prompt: "Jarvis." })
       : undefined;
 
   return {
