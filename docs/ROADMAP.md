@@ -113,6 +113,15 @@ exista algo visible, no solo logs.
 - [ ] Cargadores HumanEval/MBPP/SWE-bench-Lite (requieren sandbox real, contenedor)
 - [ ] Baseline RouteLLM real (Fase 6); varias muestras por celda para la varianza de muestreo
 
+## Propuesta: respuesta inmediata local (caché semántico + acuse) — sin fase asignada
+Idea del usuario: un modelo/caché muy liviano (<100 MB) que aprenda qué se pregunta seguido y cómo habla el usuario, responda
+al instante lo repetitivo (saludos) y, ante tareas largas, acuse rápido ("ya me pongo con eso") mientras el modelo real trabaja.
+- [ ] MVP: acuse inmediato por reglas/plantillas al enrutar una tarea larga (evento real, no progreso falso) y respuestas fijas
+      para saludos/cortesías. Cero entrenamiento, cero riesgo de alucinar
+- [ ] V2: caché semántico (embedding pequeño + similitud + umbral alto), solo para preguntas atemporales; con invalidación y
+      control del usuario (Fase 5)
+- [ ] Investigación: modelo de estilo/preferencias; medir tasa de acierto del caché y sus falsos positivos con el arnés
+
 ## Fase 4 — Shell y UI (3–4 semanas) ⬜
 - [ ] Isla con todos los estados reales; prompts de permiso; panel AI Economy
 - [ ] Cuervo con animaciones completas
@@ -163,3 +172,4 @@ exista algo visible, no solo logs.
 | 2026-10-04 | Inicio de Fase 3 (ADR-0013): `packages/harness` (suite semilla, sandbox, tabla contrafactual, replay, baselines, bootstrap, CLI). 163 tests. Corrida real con 4 modelos gratuitos (2.6B–550B): OpenRouter gratis corta a 50 peticiones/día, así que la tabla va en 68/172 celdas; el informe parcial no discrimina (tareas fáciles, 100 % en todos), lo cual es resultado de la muestra, no del router. Gemma gratis está limitada de forma persistente (429) y quedó fuera de la escalera del arnés. |
 | 2026-10-04 | Proveedores Groq (OpenAI-compatible, generalizado desde OpenRouter) y Google AI Studio (adaptador propio) + `ModelCapabilities.tier` para ordenar modelos de igual precio entre proveedores (ADR-0014). `harness list-models` y config de ejemplo multi-proveedor. 172 tests con `fetch` simulado. **Sin validar contra las APIs reales (faltan `GROQ_API_KEY` y `GEMINI_API_KEY` en el entorno).** Captura de cuotas de AI Studio del usuario: los modelos de texto (Gemini 2 Flash/Flash Lite) muestran límite 0/0 en esa cuenta y los "ilimitados" son Live API (audio en tiempo real), inutilizables para texto: hay que ver qué modelos de texto tienen cuota. |
 | 2026-10-04 | Claves de Groq y Gemini en el entorno: adaptadores Groq y Google **validados en vivo**. IDs de Llama de la config de ejemplo ya no existían; Gemini 2.5 no está disponible para cuentas nuevas. Modelos usables: gpt-oss-20b/120b y qwen3.8-27b (Groq); gemma-4-26b/31b, gemini-3.1/3.5-flash-lite (Google). Tabla contrafactual completa (7×43) e informe regenerado; un 500 transitorio de Gemma se reintentó. Pendiente: tareas más difíciles, probar herramientas con Groq/Google. |
+| 2026-10-04 | Propuesta de respuesta inmediata local (caché semántico + acuse) registrada con alcance MVP/V2/Investigación. |
