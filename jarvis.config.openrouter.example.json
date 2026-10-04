@@ -1,0 +1,20 @@
+{
+  "defaultModel": "openai/gpt-4o-mini",
+  "traceDb": "./.jarvis/traces.db",
+  "openrouter": {
+    "models": [
+      {
+        "model": "openai/gpt-4o-mini",
+        "provider": "openrouter",
+        "supportsVision": false,
+        "supportsTools": true,
+        "supportsStreaming": true,
+        "contextWindow": 128000,
+        "estimatedInputCost": 0.15,
+        "estimatedOutputCost": 0.6,
+        "expectedLatency": 800,
+        "isLocal": false
+      }
+    ]
+  }
+}
