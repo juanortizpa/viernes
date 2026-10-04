@@ -40,7 +40,7 @@ describe("LiveClient", () => {
     expect(client.status).toBe("connecting");
     socket.receive({ type: "hello.ok", protocol: 1, models: ["m"], offline: true });
     expect(client.status).toBe("ready");
-    expect(client.info).toEqual({ models: ["m"], offline: true });
+    expect(client.info).toEqual({ models: ["m"], offline: true, voice: false });
   });
 
   it("forwards only valid events and ignores garbage", async () => {
@@ -91,5 +91,24 @@ describe("LiveClient", () => {
     const c = await ready();
     c.socket.onclose?.();
     expect(c.client.status).toBe("unavailable");
+  });
+
+  it("sends voice clips and surfaces what the sidecar heard or rejected", async () => {
+    const { socket, client } = await ready();
+    const notices: unknown[] = [];
+    client.onVoice((n) => notices.push(n));
+    client.submitVoice("QUJD".repeat(40));
+    expect(socket.sent.at(-1)).toMatchObject({ type: "voice.submit" });
+    socket.receive({ type: "voice.transcribed", text: "hola", audioMs: 800, latencyMs: 300 });
+    socket.receive({ type: "voice.rejected", reason: "silence", message: "No se detectó voz" });
+    expect(notices).toEqual([
+      { kind: "transcribed", text: "hola", audioMs: 800, latencyMs: 300 },
+      { kind: "rejected", reason: "silence", message: "No se detectó voz" },
+    ]);
+  });
+
+  it("knows whether voice is available", async () => {
+    const h = await ready();
+    expect(h.client.info?.voice).toBe(false);
   });
 });

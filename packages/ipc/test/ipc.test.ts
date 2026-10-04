@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ClientMessage, LineDecoder, ServerMessage, encodeLine } from "../src";
+import { ClientMessage, LineDecoder, MAX_LINE_CHARS, ServerMessage, encodeLine } from "../src";
 
 describe("framing", () => {
   it("reassembles lines split across chunks and skips blanks", () => {
@@ -9,7 +9,8 @@ describe("framing", () => {
   });
 
   it("rejects an unterminated oversized line", () => {
-    expect(() => new LineDecoder().push("x".repeat(1_000_001))).toThrow();
+    expect(() => new LineDecoder().push("x".repeat(MAX_LINE_CHARS + 1))).toThrow();
+    expect(MAX_LINE_CHARS).toBeGreaterThanOrEqual(1_600_000); // must fit a 20 s voice clip as base64
   });
 
   it("encodes one message per line", () => {

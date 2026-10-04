@@ -11,6 +11,11 @@ export const ClientMessage = z.discriminatedUnion("type", [
     input: z.string().min(1).max(10_000),
     modality: z.enum(["text", "voice"]).default("text"),
   }),
+  /**
+   * Push-to-talk clip: base64 of a PCM16 WAV (<= 20 s). The sidecar transcribes it locally, answers with `voice.transcribed`,
+   * then runs the text as a voice task. Silence and unusable clips come back as `voice.rejected` and never reach the engine.
+   */
+  z.object({ type: z.literal("voice.submit"), audio: z.string().min(100).max(1_600_000), language: z.string().regex(/^(auto|[a-z]{2,3})$/).optional() }),
   /** Cancels every active task of this connection. */
   z.object({ type: z.literal("task.cancel") }),
   z.object({ type: z.literal("permission.answer"), requestId: z.string(), granted: z.boolean() }),
@@ -25,6 +30,14 @@ export const ServerMessage = z.discriminatedUnion("type", [
     models: z.array(z.string()),
     /** True when no real provider is configured and replies come from the local offline echo. */
     offline: z.boolean(),
+    /** A speech-to-text engine is configured, so push-to-talk can work. */
+    voice: z.boolean().default(false),
+  }),
+  z.object({ type: z.literal("voice.transcribed"), text: z.string(), audioMs: z.number(), latencyMs: z.number(), language: z.string().optional() }),
+  z.object({
+    type: z.literal("voice.rejected"),
+    reason: z.enum(["invalid", "too_short", "too_long", "silence", "empty", "unavailable", "failed", "cancelled"]),
+    message: z.string(),
   }),
   z.object({ type: z.literal("hello.error"), message: z.string() }),
   z.object({ type: z.literal("event"), event: OrchestratorEvent }),

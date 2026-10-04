@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { ClientMessage, IPC_VERSION, type ServerMessage } from "@jarvis/ipc";
 import type { EventBus, Orchestrator, PermissionResolver } from "@jarvis/core";
+import { VoiceRejected, prepareClip, type Transcriber } from "@jarvis/voice";
 
 export interface SidecarServerOptions {
   token: string;
@@ -9,6 +10,8 @@ export interface SidecarServerOptions {
   createOrchestrator: (io: { bus: EventBus; askPermission: PermissionResolver }) => Orchestrator;
   bus: EventBus;
   info: { models: string[]; offline: boolean };
+  /** Local speech-to-text. Without it, `voice.submit` is answered with `voice.rejected(unavailable)`. */
+  transcriber?: Transcriber;
   /** Unanswered permission prompts are denied after this long. */
   permissionTimeoutMs?: number;
   /** Called after a failed handshake; the host should drop the connection. */
@@ -54,7 +57,7 @@ export class SidecarServer {
         return this.fatal("handshake rejected");
       }
       this.authed = true;
-      return this.opts.send({ type: "hello.ok", protocol: IPC_VERSION, ...this.opts.info });
+      return this.opts.send({ type: "hello.ok", protocol: IPC_VERSION, ...this.opts.info, voice: this.opts.transcriber !== undefined });
     }
     if (!parsed.success) return this.opts.send({ type: "error", message: "invalid message" });
 
@@ -64,6 +67,8 @@ export class SidecarServer {
         return this.opts.send({ type: "error", message: "already authenticated" });
       case "task.submit":
         return this.submit(msg.input, msg.modality);
+      case "voice.submit":
+        return this.voice(msg.audio, msg.language);
       case "task.cancel":
         return this.cancelAll();
       case "permission.answer": {
@@ -94,6 +99,32 @@ export class SidecarServer {
       .then(() => undefined)
       .catch((e: unknown) => this.opts.send({ type: "error", message: e instanceof Error ? e.message : String(e) }))
       .finally(() => this.active.delete(entry));
+    this.active.add(entry);
+  }
+
+  /** Transcribe a push-to-talk clip, tell the UI what was heard, then run it as a voice task. */
+  private voice(audio: string, language: string | undefined): void {
+    const reject = (reason: Extract<ServerMessage, { type: "voice.rejected" }>["reason"], message: string): void =>
+      this.opts.send({ type: "voice.rejected", reason, message });
+    if (!this.opts.transcriber) return reject("unavailable", "El reconocimiento de voz no está configurado");
+    const transcriber = this.opts.transcriber;
+    const ac = new AbortController();
+    const entry = { ac, done: Promise.resolve() };
+    entry.done = (async () => {
+      try {
+        const clip = prepareClip(new Uint8Array(Buffer.from(audio, "base64")));
+        const t = await transcriber.transcribe(clip.wav, { language, signal: ac.signal });
+        if (ac.signal.aborted) return reject("cancelled", "Cancelado");
+        if (!t.text) return reject("empty", "No entendí nada");
+        this.opts.send({ type: "voice.transcribed", text: t.text, audioMs: t.audioMs, latencyMs: t.latencyMs, ...(t.language ? { language: t.language } : {}) });
+        this.submit(t.text.slice(0, 10_000), "voice");
+      } catch (e) {
+        if (ac.signal.aborted) return reject("cancelled", "Cancelado");
+        if (e instanceof VoiceRejected) return reject(e.reason, e.message);
+        this.opts.log?.(`transcription failed: ${e instanceof Error ? e.message : String(e)}`);
+        reject("failed", "No pude transcribir el audio");
+      }
+    })().finally(() => this.active.delete(entry));
     this.active.add(entry);
   }
 

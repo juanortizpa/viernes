@@ -28,6 +28,19 @@ export const Config = z.object({
     .default({}),
   /** Learn how the user talks (register, preference for brevity) from aggregate counts and add a fixed-phrase hint to the prompt (ADR-0015, R3). */
   styleProfile: z.boolean().default(true),
+  /**
+   * Local speech-to-text for push-to-talk (ADR-0016). Needs a whisper.cpp CLI binary and a ggml model that YOU provide;
+   * nothing is downloaded or built automatically. Audio never leaves the machine.
+   */
+  voice: z
+    .object({
+      binary: z.string().min(1),
+      model: z.string().min(1),
+      language: z.string().regex(/^(auto|[a-z]{2,3})$/).default("auto"),
+      threads: z.number().int().min(1).max(32).optional(),
+      timeoutMs: z.number().int().min(1_000).max(300_000).default(60_000),
+    })
+    .optional(),
   /** Refuse to start if any configured model has a non-zero price. */
   freeOnly: z.boolean().default(false),
   /** Discover installed apps (Windows Start Menu) so "abre X" works without hand-written aliases. */

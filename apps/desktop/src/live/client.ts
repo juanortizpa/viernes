@@ -5,7 +5,14 @@ export type LiveStatus = "idle" | "connecting" | "ready" | "unavailable";
 export interface LiveInfo {
   models: string[];
   offline: boolean;
+  /** Local speech-to-text is configured in the sidecar. */
+  voice: boolean;
 }
+
+/** What the sidecar tells the UI about a push-to-talk clip. */
+export type VoiceNotice =
+  | { kind: "transcribed"; text: string; audioMs: number; latencyMs: number }
+  | { kind: "rejected"; reason: string; message: string };
 
 export interface SocketLike {
   onopen: (() => void) | null;
@@ -40,6 +47,7 @@ export class LiveClient {
   lastError?: string;
   private socket?: SocketLike;
   private readonly eventListeners = new Set<(e: OrchestratorEvent) => void>();
+  private readonly voiceListeners = new Set<(n: VoiceNotice) => void>();
   private readonly statusListeners = new Set<() => void>();
 
   constructor(private readonly opts: LiveClientOptions = {}) {}
@@ -47,6 +55,11 @@ export class LiveClient {
   onEvent(l: (e: OrchestratorEvent) => void): () => void {
     this.eventListeners.add(l);
     return () => this.eventListeners.delete(l);
+  }
+
+  onVoice(l: (n: VoiceNotice) => void): () => void {
+    this.voiceListeners.add(l);
+    return () => this.voiceListeners.delete(l);
   }
 
   onStatus(l: () => void): () => void {
@@ -74,6 +87,11 @@ export class LiveClient {
 
   submit(input: string): void {
     this.send({ type: "task.submit", input, modality: "text" });
+  }
+
+  /** `wavBase64`: PCM16 mono WAV (<= 20 s) from the push-to-talk recorder. */
+  submitVoice(wavBase64: string): void {
+    this.send({ type: "voice.submit", audio: wavBase64 });
   }
 
   cancel(): void {
@@ -108,10 +126,12 @@ export class LiveClient {
       }
       const msg = parsed.data;
       if (msg.type === "hello.ok") {
-        this.info = { models: msg.models, offline: msg.offline };
+        this.info = { models: msg.models, offline: msg.offline, voice: msg.voice };
         this.setStatus("ready");
       } else if (msg.type === "hello.error") this.fail(msg.message);
       else if (msg.type === "error") this.lastError = msg.message;
+      else if (msg.type === "voice.transcribed") this.voiceListeners.forEach((l) => l({ kind: "transcribed", text: msg.text, audioMs: msg.audioMs, latencyMs: msg.latencyMs }));
+      else if (msg.type === "voice.rejected") this.voiceListeners.forEach((l) => l({ kind: "rejected", reason: msg.reason, message: msg.message }));
       else this.eventListeners.forEach((l) => l(msg.event));
     }
   }

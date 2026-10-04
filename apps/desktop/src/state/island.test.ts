@@ -82,3 +82,22 @@ describe("islandReducer", () => {
     expect(islandReducer({ ...initialState, mode: "error" }, { kind: "reset" })).toEqual(initialState);
   });
 });
+
+describe("islandReducer voice states (real mic / STT, not orchestrator progress)", () => {
+  it("listening follows the real input level and a new task clears it", () => {
+    let s = islandReducer(initialState, { kind: "voice.recording" });
+    expect(s).toMatchObject({ mode: "listening", level: 0 });
+    s = islandReducer(s, { kind: "voice.level", level: 0.6 });
+    expect(s.level).toBe(0.6);
+    s = islandReducer(s, { kind: "voice.transcribing" });
+    expect(s).toMatchObject({ mode: "thinking", headline: "Transcribiendo…" });
+    expect(s.level).toBeUndefined();
+    expect(islandReducer(s, { kind: "voice.level", level: 0.9 }).level).toBeUndefined(); // late chunk ignored
+    s = islandReducer(s, { kind: "voice.heard", text: "abre vscode" });
+    expect(s).toMatchObject({ headline: "Escuché", detail: "abre vscode" });
+  });
+
+  it("a rejected clip warns and is not shown as success", () => {
+    expect(islandReducer(initialState, { kind: "voice.rejected", message: "No se detectó voz" })).toMatchObject({ mode: "warning", headline: "No se detectó voz" });
+  });
+});

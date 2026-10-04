@@ -10,6 +10,7 @@ import {
   type FetchLike,
 } from "@jarvis/providers";
 import { AlwaysCheapestRouter, AlwaysPremiumRouter, AppCatalog, IntentRouter, MemoryTraceStore, Orchestrator, ResponseHeuristicEvaluator, RuleInstantResponder, SemanticCache, StyleTracker, instantControlRules, styleControlRules, RulesRouter, StaticRouter, type AliasStore, type InstantStore, type EventBus, type ModelRouter, type PermissionResolver, type TraceStore } from "@jarvis/core";
+import { WhisperCppTranscriber, type Transcriber } from "@jarvis/voice";
 import {
   ToolRegistry,
   filesRead,
@@ -58,6 +59,8 @@ export interface RuntimeDeps {
   aliases?: AliasStore;
   /** Where the semantic cache persists; in-memory when omitted. */
   instantStore?: InstantStore;
+  /** Overrides the configured speech-to-text engine (tests). */
+  transcriber?: Transcriber;
   /** Apps discovered on the machine; lowest-priority aliases. */
   scanned?: ScannedApp[];
 }
@@ -66,6 +69,8 @@ export interface Runtime {
   providers: ProviderRegistry;
   models: string[];
   offline: boolean;
+  /** Present when `voice` is configured (or injected for tests). */
+  transcriber?: Transcriber;
   createOrchestrator(io: { bus: EventBus; askPermission: PermissionResolver }): Orchestrator;
 }
 
@@ -151,8 +156,15 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
           : new StaticRouter(defaultModel);
   const traces = deps.traces ?? new MemoryTraceStore();
 
+  const transcriber =
+    deps.transcriber ??
+    (config.voice
+      ? new WhisperCppTranscriber({ binary: config.voice.binary, model: config.voice.model, language: config.voice.language, threads: config.voice.threads, timeoutMs: config.voice.timeoutMs })
+      : undefined);
+
   return {
     providers,
+    ...(transcriber ? { transcriber } : {}),
     models,
     offline,
     createOrchestrator: ({ bus, askPermission }) =>

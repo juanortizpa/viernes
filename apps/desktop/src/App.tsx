@@ -4,6 +4,8 @@ import { DemoPlayer } from "./demo/player";
 import { scenarios } from "./demo/scenarios";
 import { Island } from "./island/Island";
 import { LiveClient } from "./live/client";
+import { MicUnavailable, startMic, type MicSession } from "./voice/mic";
+import { toBase64 } from "./voice/pcm-buffer";
 import type { OrchestratorEvent } from "@jarvis/protocol";
 import { Raven } from "./raven/Raven";
 import type { Mode } from "./state/island";
@@ -14,12 +16,15 @@ const GALLERY: Mode[] = ["idle", "listening", "thinking", "executing", "permissi
 
 export default function App() {
   const [state, dispatch] = useReducer(islandReducer, initialState);
+  const stateRef = useRef(state);
+  stateRef.current = state;
   const player = useMemo(() => new DemoPlayer(), []);
   const live = useMemo(() => new LiveClient(), []);
   const collapseTimer = useRef<ReturnType<typeof setTimeout>>();
   const source = useRef<"demo" | "live">("demo");
   const [sourceLabel, setSourceLabel] = useState<"demo" | "live">("demo");
   const [input, setInput] = useState("");
+  const mic = useRef<{ session?: MicSession; wantStop: boolean; busy: boolean }>({ wantStop: false, busy: false });
   useSyncExternalStore(
     (cb) => live.onStatus(cb),
     () => live.status,
@@ -34,13 +39,88 @@ export default function App() {
     };
     const offDemo = player.subscribe(onEvent);
     const offLive = live.onEvent(onEvent);
+    const offVoice = live.onVoice((n) => {
+      clearTimeout(collapseTimer.current);
+      if (n.kind === "transcribed") dispatch({ kind: "voice.heard", text: n.text });
+      else {
+        dispatch({ kind: "voice.rejected", message: n.message });
+        collapseTimer.current = setTimeout(() => dispatch({ kind: "reset" }), 4500);
+      }
+    });
     if (!inTauri) void live.connect();
     return () => {
       offDemo();
       offLive();
+      offVoice();
       live.close();
     };
   }, [player, live]);
+
+  const warn = (message: string) => {
+    clearTimeout(collapseTimer.current);
+    dispatch({ kind: "voice.rejected", message });
+    collapseTimer.current = setTimeout(() => dispatch({ kind: "reset" }), 4500);
+  };
+
+  /** Push-to-talk: the microphone is open only while this is held. */
+  const startTalk = async () => {
+    const m = mic.current;
+    if (m.busy) return;
+    if (live.status !== "ready" || !live.info?.voice) return warn("Voz no configurada en el sidecar");
+    m.busy = true;
+    m.wantStop = false;
+    clearTimeout(collapseTimer.current);
+    player.stop();
+    source.current = "live"; // a real microphone and a real sidecar: never label this as a demo
+    setSourceLabel("live");
+    dispatch({ kind: "voice.recording" });
+    try {
+      m.session = await startMic((level) => dispatch({ kind: "voice.level", level }), () => void stopTalk());
+    } catch (e) {
+      m.busy = false;
+      return warn(e instanceof MicUnavailable ? e.message : "No se pudo abrir el micrófono");
+    }
+    if (m.wantStop) void stopTalk(); // released while the mic was still opening
+  };
+  const stopTalk = async (discard = false) => {
+    const m = mic.current;
+    if (!m.busy) return;
+    if (!m.session) {
+      m.wantStop = true;
+      return;
+    }
+    const session = m.session;
+    m.session = undefined;
+    m.busy = false;
+    const buffer = await session.stop();
+    if (discard) return dispatch({ kind: "reset" });
+    const wav = buffer.toWav();
+    if (!wav) return warn("Muy corto: mantén pulsado mientras hablas");
+    source.current = "live";
+    setSourceLabel("live");
+    dispatch({ kind: "voice.transcribing" });
+    live.submitVoice(toBase64(wav));
+  };
+
+  useEffect(() => {
+    const isTalkKey = (e: KeyboardEvent) => e.ctrlKey && e.code === "Space";
+    const down = (e: KeyboardEvent) => {
+      if (isTalkKey(e) && !e.repeat) (e.preventDefault(), void startTalk());
+      else if (e.key === "Escape") {
+        if (mic.current.busy) void stopTalk(true);
+        else if (stateRef.current.pending) answerPermission(false);
+      }
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.code === "Space" || e.key === "Control") void stopTalk();
+    };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+    };
+  });
 
   const answerPermission = (granted: boolean) => {
     if (source.current === "live" && state.pending) live.answerPermission(state.pending.requestId, granted);
@@ -101,6 +181,18 @@ export default function App() {
             disabled={live.status !== "ready"}
           />
           <button disabled={live.status !== "ready" || !input.trim()}>Enviar</button>
+          <button
+            type="button"
+            className={`mic${state.mode === "listening" ? " mic--on" : ""}`}
+            disabled={live.status !== "ready" || !live.info?.voice}
+            title={live.info?.voice ? "Mantén pulsado para hablar (o Ctrl+Espacio)" : "Voz no configurada: ver docs/adr/0016-voice-push-to-talk.md"}
+            aria-label="Pulsar para hablar"
+            onPointerDown={(e) => (e.currentTarget.setPointerCapture(e.pointerId), void startTalk())}
+            onPointerUp={() => void stopTalk()}
+            onPointerCancel={() => void stopTalk(true)}
+          >
+            🎙
+          </button>
         </form>
         <p className="muted small">
           Sidecar: {live.status === "ready" ? "conectado" : live.status === "connecting" ? "conectando…" : `no disponible${live.lastError ? ` (${live.lastError})` : ""} — solo escenarios demo`}

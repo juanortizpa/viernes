@@ -22,6 +22,8 @@ export interface IslandState {
   tokens: number;
   costUsd: number;
   escalations: number;
+  /** Real microphone level (0..1) while recording; undefined otherwise. */
+  level?: number;
 }
 
 export const initialState: IslandState = {
@@ -32,14 +34,35 @@ export const initialState: IslandState = {
   escalations: 0,
 };
 
-export type IslandAction = { kind: "event"; event: OrchestratorEvent } | { kind: "reset" };
+/** Voice actions mirror what the microphone and the STT engine are really doing; they are not orchestrator progress. */
+export type IslandAction =
+  | { kind: "event"; event: OrchestratorEvent }
+  | { kind: "reset" }
+  | { kind: "voice.recording" }
+  | { kind: "voice.level"; level: number }
+  | { kind: "voice.transcribing" }
+  | { kind: "voice.heard"; text: string }
+  | { kind: "voice.rejected"; message: string };
 
 /**
  * Pure reducer: OrchestratorEvent -> island state. This is the ONLY way the UI learns what
  * JARVIS is doing (ADR-0004), so nothing here can show progress that did not happen.
  */
 export function islandReducer(state: IslandState, action: IslandAction): IslandState {
-  if (action.kind === "reset") return initialState;
+  switch (action.kind) {
+    case "reset":
+      return initialState;
+    case "voice.recording":
+      return { ...initialState, mode: "listening", headline: "Escuchando…", detail: "Suelta para enviar", level: 0 };
+    case "voice.level":
+      return state.mode === "listening" ? { ...state, level: action.level } : state;
+    case "voice.transcribing":
+      return { ...state, mode: "thinking", headline: "Transcribiendo…", detail: undefined, level: undefined };
+    case "voice.heard":
+      return { ...state, mode: "thinking", headline: "Escuché", detail: action.text, level: undefined };
+    case "voice.rejected":
+      return { ...initialState, mode: "warning", headline: action.message };
+  }
   const e = action.event;
 
   switch (e.type) {

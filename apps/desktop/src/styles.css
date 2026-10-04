@@ -93,3 +93,7 @@ body { background: var(--bg); color: var(--fg); }
 .command button { padding: 10px 16px; border-radius: 8px; border: 1px solid #333a4a; background: #1b2030; color: inherit; cursor: pointer; }
 .command button:disabled { opacity: 0.5; cursor: not-allowed; }
 .small { font-size: 12px; }
+
+.mic { width: 44px; border-radius: 12px; font-size: 18px; cursor: pointer; touch-action: none; user-select: none; }
+.mic:disabled { opacity: 0.4; cursor: not-allowed; }
+.mic--on { background: #ff5d6c; color: #fff; box-shadow: 0 0 0 4px rgba(255, 93, 108, 0.35); }

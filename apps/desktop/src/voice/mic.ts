@@ -1,0 +1,52 @@
+import { PcmBuffer } from "./pcm-buffer";
+
+export interface MicSession {
+  /** Stops capture, releases the microphone and returns what was recorded. */
+  stop(): Promise<PcmBuffer>;
+}
+
+export class MicUnavailable extends Error {}
+
+/**
+ * Opens the microphone ONLY while the user holds push-to-talk and releases it on stop, so the OS "microphone in use"
+ * indicator is truthful. Calls `onLevel` with the real input level and `onFull` when the clip hits the maximum length.
+ */
+export async function startMic(onLevel: (level: number) => void, onFull: () => void): Promise<MicSession> {
+  if (!navigator.mediaDevices?.getUserMedia) throw new MicUnavailable("Este entorno no permite usar el micrófono");
+  let stream: MediaStream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+  } catch (e) {
+    throw new MicUnavailable(e instanceof DOMException && e.name === "NotAllowedError" ? "Permiso de micrófono denegado" : "No se pudo abrir el micrófono");
+  }
+  const ctx = new AudioContext();
+  try {
+    await ctx.audioWorklet.addModule("/capture-worklet.js");
+  } catch {
+    stream.getTracks().forEach((t) => t.stop());
+    await ctx.close();
+    throw new MicUnavailable("No se pudo iniciar la captura de audio");
+  }
+  const buffer = new PcmBuffer(ctx.sampleRate);
+  const source = ctx.createMediaStreamSource(stream);
+  const node = new AudioWorkletNode(ctx, "jarvis-capture", { numberOfInputs: 1, numberOfOutputs: 0 });
+  node.port.onmessage = (e: MessageEvent<Float32Array>) => {
+    buffer.push(e.data);
+    onLevel(Math.min(1, buffer.level * 6));
+    if (buffer.full) onFull();
+  };
+  source.connect(node);
+  let stopped = false;
+  return {
+    async stop() {
+      if (!stopped) {
+        stopped = true;
+        node.port.onmessage = null;
+        source.disconnect();
+        stream.getTracks().forEach((t) => t.stop());
+        await ctx.close();
+      }
+      return buffer;
+    },
+  };
+}

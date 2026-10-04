@@ -37,6 +37,7 @@ const server = new SidecarServer({
   bus,
   createOrchestrator: runtime.createOrchestrator,
   info: { models: runtime.models, offline: runtime.offline },
+  transcriber: runtime.transcriber,
   onFatal: () => setTimeout(() => process.exit(3), 50),
   log: (l) => console.error(`[sidecar] ${l}`),
 });

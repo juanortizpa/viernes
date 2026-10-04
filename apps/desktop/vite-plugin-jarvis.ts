@@ -33,7 +33,7 @@ export function jarvisBridge(): Plugin {
         res.end(JSON.stringify({ token }));
       });
 
-      const wss = new WebSocketServer({ noServer: true, maxPayload: 1_000_000 });
+      const wss = new WebSocketServer({ noServer: true, maxPayload: 2_000_000 });
       const attach = (ws: WebSocket): void => {
         const child = spawn(process.execPath, [tsxCli, main], {
           cwd: sidecarDir,

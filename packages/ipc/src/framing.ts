@@ -1,7 +1,7 @@
 /** One JSON message per line (NDJSON). Works over stdio, named pipes and WebSocket text frames. */
 export const encodeLine = (msg: unknown): string => JSON.stringify(msg) + "\n";
 
-export const MAX_LINE_CHARS = 1_000_000;
+export const MAX_LINE_CHARS = 2_000_000;
 
 /** Reassembles lines from arbitrary chunks. Throws if a single line exceeds the limit. */
 export class LineDecoder {
