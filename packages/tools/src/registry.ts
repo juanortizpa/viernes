@@ -15,6 +15,12 @@ export class ToolRegistry {
     return this.tools.get(name);
   }
 
+  /** A tool the model may call: it exists and is not reserved for the user's own commands. */
+  getForModel(name: string): AnyTool | undefined {
+    const t = this.tools.get(name);
+    return t && t.modelCallable !== false ? t : undefined;
+  }
+
   describe(tool: AnyTool): ToolDescriptor {
     return {
       name: tool.name,
@@ -28,5 +34,10 @@ export class ToolRegistry {
 
   list(): ToolDescriptor[] {
     return [...this.tools.values()].map((t) => this.describe(t));
+  }
+
+  /** What is offered to the model (see `Tool.modelCallable`). */
+  listForModel(): ToolDescriptor[] {
+    return [...this.tools.values()].filter((t) => t.modelCallable !== false).map((t) => this.describe(t));
   }
 }

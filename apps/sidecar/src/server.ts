@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { ClientMessage, IPC_VERSION, type ServerMessage } from "@jarvis/ipc";
 import type { EventBus, Orchestrator, PermissionResolver } from "@jarvis/core";
 import type { EconomySummary } from "@jarvis/protocol";
+import type { MemoryItemView } from "@jarvis/ipc";
 import { VoiceRejected, matchWakeWord, prepareClip, type Transcriber } from "@jarvis/voice";
 
 export interface SidecarServerOptions {
@@ -18,11 +19,20 @@ export interface SidecarServerOptions {
   wakeWords?: readonly string[];
   /** Aggregates the last `limit` stored traces; undefined when the trace store cannot be listed. */
   economy?: (limit: number) => EconomySummary | undefined;
+  /** The user's own view of long-term memory (ADR-0023). Without it, `memory.*` messages are answered as empty/off. */
+  memory?: MemoryControl;
   /** Unanswered permission prompts are denied after this long. */
   permissionTimeoutMs?: number;
   /** Called after a failed handshake; the host should drop the connection. */
   onFatal?: (reason: string) => void;
   log?: (line: string) => void;
+}
+
+export interface MemoryControl {
+  snapshot(): { enabled: boolean; conversationTurns: number; items: MemoryItemView[] };
+  forget(id: string): void;
+  clear(): void;
+  setEnabled(enabled: boolean): void;
 }
 
 const safeEqual = (a: string, b: string): boolean => {
@@ -75,6 +85,17 @@ export class SidecarServer {
         return this.submit(msg.input, msg.modality);
       case "wake.verify":
         return this.wake(msg.audio);
+      case "memory.get":
+        return this.memory();
+      case "memory.forget":
+        this.opts.memory?.forget(msg.id);
+        return this.memory();
+      case "memory.clear":
+        this.opts.memory?.clear();
+        return this.memory();
+      case "memory.toggle":
+        this.opts.memory?.setEnabled(msg.enabled);
+        return this.memory();
       case "economy.get":
         return this.opts.send({ type: "economy", summary: this.opts.economy?.(msg.limit) });
       case "voice.submit":
@@ -181,6 +202,11 @@ export class SidecarServer {
       }
     })().finally(() => this.active.delete(entry));
     this.active.add(entry);
+  }
+
+  private memory(): void {
+    const s = this.opts.memory?.snapshot() ?? { enabled: false, conversationTurns: 0, items: [] };
+    this.opts.send({ type: "memory", ...s });
   }
 
   private cancelAll(): void {

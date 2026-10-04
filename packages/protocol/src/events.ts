@@ -37,6 +37,16 @@ export const OrchestratorEvent = z.discriminatedUnion("type", [
     kind: z.enum(["reply", "cache", "ack"]),
     text: z.string(),
   }),
+  z.object({
+    ...base,
+    type: z.literal("context.used"),
+    /**
+     * What the assistant remembered for this request (ADR-0023): earlier turns of the current conversation and saved memories
+     * (their ids, never their text). Emitted only when something was really added to the model's prompt.
+     */
+    conversationTurns: z.number().int().nonnegative(),
+    memories: z.array(z.string()),
+  }),
   z.object({ ...base, type: z.literal("route.decided"), decision: RoutingDecision }),
   z.object({
     ...base,

@@ -214,3 +214,25 @@ Mientras tanto, prueba también: habla a ~20–30 cm del micrófono, sin fondo d
 | N6 | Desconecta internet y di "abre paint" | Funciona igual con el whisper local (más lento) |
 
 Dime en cuáles falla y qué mostró la isla en "Entendí/Escuché". Si quieres privacidad total: en `jarvis.config.json` pon `"voice": { "engine": "local", … }`.
+
+## I. Memoria (ADR-0023) **[probada en Linux con Groq real; sin probar en Windows]**
+
+`git pull` y abre `island.bat` (recompila solo). Todo se puede hacer escribiendo en la isla o por voz.
+
+| # | Haz | Esperado |
+|---|---|---|
+| M1 | «¿Quién ganó el mundial?» y, si te pregunta cuál, responde «masculino» | Responde sobre el mundial masculino (Argentina 2022). La isla muestra «💬 contexto: 1» |
+| M2 | «olvida esta conversación» y luego «masculino» | «Conversación olvidada.»; después ya no sabe a qué te refieres (es lo correcto) |
+| M3 | «recuerda que mi gato se llama Pelusa» | «Anotado: mi gato se llama Pelusa», con «0 tokens · sin LLM» (no pasa por ningún modelo) |
+| M4 | «¿cómo se llama mi gato?» | Responde Pelusa; la isla muestra «🧠 1 recuerdo» |
+| M5 | «¿cuál es la capital de Francia?» | París, **sin** «🧠» (no mete recuerdos que no vienen al caso) |
+| M6 | «recuerda que prefiero respuestas muy cortas» y luego cualquier pregunta | Respuestas cortas; «🧠» aparece siempre (las preferencias se aplican siempre) |
+| M7 | «recuerda que mi contraseña es algo123456» | Se niega: no guarda contraseñas ni tarjetas |
+| M8 | «qué recuerdas de mí» | Lista lo guardado |
+| M9 | ⚙ › Memoria | Cada recuerdo con su tipo (Dato/Preferencia) y cuántas veces se usó; ✕ lo olvida; «Borrar toda la memoria» pide un segundo clic |
+| M10 | «olvida que mi gato se llama Pelusa» y luego «¿cómo se llama mi gato?» | «Olvidado: … También olvidé la conversación en curso…»; después ya no lo sabe |
+| M11 | «borra toda mi memoria» | Pide permiso en la isla (Denegar por defecto); al permitir, la memoria queda vacía |
+| M12 | Cierra la isla (bandeja › Salir) y vuelve a abrirla | Los recuerdos siguen (`.jarvis\memory.db`); la conversación empezó de cero |
+
+Si algo responde raro, copia la pregunta exacta y lo que contestó: los fallos de recuperación se arreglan añadiendo el caso al
+corpus de `packages/harness/src/suites/memory-corpus.ts` y midiendo de nuevo (`pnpm --filter @jarvis/harness harness memory-eval`).

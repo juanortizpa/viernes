@@ -24,11 +24,30 @@ export const ClientMessage = z.discriminatedUnion("type", [
   z.object({ type: z.literal("wake.verify"), audio: z.string().min(100).max(1_600_000) }),
   /** Aggregate of the most recent stored traces, for the AI Economy panel. */
   z.object({ type: z.literal("economy.get"), limit: z.number().int().min(1).max(5000).default(500) }),
+  /**
+   * The user's own view and control of long-term memory (ADR-0023): every change is answered with a fresh `memory` message.
+   * These come from the user's clicks; the model has no way to send them.
+   */
+  z.object({ type: z.literal("memory.get") }),
+  z.object({ type: z.literal("memory.forget"), id: z.string().min(1).max(64) }),
+  z.object({ type: z.literal("memory.clear") }),
+  z.object({ type: z.literal("memory.toggle"), enabled: z.boolean() }),
   /** Cancels every active task of this connection. */
   z.object({ type: z.literal("task.cancel") }),
   z.object({ type: z.literal("permission.answer"), requestId: z.string(), granted: z.boolean() }),
 ]);
 export type ClientMessage = z.infer<typeof ClientMessage>;
+
+export const MemoryItemView = z.object({
+  id: z.string(),
+  kind: z.enum(["fact", "preference"]),
+  text: z.string(),
+  createdAt: z.number(),
+  /** Last time it was put into a prompt; absent if never. */
+  usedAt: z.number().optional(),
+  uses: z.number().int().nonnegative(),
+});
+export type MemoryItemView = z.infer<typeof MemoryItemView>;
 
 /** Sidecar -> UI/shell. `event` carries the one stream the UI renders from (ADR-0004). */
 export const ServerMessage = z.discriminatedUnion("type", [
@@ -43,6 +62,8 @@ export const ServerMessage = z.discriminatedUnion("type", [
     /** Speech engines in the order they are tried, e.g. ["groq:whisper-large-v3-turbo", "local"]. A "groq:" engine sends audio to Groq. */
     voiceEngines: z.array(z.string()).default([]),
   }),
+  /** Reply to every `memory.*` message: what is remembered, and whether memory is on. `conversationTurns` is the working memory of the current chat. */
+  z.object({ type: z.literal("memory"), enabled: z.boolean(), conversationTurns: z.number().int().nonnegative(), items: z.array(MemoryItemView) }),
   /** Reply to `economy.get`; `summary` is absent when the trace store cannot be listed. */
   z.object({ type: z.literal("economy"), summary: EconomySummary.optional() }),
   z.object({

@@ -160,3 +160,15 @@ html.tauri, html.tauri body { background: transparent; overflow: hidden; }
 .bench__modes { display: grid; gap: 4px; margin: 8px 0; }
 .bench__list { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 6px; }
 .bench__list li { display: flex; gap: 10px; align-items: center; }
+
+/* Memory panel (browser panel and island settings) */
+.memory { margin: 6px 0 12px; font-size: 13px; }
+.memory__summary { margin: 4px 0 8px; line-height: 1.4; }
+.memory__switch { display: block; margin: 6px 0; }
+.memory__list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; max-height: 220px; overflow-y: auto; }
+.memory__item { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 6px 8px; border-radius: 10px; background: rgba(255,255,255,.05); }
+.memory__text { min-width: 0; overflow-wrap: anywhere; line-height: 1.35; }
+.memory__kind { display: inline-block; padding: 0 6px; border-radius: 99px; font-size: 11px; font-weight: 600; background: rgba(93,225,255,.15); color: var(--accent); }
+.memory__kind--preference { background: rgba(255,180,84,.15); color: var(--warn); }
+.memory__confirm { margin: 8px 0; }
+.island-settings__title { margin: 14px 0 4px; font-size: 13px; }

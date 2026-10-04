@@ -26,6 +26,30 @@ export const Config = z.object({
       ttlDays: z.number().min(1).default(30),
     })
     .default({}),
+  /**
+   * What the assistant remembers (ADR-0023). `conversation`: the last exchanges of the current chat go to the model so a reply like
+   * "masculino" has context; RAM only, forgotten after `idleMinutes` of silence. `longTerm`: facts and preferences YOU ask it to
+   * remember ("recuerda que…"); relevant ones are added to the prompt of the model that answers (so they leave the machine with it).
+   */
+  memory: z
+    .object({
+      conversation: z
+        .object({
+          enabled: z.boolean().default(true),
+          maxTurns: z.number().int().min(1).max(30).default(8),
+          idleMinutes: z.number().min(1).max(240).default(20),
+        })
+        .default({}),
+      longTerm: z
+        .object({
+          enabled: z.boolean().default(true),
+          maxItems: z.number().int().min(10).max(1_000).default(200),
+          /** Relevance (0..1) a saved fact needs to be added to a prompt. */
+          minScore: z.number().min(0.3).max(1).default(0.55),
+        })
+        .default({}),
+    })
+    .default({}),
   /** Learn how the user talks (register, preference for brevity) from aggregate counts and add a fixed-phrase hint to the prompt (ADR-0015, R3). */
   styleProfile: z.boolean().default(true),
   /**

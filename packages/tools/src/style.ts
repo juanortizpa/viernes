@@ -25,6 +25,7 @@ export const makeStyleReset = (book: StyleBook): Tool<Record<string, never>, unk
   description: "Forget everything learned about how the user talks",
   risk: "reversible",
   reversible: true,
+  modelCallable: false,
   input: z.object({}).strict(),
   async run() {
     book.reset();
@@ -37,6 +38,7 @@ export const makeStyleToggle = (book: StyleBook): Tool<{ enabled: boolean }, unk
   description: "Enable or disable learning and applying the user's speaking style",
   risk: "reversible",
   reversible: true,
+  modelCallable: false,
   input: z.object({ enabled: z.boolean() }),
   async run({ enabled }) {
     book.setEnabled(enabled);

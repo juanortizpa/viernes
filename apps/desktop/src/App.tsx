@@ -3,7 +3,8 @@ import { initialState, islandReducer } from "./state/island";
 import { DemoPlayer } from "./demo/player";
 import { scenarios } from "./demo/scenarios";
 import { Island } from "./island/Island";
-import { LiveClient } from "./live/client";
+import { LiveClient, type MemorySnapshot } from "./live/client";
+import { MemoryPanel } from "./memory/MemoryPanel";
 import { isTauri, tauriTransport } from "./live/tauri-transport";
 import { IslandDock } from "./island/IslandDock";
 import { fitWindowTo } from "./shell/window-fit";
@@ -41,6 +42,7 @@ export default function App() {
   const [state, dispatch] = useReducer(islandReducer, initialState);
   const [economy, setEconomy] = useState<EconomySummary>();
   const [showEconomy, setShowEconomy] = useState(false);
+  const [memory, setMemory] = useState<MemorySnapshot>();
   const stateRef = useRef(state);
   stateRef.current = state;
   const player = useMemo(() => new DemoPlayer(), []);
@@ -154,12 +156,14 @@ export default function App() {
       taskSpeaker?.onEvent(event);
       dispatch({ kind: "event", event });
       const terminal = event.type === "task.finished" || event.type === "task.error";
-      if (event.type === "task.finished" && live.status === "ready") live.requestEconomy();
+      if (event.type === "task.finished" && live.status === "ready") (live.requestEconomy(), live.requestMemory()); // "recuerda que…" and usage counters change it
       if (terminal) scheduleReset(4500);
     };
     const offDemo = player.subscribe(onEvent);
     const offLive = live.onEvent(onEvent);
     const offEconomy = live.onEconomy(setEconomy);
+    const offMemory = live.onMemory(setMemory);
+    const offStatus = live.onStatus(() => live.status === "ready" && live.requestMemory());
     const offVoice = live.onVoice((n) => {
       clearTimeout(collapseTimer.current);
       if (n.kind === "transcribed") dispatch({ kind: "voice.heard", text: n.text, ...(n.engine ? { engine: n.engine } : {}), ...(n.heard ? { heard: n.heard } : {}) });
@@ -175,6 +179,8 @@ export default function App() {
       offLive();
       offVoice();
       offEconomy();
+      offMemory();
+      offStatus();
       live.close();
     };
   }, [player, live, taskSpeaker]);
@@ -381,6 +387,7 @@ export default function App() {
             audioDsp={audioDsp}
             onAudioDsp={chooseAudioDsp}
             pttShortcut={shell?.pttShortcut}
+            memory={<MemoryPanel memory={memory} onForget={(id) => live.forgetMemory(id)} onClear={() => live.clearMemory()} onToggle={(on) => live.setMemoryEnabled(on)} />}
             wake={
               <WakeSettings
                 enabled={wakeEnabled}
@@ -494,6 +501,13 @@ export default function App() {
           onToggle={chooseWake}
           onEnrollmentChanged={() => wakeEnabled && void startWake()}
         />
+
+        <h2>Memoria</h2>
+        {live.status === "ready" ? (
+          <MemoryPanel memory={memory} onForget={(id) => live.forgetMemory(id)} onClear={() => live.clearMemory()} onToggle={(on) => live.setMemoryEnabled(on)} />
+        ) : (
+          <p className="muted small">Disponible con el sidecar conectado.</p>
+        )}
 
         <BenchRecorder onBusy={(busy) => wakeRef.current?.setPaused(busy)} />
 

@@ -1,0 +1,2388 @@
+[
+  {
+    "model": "openai/gpt-oss-20b",
+    "samples": [
+      {
+        "arm": "A",
+        "q": "¿Cómo se llama mi gato?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 129,
+        "answer": "No lo sé."
+      },
+      {
+        "arm": "B",
+        "q": "¿Cómo se llama mi gato?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 166,
+        "answer": "Tu gato se llama Pelusa."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cómo se llama mi gato?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 533,
+        "answer": "Pelusa."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cómo se llama mi gato?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 129,
+        "answer": "Lo siento, no tengo información sobre el nombre de tu gato. ¿Podrías decirlo?"
+      },
+      {
+        "arm": "B",
+        "q": "¿Cómo se llama mi gato?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 166,
+        "answer": "Tu gato se llama Pelusa."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cómo se llama mi gato?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 533,
+        "answer": "Tu gato se llama Pelusa."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cuál es mi comida favorita?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 130,
+        "answer": "No tengo información sobre tus gustos personales. ¿Podrías decirme cuál es tu comida favorita?"
+      },
+      {
+        "arm": "B",
+        "q": "¿Cuál es mi comida favorita?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 164,
+        "answer": "Tu comida favorita es la bandeja paisa."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cuál es mi comida favorita?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 534,
+        "answer": "Tu comida favorita es la bandeja paisa."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cuál es mi comida favorita?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 130,
+        "answer": "No lo sé con certeza. ¿Cuál es tu comida favorita?"
+      },
+      {
+        "arm": "B",
+        "q": "¿Cuál es mi comida favorita?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 164,
+        "answer": "Tu comida favorita es la bandeja paisa."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cuál es mi comida favorita?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 534,
+        "answer": "Tu comida favorita es la bandeja paisa."
+      },
+      {
+        "arm": "A",
+        "q": "¿En qué ciudad vivo?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 129,
+        "answer": "No tengo acceso a esa información. Si necesitas ayuda con algo relacionado con tu ciudad, dime más y con gusto te ayudaré."
+      },
+      {
+        "arm": "B",
+        "q": "¿En qué ciudad vivo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 161,
+        "answer": "Bogotá."
+      },
+      {
+        "arm": "C",
+        "q": "¿En qué ciudad vivo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 533,
+        "answer": "Vives en Bogotá."
+      },
+      {
+        "arm": "A",
+        "q": "¿En qué ciudad vivo?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 129,
+        "answer": "Lo siento, pero no tengo forma de saber en qué ciudad vives. ¿Podrías indicármelo?"
+      },
+      {
+        "arm": "B",
+        "q": "¿En qué ciudad vivo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 161,
+        "answer": "Vives en Bogotá."
+      },
+      {
+        "arm": "C",
+        "q": "¿En qué ciudad vivo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 533,
+        "answer": "Vives en Bogotá."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cómo se llama mi pareja y a qué se dedica?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 134,
+        "answer": "Lo siento, pero no puedo ayudar con eso."
+      },
+      {
+        "arm": "B",
+        "q": "¿Cómo se llama mi pareja y a qué se dedica?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 168,
+        "answer": "Tu pareja se llama **Laura** y se dedica a la **veterinaria**."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cómo se llama mi pareja y a qué se dedica?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 538,
+        "answer": "Tu pareja se llama Laura y es veterinaria."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cómo se llama mi pareja y a qué se dedica?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 134,
+        "answer": "Lo siento, pero no puedo ayudar con eso."
+      },
+      {
+        "arm": "B",
+        "q": "¿Cómo se llama mi pareja y a qué se dedica?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 168,
+        "answer": "Tu pareja se llama **Laura** y es **veterinaria**."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cómo se llama mi pareja y a qué se dedica?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 538,
+        "answer": "Tu pareja se llama **Laura** y es **veterinaria**."
+      },
+      {
+        "arm": "A",
+        "q": "¿Qué día es mi cumpleaños?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 129,
+        "answer": "Lo siento, pero no tengo acceso a esa información."
+      },
+      {
+        "arm": "B",
+        "q": "¿Qué día es mi cumpleaños?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 162,
+        "answer": "Tu cumpleaños es el **3 de mayo**."
+      },
+      {
+        "arm": "C",
+        "q": "¿Qué día es mi cumpleaños?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 533,
+        "answer": "Tu cumpleaños es el **3 de mayo**. En 2026 cae en **lunes**."
+      },
+      {
+        "arm": "A",
+        "q": "¿Qué día es mi cumpleaños?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 129,
+        "answer": "Lo siento, pero no tengo información sobre tu cumpleaños. ¿Podrías indicarme la fecha?"
+      },
+      {
+        "arm": "B",
+        "q": "¿Qué día es mi cumpleaños?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 162,
+        "answer": "Tu cumpleaños es el **3 de mayo**."
+      },
+      {
+        "arm": "C",
+        "q": "¿Qué día es mi cumpleaños?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 533,
+        "answer": "Tu cumpleaños, el 3 de mayo, cae en **domingo**."
+      },
+      {
+        "arm": "A",
+        "q": "¿Soy alérgico a algo?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 132,
+        "answer": "No puedo determinar si eres alérgico a algo sin una evaluación médica adecuada. Si sientes síntomas de alergia (ronchas, picazón, hinchazón, dificultad para respirar, etc.), lo mejor es consultar a un médico o alergólogo. Ellos pueden hacer pruebas específicas (como pruebas de piel o análisis de sangre) para identificar los alérgenos."
+      },
+      {
+        "arm": "B",
+        "q": "¿Soy alérgico a algo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 173,
+        "answer": "Sí, eres alérgico a los mariscos y a la penicilina. Si sospechas otras alergias, lo mejor es consultar a un profesional."
+      },
+      {
+        "arm": "C",
+        "q": "¿Soy alérgico a algo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 536,
+        "answer": "Sí, eres alérgico a mariscos y a la penicilina."
+      },
+      {
+        "arm": "A",
+        "q": "¿Soy alérgico a algo?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 132,
+        "answer": "No puedo determinar si tienes alergias sin más información o pruebas médicas. Si notas síntomas como estornudos, picazón, hinchazón, dificultad para respirar o erupciones cutáneas después de estar cerca de ciertas sustancias, lo mejor es consultar a un médico o alergólogo. Ellos pueden solicitar pruebas de alergia (pruebas cutáneas, análisis de sangre, etc.) y ofrecerte un diagnóstico preciso y un plan de manejo."
+      },
+      {
+        "arm": "B",
+        "q": "¿Soy alérgico a algo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 173,
+        "answer": "Sí, eres alérgico a los mariscos y a la penicilina."
+      },
+      {
+        "arm": "C",
+        "q": "¿Soy alérgico a algo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 536,
+        "answer": "Sí, eres alérgico a los mariscos y a la penicilina."
+      },
+      {
+        "arm": "A",
+        "q": "¿Qué modelo de carro tengo?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 129,
+        "answer": "Lo siento, pero no tengo forma de saber qué modelo de carro tienes. Para ayudarte, necesitaría que me des más detalles, como la marca, el año, alguna característica distintiva o el número de serie (VIN). ¡Con esa información podré identificarlo!"
+      },
+      {
+        "arm": "B",
+        "q": "¿Qué modelo de carro tengo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 166,
+        "answer": "Tu carro es un **Mazda 3**."
+      },
+      {
+        "arm": "C",
+        "q": "¿Qué modelo de carro tengo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 533,
+        "answer": "Tienes un Mazda 3 rojo del 2018."
+      },
+      {
+        "arm": "A",
+        "q": "¿Qué modelo de carro tengo?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 129,
+        "answer": "No dispongo de información sobre tu vehículo. Si me indicas la marca, el año, alguna característica específica o el número de identificación del vehículo (VIN), podré ayudarte a identificar el modelo."
+      },
+      {
+        "arm": "B",
+        "q": "¿Qué modelo de carro tengo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 166,
+        "answer": "Tienes un Mazda 3 rojo del año 2018."
+      },
+      {
+        "arm": "C",
+        "q": "¿Qué modelo de carro tengo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 533,
+        "answer": "Tienes un Mazda 3 rojo del 2018."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cómo se llama mi jefe?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 129,
+        "answer": "Lo siento, pero no tengo esa información. ¿Podrías darme más detalles?"
+      },
+      {
+        "arm": "B",
+        "q": "¿Cómo se llama mi jefe?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 171,
+        "answer": "Carlos."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cómo se llama mi jefe?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 533,
+        "answer": "Tu jefe se llama **Carlos**."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cómo se llama mi jefe?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 129,
+        "answer": "No lo sé. Si me das más contexto, podré ayudarte."
+      },
+      {
+        "arm": "B",
+        "q": "¿Cómo se llama mi jefe?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 171,
+        "answer": "Tu jefe se llama Carlos."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cómo se llama mi jefe?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 533,
+        "answer": "Tu jefe se llama Carlos."
+      },
+      {
+        "arm": "A",
+        "q": "Quiero escribirle a mi hermana: ¿cómo se llama y qué le gusta tomar?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 141,
+        "answer": "Lo siento, pero no puedo ayudar con eso."
+      },
+      {
+        "arm": "B",
+        "q": "Quiero escribirle a mi hermana: ¿cómo se llama y qué le gusta tomar?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 191,
+        "answer": "Tu hermana se llama **Ana** y le encanta **el té verde**. Un ejemplo de mensaje: > “Hola Ana, solo quería recordarte que siempre me alegra cuando tomamos una taza de tu té verde favorito. ¡Te quiero mucho!”"
+      },
+      {
+        "arm": "C",
+        "q": "Quiero escribirle a mi hermana: ¿cómo se llama y qué le gusta tomar?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 545,
+        "answer": "Se llama **Ana** y le gusta tomar **té verde**."
+      },
+      {
+        "arm": "A",
+        "q": "Quiero escribirle a mi hermana: ¿cómo se llama y qué le gusta tomar?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 141,
+        "answer": "¡Claro! Aquí tienes un ejemplo breve y amigable que puedes enviarle a tu hermana: > **Hola [nombre de tu hermana],** > Solo quería saludarte y saber: > 1. ¿Cómo te llamas? > 2. ¿Qué te gusta beber? > ¡Espero tu respuesta! > Un abrazo. Puedes sustituir “[nombre de tu hermana]” por su nombre real si ya lo conoces, o dejarlo como una pregunta si aún no lo sabes. ¡Éxito con tu mensaje!"
+      },
+      {
+        "arm": "B",
+        "q": "Quiero escribirle a mi hermana: ¿cómo se llama y qué le gusta tomar?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 191,
+        "answer": "Tu hermana se llama **Ana** y le encanta tomar **té verde**."
+      },
+      {
+        "arm": "C",
+        "q": "Quiero escribirle a mi hermana: ¿cómo se llama y qué le gusta tomar?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 545,
+        "answer": "Tu hermana se llama **Ana** y le gusta tomar **té verde**."
+      },
+      {
+        "arm": "A",
+        "q": "What is my brother's name and where does he live?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 135,
+        "answer": "I’m sorry, but I can’t help with that."
+      },
+      {
+        "arm": "B",
+        "q": "What is my brother's name and where does he live?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 171,
+        "answer": "Your brother is **Daniel**, and he lives in **Toronto**."
+      },
+      {
+        "arm": "C",
+        "q": "What is my brother's name and where does he live?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 539,
+        "answer": "Tu hermano se llama Daniel y vive en Toronto."
+      },
+      {
+        "arm": "A",
+        "q": "What is my brother's name and where does he live?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 135,
+        "answer": "I’m sorry, but I can’t help with that."
+      },
+      {
+        "arm": "B",
+        "q": "What is my brother's name and where does he live?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 171,
+        "answer": "Your brother’s name is Daniel and he lives in Toronto."
+      },
+      {
+        "arm": "C",
+        "q": "What is my brother's name and where does he live?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 539,
+        "answer": "Your brother’s name is **Daniel**, and he lives in **Toronto**."
+      },
+      {
+        "arm": "A",
+        "q": "¿A qué hora voy al gimnasio?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "No tengo esa información. ¿A qué hora te gustaría ir al gimnasio?"
+      },
+      {
+        "arm": "B",
+        "q": "¿A qué hora voy al gimnasio?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 168,
+        "answer": "Vas al gimnasio a las 6 a.m. los martes y jueves."
+      },
+      {
+        "arm": "C",
+        "q": "¿A qué hora voy al gimnasio?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 535,
+        "answer": "Los martes y jueves vas al gimnasio a las 6 am."
+      },
+      {
+        "arm": "A",
+        "q": "¿A qué hora voy al gimnasio?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "Lo siento, pero no dispongo de tu agenda. ¿A qué hora planeas ir al gimnasio hoy?"
+      },
+      {
+        "arm": "B",
+        "q": "¿A qué hora voy al gimnasio?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 168,
+        "answer": "Los martes y jueves vas al gimnasio a las **6 am**."
+      },
+      {
+        "arm": "C",
+        "q": "¿A qué hora voy al gimnasio?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 535,
+        "answer": "Al gimnasio vas los martes y jueves a las **6 am**."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cómo tomo el café?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 128,
+        "answer": "Bebe tu café con la forma que prefieras: 1. Prepara la bebida (expreso, americano, con filtro, etc.). 2. Vierte en una taza, agrega azúcar, leche o crema si lo deseas. 3. Si te gusta, puedes aromatizar con especias o endulzante natural. 4. Toma sorbos lentamente, disfrutando de su aroma y sabor. ¡Salud!"
+      },
+      {
+        "arm": "B",
+        "q": "¿Cómo tomo el café?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 165,
+        "answer": "Tomas el café sin azúcar y con leche de avena."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cómo tomo el café?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 532,
+        "answer": "Como prefieres, tomas el café sin azúcar y con leche de avena. Simplemente prepara tu taza de café, añade la leche de avena y listo. ¡Disfrútalo!"
+      },
+      {
+        "arm": "A",
+        "q": "¿Cómo tomo el café?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 128,
+        "answer": "Para preparar un café sencillo: 1. **Elige tu método** - *Cafetera de goteo:* coloca café molido en el filtro, añade agua (aprox. 200 ml por taza). - *Prensa francesa:* añade café molido grueso, vierte agua caliente (no hirviendo), deja reposar 4 min y presiona. - *Espresso:* usa café finamente molido, llena el portafiltro y presiona con la máquina. 2. **Mide la proporción** - Generalmente 1 cucharada de café (≈10 g) por cada 180 ml de agua. 3. **Agua** - Usa agua fresca y limpia. La temperatura ideal es 90‑96 °C. 4. **Preparar** - Enciende la máquina, espera a que el café termine de salir. - Si lo prefieres, añade azúcar, leche o crema al gusto. 5. **Disfrutar** - Sirve inmediatamente, ya que el café pierde sabor con el tiempo. ¡Salud!"
+      },
+      {
+        "arm": "B",
+        "q": "¿Cómo tomo el café?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 165,
+        "answer": "Para disfrutar tu café sin azúcar y con leche de avena, sigue estos pasos: 1. **Prepara el café** - Usa tu método preferido (cafetera, prensa francesa, espresso, etc.). - Si es posible, ajusta la intensidad para que el sabor sea agradable sin endulzante. 2. **Añade la leche de avena** - Calienta la leche de avena a baja temperatura (no la sobrecalientes, para que no pierda su textura). - Vierte lentamente sobre el café hasta alcanzar la proporción deseada (generalmente 1/4 a 1/3 de leche, pero ajusta a tu gusto). 3. **Mezcla suavemente** - Revuelve con una cuchara o con un pequeño agitador para combinar los sabores sin crear demasiada espuma. 4. **Prueba y ajusta** - Si el café sigue siendo muy fuerte, agrega un poco más de leche de avena. - Si prefieres un toque más cremoso, prueba con leche de avena sin azúcar (la mayoría ya es baja en azúcar). 5. **Disfruta** - Bebe a temperatura ambiente o ligeramente tibio. - Si te gusta, añade especias (canela, nuez moscada) o una pizca de cacao sin azúcar para variar el sabor. ¡Salud!"
+      },
+      {
+        "arm": "C",
+        "q": "¿Cómo tomo el café?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 532,
+        "answer": "Tomas tu café sin azúcar y lo endulzas con leche de avena. Si lo preparas al estilo colombiano, lo sirves caliente; si prefieres un latte, mezcla el espresso con leche de avena al vapor. ¡Salud!"
+      },
+      {
+        "arm": "A",
+        "q": "¿Para qué estoy entrenando?",
+        "kind": "semantic-gap",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 130,
+        "answer": "Estás entrenando para: 1. **Mejorar tu rendimiento** (físico o mental) en lo que haces. 2. **Incrementar la salud** y el bienestar general. 3. **Desarrollar disciplina** y hábitos positivos. 4. **Superar retos** y alcanzar objetivos específicos. 5. **Mantener la motivación** y la autoconfianza."
+      },
+      {
+        "arm": "B",
+        "q": "¿Para qué estoy entrenando?",
+        "kind": "semantic-gap",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 130,
+        "answer": "Estás entrenando para mejorar tus habilidades, adquirir nuevos conocimientos y aumentar tu rendimiento en lo que elijas: puede ser físico, mental o profesional. El objetivo principal es progresar y alcanzar metas personales o de desarrollo."
+      },
+      {
+        "arm": "C",
+        "q": "¿Para qué estoy entrenando?",
+        "kind": "semantic-gap",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 534,
+        "answer": "Estás entrenando para participar en un medio maratón en octubre, con el objetivo de mejorar tu resistencia, salud cardiovascular y lograr un objetivo personal de rendimiento deportivo."
+      },
+      {
+        "arm": "A",
+        "q": "¿Para qué estoy entrenando?",
+        "kind": "semantic-gap",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 130,
+        "answer": "¿A qué te refieres exactamente con “entrenar”? - Si te refieres a un **entrenamiento físico**: mejora tu salud, fuerza, resistencia y bienestar general. - Si te refieres a un **entrenamiento profesional** (por ejemplo, aprender una nueva habilidad o certificación): aumenta tu valor en el mercado laboral, te prepara para roles más avanzados y mejora tu desempeño. - Si hablas de **entrenamiento de un modelo de IA** (como tú estás interactuando conmigo): se usa para afinar respuestas, comprender mejor el lenguaje y adaptarse a tareas específicas. En cualquier caso, el objetivo principal es crecer y obtener resultados concretos que te ayuden a alcanzar tus metas personales o profesionales."
+      },
+      {
+        "arm": "B",
+        "q": "¿Para qué estoy entrenando?",
+        "kind": "semantic-gap",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 130,
+        "answer": "Estás entrenando para: 1. **Mejorar tu rendimiento** – ya sea físico, mental o profesional, el entrenamiento aumenta tu capacidad y eficiencia. 2. **Desarrollar nuevas habilidades** – al practicar, consolidas técnicas o conocimientos que te permiten avanzar en tus metas. 3. **Mantener la salud** – el ejercicio físico regular previene enfermedades y mejora tu bienestar general. 4. **Fortalecer la disciplina y la perseverancia** – el entrenamiento constante refuerza hábitos positivos y la resiliencia frente a desafíos. En resumen, entrenas para crecer, estar más preparado y vivir una vida más saludable y productiva."
+      },
+      {
+        "arm": "C",
+        "q": "¿Para qué estoy entrenando?",
+        "kind": "semantic-gap",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 534,
+        "answer": "Estás entrenando para poder completar un **medio maratón en octubre**."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cuántos años tiene mi hija y a qué colegio va?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 136,
+        "answer": "Lo siento, pero no tengo esa información."
+      },
+      {
+        "arm": "B",
+        "q": "¿Cuántos años tiene mi hija y a qué colegio va?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 175,
+        "answer": "Tu hija Sofía tiene 6 años y asiste al colegio San José."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cuántos años tiene mi hija y a qué colegio va?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 540,
+        "answer": "Tu hija Sofía tiene 6 años y va al colegio San José."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cuántos años tiene mi hija y a qué colegio va?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 136,
+        "answer": "Lo siento, pero no puedo ayudar con eso."
+      },
+      {
+        "arm": "B",
+        "q": "¿Cuántos años tiene mi hija y a qué colegio va?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 175,
+        "answer": "Tu hija Sofía tiene 6 años y va al colegio San José."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cuántos años tiene mi hija y a qué colegio va?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 540,
+        "answer": "Tu hija Sofía tiene **6 años** y va al colegio **San José**."
+      },
+      {
+        "arm": "A",
+        "q": "¿Con qué empresa tengo mi plan de datos?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 133,
+        "answer": "Lo siento, pero no tengo acceso a la información de tu cuenta personal ni a los detalles de tu plan. Por favor, revisa la factura, la app de tu operador o envíame el número de cliente (si te sientes cómodo) para poder ayudarte."
+      },
+      {
+        "arm": "B",
+        "q": "¿Con qué empresa tengo mi plan de datos?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 182,
+        "answer": "Con Claro."
+      },
+      {
+        "arm": "C",
+        "q": "¿Con qué empresa tengo mi plan de datos?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 537,
+        "answer": "Con Claro."
+      },
+      {
+        "arm": "A",
+        "q": "¿Con qué empresa tengo mi plan de datos?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 133,
+        "answer": "No dispongo de acceso a tu información personal, así que no puedo decirte con certeza cuál es la compañía que te brinda tu plan de datos. Para averiguarlo, puedes: 1. Revisar el contrato o la factura que recibes cada mes. 2. Abrir la app o el sitio web de tu operador móvil y ver la sección “Planes” o “Datos”. 3. Si tienes dudas, llama a la línea de atención al cliente de tu operador; ellos podrán confirmarte la información. Si necesitas ayuda con otro tema, avísame."
+      },
+      {
+        "arm": "B",
+        "q": "¿Con qué empresa tengo mi plan de datos?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 182,
+        "answer": "Tienes un plan de datos de 20 GB con Claro."
+      },
+      {
+        "arm": "C",
+        "q": "¿Con qué empresa tengo mi plan de datos?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 537,
+        "answer": "Tienes tu plan de datos con **Claro**."
+      },
+      {
+        "arm": "A",
+        "q": "¿Qué lenguajes de programación uso?",
+        "kind": "semantic-gap",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "Para responder con precisión necesito un poco más de contexto. ¿A qué proyecto, entorno o experiencia te refieres?"
+      },
+      {
+        "arm": "B",
+        "q": "¿Qué lenguajes de programación uso?",
+        "kind": "semantic-gap",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "No dispongo de información específica sobre tu entorno de trabajo. Los lenguajes de programación más comunes que suelen utilizarse en la actualidad son: - **Python** – para scripts, data science, web y automatización. - **JavaScript / TypeScript** – desarrollo web frontend y backend (Node.js). - **Java** – aplicaciones empresariales, Android, backend. - **C/C++** – sistemas embebidos, rendimiento crítico. - **C#** – desarrollo en .NET, juegos con Unity. - **Go** – microservicios y sistemas distribuidos. - **Rust** – sistemas de alto rendimiento y seguridad. Si quieres una lista específica de los lenguajes que tú usas, por favor indícame tu stack tecnológico o los proyectos en los que trabajas."
+      },
+      {
+        "arm": "C",
+        "q": "¿Qué lenguajes de programación uso?",
+        "kind": "semantic-gap",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 535,
+        "answer": "Principalmente programas en **Python** y **TypeScript**."
+      },
+      {
+        "arm": "A",
+        "q": "¿Qué lenguajes de programación uso?",
+        "kind": "semantic-gap",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "Lo siento, no tengo información sobre tus hábitos de programación. Si me das más contexto, podré ayudarte."
+      },
+      {
+        "arm": "B",
+        "q": "¿Qué lenguajes de programación uso?",
+        "kind": "semantic-gap",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "No lo sé; ¿qué lenguajes usas normalmente?"
+      },
+      {
+        "arm": "C",
+        "q": "¿Qué lenguajes de programación uso?",
+        "kind": "semantic-gap",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 535,
+        "answer": "Programas principalmente en **Python** y **TypeScript**."
+      },
+      {
+        "arm": "A",
+        "q": "¿Puedo pedir ceviche esta noche? Responde sí o no y por qué.",
+        "kind": "semantic-gap",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 141,
+        "answer": "Sí, puedes pedir ceviche. Es un plato fresco, popular y suele estar disponible en la mayoría de los restaurantes de mariscos."
+      },
+      {
+        "arm": "B",
+        "q": "¿Puedo pedir ceviche esta noche? Responde sí o no y por qué.",
+        "kind": "semantic-gap",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 141,
+        "answer": "Sí. El ceviche es un plato fresco y ligero que suele prepararse con pescado o mariscos crudos, jugo de cítricos, cebolla, cilantro y ají, lo que lo hace ideal para una cena ligera y refrescante en la noche. Solo asegúrate de que el pescado o marisco esté fresco y de buena calidad para garantizar seguridad alimentaria."
+      },
+      {
+        "arm": "C",
+        "q": "¿Puedo pedir ceviche esta noche? Responde sí o no y por qué.",
+        "kind": "semantic-gap",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 545,
+        "answer": "No, porque eres alérgico a los mariscos y el ceviche está hecho principalmente de pescado o mariscos."
+      },
+      {
+        "arm": "A",
+        "q": "¿Puedo pedir ceviche esta noche? Responde sí o no y por qué.",
+        "kind": "semantic-gap",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 141,
+        "answer": "Sí, porque la mayoría de los restaurantes que sirven ceviche suelen estar abiertos hasta tarde, aunque la disponibilidad exacta depende de los horarios de tu establecimiento local."
+      },
+      {
+        "arm": "B",
+        "q": "¿Puedo pedir ceviche esta noche? Responde sí o no y por qué.",
+        "kind": "semantic-gap",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 141,
+        "answer": "Sí, puedes pedir ceviche esta noche, porque la mayoría de los restaurantes de comida latina y las plataformas de entrega están abiertas hasta la medianoche y suelen ofrecer ceviche como opción del menú."
+      },
+      {
+        "arm": "C",
+        "q": "¿Puedo pedir ceviche esta noche? Responde sí o no y por qué.",
+        "kind": "semantic-gap",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 545,
+        "answer": "No, no deberías pedir ceviche. El ceviche contiene pescado o mariscos, a los cuales eres alérgico, por lo que puede provocar una reacción adversa."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cuál es la capital de Francia?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "La capital de Francia es París."
+      },
+      {
+        "arm": "B",
+        "q": "¿Cuál es la capital de Francia?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "La capital de Francia es **París**."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cuál es la capital de Francia?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 535,
+        "answer": "La capital de Francia es París."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cuál es la capital de Francia?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "La capital de Francia es París."
+      },
+      {
+        "arm": "B",
+        "q": "¿Cuál es la capital de Francia?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "La capital de Francia es París."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cuál es la capital de Francia?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 535,
+        "answer": "La capital de Francia es París."
+      },
+      {
+        "arm": "A",
+        "q": "Explica qué es un closure en JavaScript en dos frases.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 136,
+        "answer": "Un closure es la combinación de una función y su entorno léxico, que permite que la función recuerde y acceda a variables externas aun cuando se ejecute fuera de su ámbito original. Este mecanismo facilita el encapsulamiento y la creación de funciones con estado privado."
+      },
+      {
+        "arm": "B",
+        "q": "Explica qué es un closure en JavaScript en dos frases.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 136,
+        "answer": "Un *closure* es una función que mantiene acceso a las variables de su entorno léxico, incluso después de que la función que la creó haya terminado de ejecutarse. Se forma cuando una función interna referencia variables de la función externa, creando un ámbito cerrado que persiste mientras la función interna exista."
+      },
+      {
+        "arm": "C",
+        "q": "Explica qué es un closure en JavaScript en dos frases.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 540,
+        "answer": "Un *closure* en JavaScript es la combinación de una función y el entorno léxico que la rodea, lo que le permite acceder a variables externas incluso después de que la función que las declaró haya terminado. Esta característica facilita crear funciones con “memoria”, manteniendo datos privados y persistentes entre invocaciones."
+      },
+      {
+        "arm": "A",
+        "q": "Explica qué es un closure en JavaScript en dos frases.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 136,
+        "answer": "Un *closure* en JavaScript es una función que recuerda el entorno léxico donde fue creada, incluso cuando se ejecuta fuera de ese ámbito. Esto permite que la función acceda y mantenga variables del alcance externo, lo que facilita la encapsulación y la creación de funciones de alto orden."
+      },
+      {
+        "arm": "B",
+        "q": "Explica qué es un closure en JavaScript en dos frases.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 136,
+        "answer": "Un *closure* en JavaScript es una función que conserva el acceso a las variables de su ámbito léxico incluso después de que la función externa haya terminado de ejecutarse. Esta característica permite encapsular datos y crear funciones con estado, facilitando patrones como módulos y funciones de fábrica."
+      },
+      {
+        "arm": "C",
+        "q": "Explica qué es un closure en JavaScript en dos frases.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 540,
+        "answer": "Un **closure** en JavaScript es la combinación de una función y las variables léxicamente accesibles en el momento en que se define, permitiendo que la función recuerde y utilice esas variables incluso después de que el contexto original haya terminado. Esto permite encapsular datos privados y crear funciones con estado que persiste entre llamadas."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cuánto es 17 por 23?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 132,
+        "answer": "17 × 23 = 391."
+      },
+      {
+        "arm": "B",
+        "q": "¿Cuánto es 17 por 23?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 132,
+        "answer": "391"
+      },
+      {
+        "arm": "C",
+        "q": "¿Cuánto es 17 por 23?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 536,
+        "answer": "17 × 23 = 391."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cuánto es 17 por 23?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 132,
+        "answer": "17 × 23 = 391."
+      },
+      {
+        "arm": "B",
+        "q": "¿Cuánto es 17 por 23?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 132,
+        "answer": "17 por 23 es 391."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cuánto es 17 por 23?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 536,
+        "answer": "17 × 23 = **391**"
+      },
+      {
+        "arm": "A",
+        "q": "Dame una receta corta de arepas.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 132,
+        "answer": "**Receta rápida de arepas** 1. **Ingredientes (para 4 arepas)** - 2 tazas de harina de maíz precocida (masarepa, harina PAN…) - 2 ½ tazas de agua tibia - 1 cucharadita de sal - 1 cucharada de aceite vegetal (opcional) 2. **Preparación** 1. En un bol grande mezcla la harina y la sal. 2. Añade poco a poco el agua tibia y mezcla con la mano o con una cuchara hasta que la masa quede húmeda pero no pegajosa. 3. Deja reposar 5 min. 4. Forma 4 bolas y aplánalas en forma de disco de ~1 cm de grosor. 5. Calienta una sartén antiadherente o una plancha a fuego medio. 6. Cocina cada arepa 2‑3 min por cada lado, o hasta que se dore y esté firme por dentro. 7. Opcional: pincela ligeramente con aceite antes de dorar. 3. **Servir** - Corta, rellena con queso, aguacate, carne mechada o lo que prefieras. ¡Disfruta!"
+      },
+      {
+        "arm": "B",
+        "q": "Dame una receta corta de arepas.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 132,
+        "answer": "**Arepas rápidas (para 4 personas)** **Ingredientes** - 2 tazas de harina de maíz precocida (masarepa) - 2 ½ tazas de agua tibia - 1 cucharadita de sal - 1–2 cucharadas de aceite vegetal (para la sartén) **Instrucciones** 1. En un bol grande, mezcla la harina y la sal. 2. Vierte el agua tibia poco a poco, amasando con las manos hasta obtener una masa homogénea, suave y ligeramente pegajosa (≈10 min). 3. Deja reposar la masa 5 min. 4. Forma 4 bolas de ⅝‑⅞ cm de grosor. 5. Calienta la sartén a fuego medio y agrega un poco de aceite. 6. Cocina cada arepa 2–3 min de cada lado, hasta que la superficie esté dorada y crujiente. 7. Si quieres un interior más esponjoso, corta un corte y abre un poco antes de servir. ¡Disfruta con tu relleno favorito!"
+      },
+      {
+        "arm": "C",
+        "q": "Dame una receta corta de arepas.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 536,
+        "answer": "**Arepas simples (2 personas)** 1. **Ingredientes** - 1 taza de harina precocida (masarepa) - 1 taza de agua tibia - 1 cucharadita de sal - 1 cucharada de aceite vegetal (opcional) 2. **Preparación** 1. En un tazón mezcla la harina con la sal. 2. Añade poco a poco el agua tibia y amasa hasta obtener una masa homogénea y que no se pegue. 3. Deja reposar 5 min. 4. Divide la masa en 4 bolas y aplánalas hasta que midan ~1 cm de grosor. 5. Calienta una sartén (puedes usar una plancha) con un poco de aceite y cocina cada arepa 4–5 min por lado, o hasta que esté dorada y haya una cavidad interna. 3. **Servir** - Abre la cavidad con un cuchillo y rellena con queso, aguacate, jamón, o lo que prefieras. ¡Disfruta!"
+      },
+      {
+        "arm": "A",
+        "q": "Dame una receta corta de arepas.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 132,
+        "answer": "**Arepas cortas (para 4 personas)** 1. **Ingredientes** - 2 tazas de harina de maíz precocida (arepa o Masarepa) - 2 tazas de agua tibia - 1 cucharadita de sal - 1 cucharada de aceite vegetal (para la masa y la sartén) 2. **Preparación** a. En un bol grande mezcla la harina con la sal. b. Agrega poco a poco el agua tibia y amasa con las manos hasta que la masa quede homogénea, suave y sin grumos. c. Deja reposar la masa 5 min. d. Forma bolas de unos 10 cm de diámetro y aplánalas con un rodillo a unos 1 cm de grosor. e. Calienta una sartén antiadherente con un chorrito de aceite a fuego medio. f. Fríe cada arepa 3 min de cada lado, o hasta que esté dorada y crujiente por fuera y tierna por dentro. g. Retira y deja reposar 2 min antes de servir. 3. **Servir** Sirve las arepas calientes acompañadas de queso rallado, aguacate, o tu relleno favorito. ¡Disfruta!"
+      },
+      {
+        "arm": "B",
+        "q": "Dame una receta corta de arepas.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 132,
+        "answer": "**Arepas (2-3 piezas medianas)** **Ingredientes** - 1 ½ taza de harina precocida (maíz blanco o amarillo) - 1 ½ taza de agua tibia - ½ cucharadita de sal - 1–2 cucharadas de aceite vegetal (para la tortilla) **Instrucciones** 1. **Mezcla**: En un recipiente, combina la harina y la sal. Poco a poco, agrega el agua tibia y amasa con las manos hasta obtener una masa homogénea, suave y sin grumos. La masa debe ser maleable; si está pegajosa, añade un poco más de harina. 2. **Forma**: Divide la masa en 2‑3 porciones y forma discos de 2‑3 cm de grosor. 3. **Cocina**: Calienta una sartén antiadherente a fuego medio y unta ligeramente con aceite. Coloca las arepas y cocina 4–5 min por lado, hasta que estén doradas y crujientes por fuera, y blanquecinas por dentro. 4. **Sirve**: Corta por la mitad y rellena con queso, carne, aguacate o lo que prefieras. ¡Listo! Disfruta de tus arepas recién hechas."
+      },
+      {
+        "arm": "C",
+        "q": "Dame una receta corta de arepas.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 536,
+        "answer": "**Receta rápida de arepas** **Ingredientes (para 4 arepas)** - 2 tazas de harina de maíz precocida (arepa) - 2 ½ tazas de agua tibia - 1 cucharadita de sal - 1-2 cucharadas de aceite vegetal (para freír o grillar) **Instrucciones** 1. **Mezclar**: En un tazón grande, combina la harina y la sal. Añade poco a poco el agua tibia, mezclando con la mano o una cuchara hasta obtener una masa homogénea, suave y sin grumos. 2. **Refrigerar**: Cubre la masa y deja reposar 10‑15 min. Esto facilita la formación de las arepas. 3. **Formar**: Con las manos húmedas, forma bolas de unos 90 mm de diámetro. Aplana cada bola con el pulgar hasta que quede una tortilla gruesa, de unos 2 cm. 4. **Cocinar**: - **En sartén**: Calienta el aceite a fuego medio. Coloca las arepas y cocina 3‑4 min por cada lado, hasta dorar y que se suelten fácilmente de la sartén. - **Opción grill**: Precalienta una plancha o parrilla a fuego medio y cocina 3‑4 min por lado, con un poco de aceite si lo deseas. 5. **Servir**: Corta por la mitad y rellena con tu relleno favorito: queso, aguacate, carne desmechada, huevo, etc. ¡Disfruta! ¡Listo! Una arepa deliciosa en menos de 30 min."
+      },
+      {
+        "arm": "A",
+        "q": "Write a haiku about the sea.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "Breezes kiss salt‑blue Waves cradle moonlit secrets, Shoreline hums, soft hush."
+      },
+      {
+        "arm": "B",
+        "q": "Write a haiku about the sea.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "Ocean waves whisper, Moonlight paints the endless blue, Night cradles the tide."
+      },
+      {
+        "arm": "C",
+        "q": "Write a haiku about the sea.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 535,
+        "answer": "Brisa del mar Ondas al mar murmuran Mares eternos"
+      },
+      {
+        "arm": "A",
+        "q": "Write a haiku about the sea.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "Silent waves whisper, Moonlight drips into deep blue— Ocean keeps its song."
+      },
+      {
+        "arm": "B",
+        "q": "Write a haiku about the sea.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "Waves hush in moonlight Salt breath kisses tide's old song Night swallows sea's breath"
+      },
+      {
+        "arm": "C",
+        "q": "Write a haiku about the sea.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 535,
+        "answer": "High mist lifts the sea Foam curls like silver ribbons Night falls over waves"
+      }
+    ]
+  },
+  {
+    "model": "openai/gpt-oss-120b",
+    "samples": [
+      {
+        "arm": "A",
+        "q": "¿Cómo se llama mi gato?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 129,
+        "answer": "No tengo información sobre el nombre de tu gato. ¿Quieres contarme más al respecto?"
+      },
+      {
+        "arm": "B",
+        "q": "¿Cómo se llama mi gato?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 166,
+        "answer": "Tu gato se llama Pelusa."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cómo se llama mi gato?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 533,
+        "answer": "Tu gato se llama **Pelusa**."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cómo se llama mi gato?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 129,
+        "answer": "No lo sé. ¿Podrías decirme cómo se llama?"
+      },
+      {
+        "arm": "B",
+        "q": "¿Cómo se llama mi gato?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 166,
+        "answer": "Tu gato se llama Pelusa."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cómo se llama mi gato?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 789,
+        "answer": "Tu gato se llama Pelusa."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cuál es mi comida favorita?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 130,
+        "answer": "No lo sé. ¿Podrías decírmelo?"
+      },
+      {
+        "arm": "B",
+        "q": "¿Cuál es mi comida favorita?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 164,
+        "answer": "Tu comida favorita es la bandeja paisa."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cuál es mi comida favorita?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 1046,
+        "answer": "Tu comida favorita es la bandeja paisa."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cuál es mi comida favorita?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 130,
+        "answer": "No lo sé, ¿cuál es tu comida favorita?"
+      },
+      {
+        "arm": "B",
+        "q": "¿Cuál es mi comida favorita?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 164,
+        "answer": "Tu comida favorita es la bandeja paisa."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cuál es mi comida favorita?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 1046,
+        "answer": "Tu comida favorita es la bandeja paisa."
+      },
+      {
+        "arm": "A",
+        "q": "¿En qué ciudad vivo?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 129,
+        "answer": "No sé en qué ciudad vives."
+      },
+      {
+        "arm": "B",
+        "q": "¿En qué ciudad vivo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 161,
+        "answer": "Vives en Bogotá."
+      },
+      {
+        "arm": "C",
+        "q": "¿En qué ciudad vivo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 533,
+        "answer": "Vives en Bogotá."
+      },
+      {
+        "arm": "A",
+        "q": "¿En qué ciudad vivo?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 129,
+        "answer": "No tengo información sobre tu ubicación, por lo que no sé en qué ciudad vives."
+      },
+      {
+        "arm": "B",
+        "q": "¿En qué ciudad vivo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 161,
+        "answer": "Vives en Bogotá."
+      },
+      {
+        "arm": "C",
+        "q": "¿En qué ciudad vivo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 533,
+        "answer": "Vives en Bogotá."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cómo se llama mi pareja y a qué se dedica?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 134,
+        "answer": "Lo siento, pero no dispongo de esa información."
+      },
+      {
+        "arm": "B",
+        "q": "¿Cómo se llama mi pareja y a qué se dedica?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 168,
+        "answer": "Tu pareja se llama Laura y es veterinaria."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cómo se llama mi pareja y a qué se dedica?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 538,
+        "answer": "Tu pareja se llama Laura y trabaja como veterinaria."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cómo se llama mi pareja y a qué se dedica?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 134,
+        "answer": "No dispongo de esa información. Si deseas compartir más detalles, con gusto intentaré ayudarte en lo que necesites."
+      },
+      {
+        "arm": "B",
+        "q": "¿Cómo se llama mi pareja y a qué se dedica?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 168,
+        "answer": "Tu pareja se llama Laura y es veterinaria."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cómo se llama mi pareja y a qué se dedica?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 538,
+        "answer": "Tu pareja se llama **Laura** y se dedica a la **veterinaria**."
+      },
+      {
+        "arm": "A",
+        "q": "¿Qué día es mi cumpleaños?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 129,
+        "answer": "No tengo esa información. ¿Podrías decirme cuál es la fecha de tu cumpleaños?"
+      },
+      {
+        "arm": "B",
+        "q": "¿Qué día es mi cumpleaños?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 162,
+        "answer": "Tu cumpleaños es el 3 de mayo."
+      },
+      {
+        "arm": "C",
+        "q": "¿Qué día es mi cumpleaños?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 533,
+        "answer": "Tu cumpleaños es el 3 de mayo."
+      },
+      {
+        "arm": "A",
+        "q": "¿Qué día es mi cumpleaños?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 129,
+        "answer": "No tengo esa información. Si me la compartes, con gusto la recuerdo para futuras conversaciones."
+      },
+      {
+        "arm": "B",
+        "q": "¿Qué día es mi cumpleaños?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 162,
+        "answer": "Tu cumpleaños es el 3 de mayo."
+      },
+      {
+        "arm": "C",
+        "q": "¿Qué día es mi cumpleaños?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 1045,
+        "answer": "Tu cumpleaños es el 3 de mayo."
+      },
+      {
+        "arm": "A",
+        "q": "¿Soy alérgico a algo?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 132,
+        "answer": "No tengo información sobre tu historial médico, por lo que no puedo determinar si eres alérgico a algo. Si experimentas síntomas como picazón, sarpullido, congestión, dificultad para respirar u otros después de consumir ciertos alimentos, usar productos específicos o estar en ciertos entornos, lo más seguro es consultar a un médico o alergólogo. Ellos pueden realizar pruebas y evaluaciones para identificar posibles alergias."
+      },
+      {
+        "arm": "B",
+        "q": "¿Soy alérgico a algo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 173,
+        "answer": "Sí, eres alérgico a los mariscos y a la penicilina."
+      },
+      {
+        "arm": "C",
+        "q": "¿Soy alérgico a algo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 536,
+        "answer": "Sí, eres alérgico a los mariscos y a la penicilina."
+      },
+      {
+        "arm": "A",
+        "q": "¿Soy alérgico a algo?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 132,
+        "answer": "No puedo saberlo sin información médica específica. Si tienes síntomas como picazón, sarpullido, estornudos, dificultad para respirar o hinchazón después de consumir ciertos alimentos, usar productos o estar en ciertos ambientes, lo mejor es que lo consultes con un profesional de la salud. ¿Podrías describir los síntomas que experimentas y en qué situaciones aparecen? Así podré orientarte mejor."
+      },
+      {
+        "arm": "B",
+        "q": "¿Soy alérgico a algo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 173,
+        "answer": "Sí, eres alérgico a los mariscos y a la penicilina."
+      },
+      {
+        "arm": "C",
+        "q": "¿Soy alérgico a algo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 536,
+        "answer": "Sí, eres alérgico a los mariscos y a la penicilina."
+      },
+      {
+        "arm": "A",
+        "q": "¿Qué modelo de carro tengo?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 129,
+        "answer": "Para poder identificar el modelo de tu carro necesito más información. ¿Podrías indicarme la marca, el año de fabricación y/o alguna característica distintiva (por ejemplo, tipo de motor, número de puertas, color, etc.)? Con esos datos podré ayudarte a determinar el modelo exacto."
+      },
+      {
+        "arm": "B",
+        "q": "¿Qué modelo de carro tengo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 166,
+        "answer": "Tienes un Mazda 3 rojo del año 2018."
+      },
+      {
+        "arm": "C",
+        "q": "¿Qué modelo de carro tengo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 1045,
+        "answer": "Tienes un **Mazda 3 rojo del 2018**."
+      },
+      {
+        "arm": "A",
+        "q": "¿Qué modelo de carro tengo?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 129,
+        "answer": "Para poder identificar el modelo de tu carro necesito más información. ¿Podrías indicarme al menos la marca, el año y alguna característica distintiva (por ejemplo, tipo de motor, número de puertas o algún detalle del interior/exterior)? Con esos datos podré ayudarte a determinar el modelo exacto."
+      },
+      {
+        "arm": "B",
+        "q": "¿Qué modelo de carro tengo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 166,
+        "answer": "Tienes un Mazda 3 rojo del 2018."
+      },
+      {
+        "arm": "C",
+        "q": "¿Qué modelo de carro tengo?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 1045,
+        "answer": "Tienes un Mazda 3 rojo del 2018."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cómo se llama mi jefe?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 129,
+        "answer": "Lo siento, pero no tengo información sobre el nombre de tu jefe. ¿Hay algo más en lo que pueda ayudarte?"
+      },
+      {
+        "arm": "B",
+        "q": "¿Cómo se llama mi jefe?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 171,
+        "answer": "Tu jefe se llama Carlos."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cómo se llama mi jefe?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 533,
+        "answer": "Tu jefe se llama Carlos."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cómo se llama mi jefe?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 129,
+        "answer": "No dispongo de esa información. ¿Podrías darme más detalles?"
+      },
+      {
+        "arm": "B",
+        "q": "¿Cómo se llama mi jefe?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 171,
+        "answer": "Tu jefe se llama Carlos."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cómo se llama mi jefe?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 533,
+        "answer": "Tu jefe se llama Carlos."
+      },
+      {
+        "arm": "A",
+        "q": "Quiero escribirle a mi hermana: ¿cómo se llama y qué le gusta tomar?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 141,
+        "answer": "¡Claro! Aquí tienes un mensaje listo para enviarle a tu hermana. Solo remplaza **[Nombre]** por su nombre y, si quieres, añade algún detalle personal: --- **Mensaje:** > Hola **[Nombre]**, > > ¿Cómo estás? > Me estaba preguntando, ¿qué te gusta tomar (bebida favorita, café, té, jugo…)? > > ¡Cuéntame! --- Si prefieres algo más informal o con otro tono, dime y lo ajustamos."
+      },
+      {
+        "arm": "B",
+        "q": "Quiero escribirle a mi hermana: ¿cómo se llama y qué le gusta tomar?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 191,
+        "answer": "Tu hermana se llama **Ana** y le encanta tomar **té verde**."
+      },
+      {
+        "arm": "C",
+        "q": "Quiero escribirle a mi hermana: ¿cómo se llama y qué le gusta tomar?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 545,
+        "answer": "Tu hermana se llama **Ana** y le encanta tomar **té verde**."
+      },
+      {
+        "arm": "A",
+        "q": "Quiero escribirle a mi hermana: ¿cómo se llama y qué le gusta tomar?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 141,
+        "answer": "Lo siento, pero no puedo ayudar con eso."
+      },
+      {
+        "arm": "B",
+        "q": "Quiero escribirle a mi hermana: ¿cómo se llama y qué le gusta tomar?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 191,
+        "answer": "Su hermana se llama **Ana** y le gusta tomar **té verde**."
+      },
+      {
+        "arm": "C",
+        "q": "Quiero escribirle a mi hermana: ¿cómo se llama y qué le gusta tomar?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 545,
+        "answer": "Tu hermana se llama **Ana** y le encanta tomar **té verde**."
+      },
+      {
+        "arm": "A",
+        "q": "What is my brother's name and where does he live?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 135,
+        "answer": "I’m sorry, but I don’t have that information."
+      },
+      {
+        "arm": "B",
+        "q": "What is my brother's name and where does he live?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 171,
+        "answer": "Your brother’s name is Daniel, and he lives in Toronto."
+      },
+      {
+        "arm": "C",
+        "q": "What is my brother's name and where does he live?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 539,
+        "answer": "Tu hermano se llama **Daniel** y vive en **Toronto**."
+      },
+      {
+        "arm": "A",
+        "q": "What is my brother's name and where does he live?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 135,
+        "answer": "I’m sorry, but I can’t help with that."
+      },
+      {
+        "arm": "B",
+        "q": "What is my brother's name and where does he live?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 171,
+        "answer": "Your brother’s name is Daniel, and he lives in Toronto."
+      },
+      {
+        "arm": "C",
+        "q": "What is my brother's name and where does he live?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 539,
+        "answer": "Tu hermano se llama Daniel y vive en Toronto."
+      },
+      {
+        "arm": "A",
+        "q": "¿A qué hora voy al gimnasio?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "¿A qué hora te gustaría ir? Déjame saber tus horarios disponibles y tus preferencias (por ejemplo, antes o después del trabajo) y te sugiero el mejor momento."
+      },
+      {
+        "arm": "B",
+        "q": "¿A qué hora voy al gimnasio?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 168,
+        "answer": "Vas al gimnasio a las 6 a.m. los martes y jueves."
+      },
+      {
+        "arm": "C",
+        "q": "¿A qué hora voy al gimnasio?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 1047,
+        "answer": "Vas al gimnasio los martes y jueves a las 6 a. m."
+      },
+      {
+        "arm": "A",
+        "q": "¿A qué hora voy al gimnasio?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "¡Hola! No tengo tu agenda, así que dime un poco más sobre tu rutina: - ¿Trabajas o estudias en horarios fijos? - ¿ Prefieres entrenar temprano, al mediodía o por la tarde/noche? - ¿Cuántas veces a la semana quieres ir al gimnasio? Con esos datos podré sugerirte la hora más adecuada."
+      },
+      {
+        "arm": "B",
+        "q": "¿A qué hora voy al gimnasio?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 168,
+        "answer": "Vas al gimnasio los martes y jueves a las 6 a. m."
+      },
+      {
+        "arm": "C",
+        "q": "¿A qué hora voy al gimnasio?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 535,
+        "answer": "Vas al gimnasio los martes y jueves a las 6 a.m."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cómo tomo el café?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 128,
+        "answer": "¡Claro! Aquí tienes algunas recomendaciones para disfrutar el café al máximo: 1. **Elige el método de preparación** - **Filtro o prensa francesa**: ideal para sabores suaves y equilibrados. - **Espresso**: concentrado y potente, base de muchas bebidas. - **Aeropress**: rápido y versátil, buen equilibrio entre cuerpo y acidez. 2. **Controla la temperatura** - El agua debe estar entre **90 °C y 96 °C**. Evita el agua hirviendo (≈100 °C), ya que puede quemar los granos y dar amargor. 3. **Proporción café‑agua** - Aproximadamente **1 g de café por cada 15‑18 ml de agua** (≈55 g por litro). Ajusta según tu gusto: menos agua → café más fuerte. 4. **Tiempo de extracción** - **Filtro**: 3‑4 min. - **Prensa francesa**: 4‑5 min antes de presionar. - **Espresso**: 25‑30 s. - **Aeropress**: 1‑2 min. 5. **Personaliza (opcional)** - **Leche o crema**: añádela caliente o fría según la bebida. - **Endulzantes**: azúcar, miel, stevia o sirope de agave. - **Especias**: canela, nuez moscada o cacao en polvo para dar aroma. 6. **Momento del día** - **Mañana**: café más intenso (espresso, ristretto). - **Tarde**: versiones más ligeras (café filtrado, con leche). - Evita consumirlo después de las 17 h si eres sensible a la cafeína. 7. **Disfruta con atención** - Huele los aromas antes de beber. - Toma un sorbo pequeño, deja que el café cubra toda la lengua y percibe los sabores (ácido, dulce, amargo, cuerpo). ¡Listo! Con estos pasos podrás tomar tu café de forma deliciosa y consciente. ☕️"
+      },
+      {
+        "arm": "B",
+        "q": "¿Cómo tomo el café?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 165,
+        "answer": "Según lo que me indicaste, tomas el café sin azúcar y con leche de avena."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cómo tomo el café?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 788,
+        "answer": "Tomas el café sin azúcar y con leche de avena."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cómo tomo el café?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 128,
+        "answer": "¡Claro! Aquí tienes algunas formas clásicas y consejos rápidos para disfrutar el café: 1. **Solo (espresso o filtrado)** - **Sin nada añadido**: permite apreciar los aromas y sabores propios del grano. - **Temperatura**: entre 60‑70 °C para no quemar el paladar. 2. **Con leche** - **Café con leche** (1/3 café, 2/3 leche caliente). - **Capuchino** (espresso + 1 parte de leche vaporizada + 1 parte de espuma). - **Latte** (más leche que espuma, ideal para sabores suaves). 3. **Con endulzante** - **Azúcar o edulcorante** al gusto. - **Jarabe** (vainilla, avellana, caramelo) para darle un toque gourmet. 4. **A la fría** - **Café helado**: prepara café fuerte, enfríalo y sírvelo con hielo. - **Cold brew**: infusión en frío 12‑24 h; menos acidez y más suavidad. 5. **Consejos de consumo** - **No tomes en exceso**: 3‑4 tazas al día (≈300 mg de cafeína) es lo recomendado para la mayoría de los adultos. - **Evita tomarlo justo antes de dormir** (al menos 6 h antes). - **Acompáñalo con alimentos** (pan integral, fruta) para reducir posibles molestias estomacales. Experimenta combinando leche, azúcar o sabores hasta encontrar tu versión favorita. ¡Salud!"
+      },
+      {
+        "arm": "B",
+        "q": "¿Cómo tomo el café?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 165,
+        "answer": "Tomas el café sin azúcar y con leche de avena."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cómo tomo el café?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 532,
+        "answer": "Tomas el café sin azúcar y con leche de avena."
+      },
+      {
+        "arm": "A",
+        "q": "¿Para qué estoy entrenando?",
+        "kind": "semantic-gap",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 130,
+        "answer": "Estás entrenando para: 1. **Mejorar tu salud**: fortalece el corazón, los músculos y el sistema inmunológico. 2. **Aumentar tu energía**: el ejercicio regular eleva tus niveles de vitalidad y reduce la fatiga. 3. **Controlar el peso**: quemas calorías y favoreces una composición corporal más saludable. 4. **Reducir el estrés**: la actividad física libera endorfinas que mejoran el estado de ánimo. 5. **Potenciar la confianza**: ver progresos y superar metas refuerza tu autoestima. 6. **Mantener la independencia**: una mejor fuerza y movilidad facilitan las actividades diarias a largo plazo."
+      },
+      {
+        "arm": "B",
+        "q": "¿Para qué estoy entrenando?",
+        "kind": "semantic-gap",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 130,
+        "answer": "Estás entrenando para: 1. **Mejorar tu salud**: fortalece el corazón, los músculos y el sistema inmunológico. 2. **Aumentar tu energía**: te sientes más activo y resistente al cansancio. 3. **Elevar tu estado de ánimo**: el ejercicio libera endorfinas que reducen el estrés y la ansiedad. 4. **Lograr metas personales**: ya sea perder peso, ganar fuerza o superar un reto deportivo. 5. **Mantener la mente aguda**: el entrenamiento regular mejora la concentración y la memoria."
+      },
+      {
+        "arm": "C",
+        "q": "¿Para qué estoy entrenando?",
+        "kind": "semantic-gap",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 534,
+        "answer": "Estás entrenando para correr una media maratón que tienes programada en octubre."
+      },
+      {
+        "arm": "A",
+        "q": "¿Para qué estoy entrenando?",
+        "kind": "semantic-gap",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 130,
+        "answer": "Entrenas para mejorar tu salud, rendimiento y bienestar, alcanzar metas personales o deportivas, y sentirte más fuerte y capaz en el día a día."
+      },
+      {
+        "arm": "B",
+        "q": "¿Para qué estoy entrenando?",
+        "kind": "semantic-gap",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 130,
+        "answer": "Estás entrenando para mejorar algún aspecto de ti mismo: tu condición física, tu salud, tu rendimiento deportivo, tu bienestar mental o para alcanzar una meta específica (por ejemplo, completar una carrera, ganar fuerza, reducir el estrés, etc.). ¿Qué objetivo tienes en mente?"
+      },
+      {
+        "arm": "C",
+        "q": "¿Para qué estoy entrenando?",
+        "kind": "semantic-gap",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 1046,
+        "answer": "Estás entrenando para correr medio maratón en octubre, con el objetivo de mejorar tu condición física y estar listo para la carrera."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cuántos años tiene mi hija y a qué colegio va?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 136,
+        "answer": "No tengo esa información. Si me la proporcionas, podré ayudarte con lo que necesites."
+      },
+      {
+        "arm": "B",
+        "q": "¿Cuántos años tiene mi hija y a qué colegio va?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 175,
+        "answer": "Tu hija Sofía tiene 6 años y asiste al colegio San José."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cuántos años tiene mi hija y a qué colegio va?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 540,
+        "answer": "Tu hija Sofía tiene 6 años y estudia en el colegio San José."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cuántos años tiene mi hija y a qué colegio va?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 136,
+        "answer": "Lo siento, no dispongo de esa información. ¿Podrías indicarme la edad y el colegio de tu hija?"
+      },
+      {
+        "arm": "B",
+        "q": "¿Cuántos años tiene mi hija y a qué colegio va?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 175,
+        "answer": "Tu hija Sofía tiene 6 años y estudia en el colegio San José."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cuántos años tiene mi hija y a qué colegio va?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 1052,
+        "answer": "Tu hija Sofía tiene 6 años y estudia en el colegio San José."
+      },
+      {
+        "arm": "A",
+        "q": "¿Con qué empresa tengo mi plan de datos?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 133,
+        "answer": "Para poder indicarte con qué operadora tienes contratado tu plan de datos, necesito que me proporciones alguno de los siguientes datos: - Número de teléfono asociado al plan - Nombre del plan o número de cliente Con esa información podré consultarlo y confirmarte la empresa correspondiente."
+      },
+      {
+        "arm": "B",
+        "q": "¿Con qué empresa tengo mi plan de datos?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 182,
+        "answer": "Tu plan de datos es con **Claro**."
+      },
+      {
+        "arm": "C",
+        "q": "¿Con qué empresa tengo mi plan de datos?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 1049,
+        "answer": "Tu plan de datos de 20 GB es con **Claro**."
+      },
+      {
+        "arm": "A",
+        "q": "¿Con qué empresa tengo mi plan de datos?",
+        "kind": "memory",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 133,
+        "answer": "Lo siento, pero no tengo acceso a información personal ni a datos de tu cuenta. Te recomiendo revisar tu factura, el contrato de servicio o contactar directamente al servicio de atención al cliente del operador para confirmar con qué empresa tienes contratado tu plan de datos."
+      },
+      {
+        "arm": "B",
+        "q": "¿Con qué empresa tengo mi plan de datos?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 182,
+        "answer": "Tu plan de datos es con **Claro**."
+      },
+      {
+        "arm": "C",
+        "q": "¿Con qué empresa tengo mi plan de datos?",
+        "kind": "memory",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 1049,
+        "answer": "Tu plan de datos es con **Claro**."
+      },
+      {
+        "arm": "A",
+        "q": "¿Qué lenguajes de programación uso?",
+        "kind": "semantic-gap",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "Los lenguajes que más conviene usar dependen de tus objetivos y del tipo de proyectos que quieras desarrollar. Aquí tienes una guía rápida: | Área de desarrollo | Lenguajes recomendados | Por qué | |--------------------|------------------------|---------| | **Desarrollo web (frontend)** | **JavaScript**, **TypeScript**, **HTML/CSS** | Ecosistema amplio, frameworks como React, Vue o Angular. | | **Desarrollo web (backend)** | **Node.js (JavaScript/TypeScript)**, **Python**, **Ruby**, **PHP**, **Go**, **Java**, **C#** | Gran cantidad de bibliotecas y frameworks (Express, Django, Rails, Laravel, Spring, .NET). | | **Aplicaciones móviles** | **Kotlin** (Android), **Swift** (iOS), **Flutter (Dart)**, **React Native (JavaScript/TypeScript)** | Soporte nativo o multiplataforma. | | **Data Science / Machine Learning** | **Python**, **R**, **Julia** | Bibliotecas como pandas, NumPy, scikit‑learn, TensorFlow, PyTorch. | | **Sistemas y hardware** | **C**, **C++**, **Rust**, **Assembly** | Control de bajo nivel, alto rendimiento y seguridad. | | **Desarrollo de juegos** | **C#** (Unity), **C++** (Unreal Engine), **Godot (GDScript)** | Motores de juego consolidados. | | **Automatización / Scripts** | **Python**, **Bash**, **PowerShell** | Simplicidad y disponibilidad en la mayoría de sistemas. | | **DevOps / Infraestructura** | **Go**, **Python**, **Ruby**, **HCL** (Terraform) | Herramientas de orquestación y cloud‑native. | | **FinTech / Blockchain** | **Solidity**, **Rust**, **Go**, **Python** | Smart contracts y desarrollo de nodos. | ### Qué considerar al elegir 1. **Objetivo del proyecto**: ¿Web, móvil, análisis de datos, sistemas embebidos? 2. **Curva de aprendizaje**: Algunos lenguajes son más accesibles para principiantes (Python) y otros requieren más conocimiento de conceptos de bajo nivel (C/C++). 3. **Comunidad y ecosistema**: Un lenguaje con buena documentación y paquetes reduce el tiempo de desarrollo. 4. **Rendimiento requerido**: Para aplicaciones críticas en velocidad, C++, Rust o Go son opciones sólidas. 5. **Compatibilidad y despliegue**: Piensa en dónde se ejecutará tu código (navegador, servidor, dispositivo móvil, hardware). ### Recomendación rápida - **Si eres principiante o buscas versatilidad**: **Python** (data, web, automatización) o **JavaScript/TypeScript** (todo lo web y también backend con Node.js). - **Si te interesa desarrollo móvil**: **Kotlin** (Android) o **Swift** (iOS); para multiplataforma, **Flutter** (Dart) o **React Native**. - **Si buscas rendimiento y control**: **C++** o **Rust**. --- **¿Tienes algún proyecto concreto en mente?** Con más detalle puedo afinar la recomendación a los lenguajes que mejor se adapten a tus necesidades."
+      },
+      {
+        "arm": "B",
+        "q": "¿Qué lenguajes de programación uso?",
+        "kind": "semantic-gap",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "No tengo información sobre los lenguajes que utilizas. ¿Podrías especificar a qué proyecto o contexto te refieres?"
+      },
+      {
+        "arm": "C",
+        "q": "¿Qué lenguajes de programación uso?",
+        "kind": "semantic-gap",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 1047,
+        "answer": "Programas principalmente en **Python** y **TypeScript**."
+      },
+      {
+        "arm": "A",
+        "q": "¿Qué lenguajes de programación uso?",
+        "kind": "semantic-gap",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "No dispongo de información sobre tus experiencias previas. ¿Podrías contarme en qué proyectos o contextos estás interesado para orientarte mejor?"
+      },
+      {
+        "arm": "B",
+        "q": "¿Qué lenguajes de programación uso?",
+        "kind": "semantic-gap",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "No tengo información sobre los lenguajes que utilizas actualmente. Si me cuentas qué proyectos o áreas te interesan (desarrollo web, ciencia de datos, apps móviles, etc.), podré sugerirte los lenguajes más habituales para esas tareas."
+      },
+      {
+        "arm": "C",
+        "q": "¿Qué lenguajes de programación uso?",
+        "kind": "semantic-gap",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 535,
+        "answer": "Programas principalmente en **Python** y **TypeScript**."
+      },
+      {
+        "arm": "A",
+        "q": "¿Puedo pedir ceviche esta noche? Responde sí o no y por qué.",
+        "kind": "semantic-gap",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 141,
+        "answer": "Sí, puedes pedir ceviche esta noche, siempre que tengas acceso a un restaurante que lo ofrezca, que el plato esté disponible y que no tengas restricciones dietéticas o de salud que lo impidan."
+      },
+      {
+        "arm": "B",
+        "q": "¿Puedo pedir ceviche esta noche? Responde sí o no y por qué.",
+        "kind": "semantic-gap",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 141,
+        "answer": "Sí. No hay ninguna restricción que te impida pedir ceviche esta noche; solo depende de tus horarios, disponibilidad del restaurante y tus preferencias personales."
+      },
+      {
+        "arm": "C",
+        "q": "¿Puedo pedir ceviche esta noche? Responde sí o no y por qué.",
+        "kind": "semantic-gap",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 545,
+        "answer": "No. Eres alérgico a los mariscos, y el ceviche está hecho con pescado crudo (y a veces otros mariscos), por lo que podría provocarte una reacción alérgica."
+      },
+      {
+        "arm": "A",
+        "q": "¿Puedo pedir ceviche esta noche? Responde sí o no y por qué.",
+        "kind": "semantic-gap",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 141,
+        "answer": "Sí. El ceviche es un plato fresco y ligero que se sirve frío, por lo que es una opción ideal para una cena nocturna sin sentir pesadez. Además, si tienes acceso a un buen restaurante o servicio de entrega, puedes disfrutarlo sin complicaciones."
+      },
+      {
+        "arm": "B",
+        "q": "¿Puedo pedir ceviche esta noche? Responde sí o no y por qué.",
+        "kind": "semantic-gap",
+        "ok": false,
+        "leaked": false,
+        "inputTokens": 141,
+        "answer": "Sí, puedes pedir ceviche esta noche, siempre que tengas acceso a un restaurante que lo ofrezca y no tengas restricciones dietéticas, de salud o de horarios que lo impidan."
+      },
+      {
+        "arm": "C",
+        "q": "¿Puedo pedir ceviche esta noche? Responde sí o no y por qué.",
+        "kind": "semantic-gap",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 545,
+        "answer": "No. El ceviche está hecho con pescado crudo (mariscos) y tú eres alérgico a los mariscos, por lo que podrías tener una reacción alérgica grave si lo consumes."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cuál es la capital de Francia?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "La capital de Francia es París."
+      },
+      {
+        "arm": "B",
+        "q": "¿Cuál es la capital de Francia?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "La capital de Francia es París."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cuál es la capital de Francia?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 535,
+        "answer": "La capital de Francia es París."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cuál es la capital de Francia?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "La capital de Francia es París."
+      },
+      {
+        "arm": "B",
+        "q": "¿Cuál es la capital de Francia?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "La capital de Francia es París."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cuál es la capital de Francia?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 535,
+        "answer": "La capital de Francia es París."
+      },
+      {
+        "arm": "A",
+        "q": "Explica qué es un closure en JavaScript en dos frases.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 136,
+        "answer": "Un closure es una función que **mantiene acceso** a las variables de su ámbito léxico externo, incluso después de que esa función externa haya terminado su ejecución. Esto permite que el closure “recuerde” y manipule esos valores cada vez que se invoca, creando datos privados y encapsulación."
+      },
+      {
+        "arm": "B",
+        "q": "Explica qué es un closure en JavaScript en dos frases.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 136,
+        "answer": "Un closure es una función que conserva acceso al ámbito léxico (variables) en el que fue creada, aun cuando se ejecute fuera de ese contexto. Esto permite que la función “recuerde” y pueda usar esas variables externas cada vez que se invoque."
+      },
+      {
+        "arm": "C",
+        "q": "Explica qué es un closure en JavaScript en dos frases.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 1052,
+        "answer": "Un closure es una función que conserva acceso al ámbito (variables) en el que fue creada, incluso después de que ese ámbito externo haya terminado su ejecución. Esto permite que la función interior recuerde y utilice esas variables cada vez que se invoque."
+      },
+      {
+        "arm": "A",
+        "q": "Explica qué es un closure en JavaScript en dos frases.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 136,
+        "answer": "Un *closure* es una función que captura y retiene el entorno léxico donde fue creada, de modo que puede acceder a variables externas aun después de que la función externa haya terminado su ejecución. Esto permite mantener estado privado y crear funciones con comportamiento personalizado sin exponer esas variables al ámbito global."
+      },
+      {
+        "arm": "B",
+        "q": "Explica qué es un closure en JavaScript en dos frases.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 136,
+        "answer": "Un closure es una función que conserva acceso al ámbito léxico en el que fue creada, incluso después de que ese ámbito haya finalizado. Así, puede recordar y usar variables externas a su propia definición cada vez que se invoca."
+      },
+      {
+        "arm": "C",
+        "q": "Explica qué es un closure en JavaScript en dos frases.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 540,
+        "answer": "Un *closure* es una función que, además de su propio código, conserva acceso a las variables del entorno léxico en el que fue creada, aun cuando ese entorno haya terminado su ejecución. Gracias a los closures, esas variables “capturadas” persisten en memoria y pueden ser leídas o modificadas cada vez que se invoca la función interna."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cuánto es 17 por 23?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 132,
+        "answer": "17 × 23 = 391."
+      },
+      {
+        "arm": "B",
+        "q": "¿Cuánto es 17 por 23?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 132,
+        "answer": "17 × 23 = 391."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cuánto es 17 por 23?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 1048,
+        "answer": "17 × 23 = 391."
+      },
+      {
+        "arm": "A",
+        "q": "¿Cuánto es 17 por 23?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 132,
+        "answer": "17 × 23 = 391."
+      },
+      {
+        "arm": "B",
+        "q": "¿Cuánto es 17 por 23?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 132,
+        "answer": "17 × 23 = 391."
+      },
+      {
+        "arm": "C",
+        "q": "¿Cuánto es 17 por 23?",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 1048,
+        "answer": "17 × 23 = 391."
+      },
+      {
+        "arm": "A",
+        "q": "Dame una receta corta de arepas.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 132,
+        "answer": "**Receta rápida de arepas** **Ingredientes (para 4 arepas)** - 2 tazas de harina de maíz precocida (tipo P.A.N.) - 2 ½ tazas de agua tibia - 1 ½ cucharadita de sal - 1 cucharada de aceite (opcional, para la masa o para cocinar) **Procedimiento** 1. **Mezclar** la harina y la sal en un bol grande. 2. **Agregar** el agua poco a poco, amasando con la mano hasta obtener una masa suave, homogénea y sin grumos. Deja reposar 5 min (la masa se endurece un poco). 3. **Formar** bolitas del tamaño de una pelota de golf y aplánalas hasta obtener discos de ~1 cm de grosor. 4. **Cocinar**: - *En sartén*: Calienta una sartén antiadherente con un chorrito de aceite a fuego medio. Coloca las arepas y cocina 5‑6 min por cada lado, hasta que estén doradas y suenen huecas al golpearlas. - *Opcional*: Termina en el horno a 180 °C por 10 min para que queden crujientes por fuera. 5. **Abrir** las arepas con un cuchillo, rellenar con lo que prefieras (queso, jamón, carne mechada, aguacate, etc.) y servir calientes. ¡Listas en menos de 30 min! Buen provecho."
+      },
+      {
+        "arm": "B",
+        "q": "Dame una receta corta de arepas.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 132,
+        "answer": "**Receta rápida de arepas** **Ingredientes (para 4 arepas):** - 2 tazas de harina de maíz precocida (tipo Harina P.A.N.) - 2 ½ tazas de agua tibia - 1 ½ cucharadita de sal - 1‑2 cucharadas de aceite (para la masa) + aceite para cocinar **Procedimiento:** 1. **Mezclar:** En un bol grande, disuelve la sal en el agua tibia. 2. **Incorporar la harina:** Añade la harina poco a poco mientras revuelves con una cuchara de madera o tus manos, evitando grumos. 3. **Amasar:** Agrega el aceite y amasa unos 30 segundos hasta obtener una masa suave, homogénea y ligeramente húmeda (no pegajosa). 4. **Formar:** Divide la masa en 4 porciones y forma bolas. Aplástalas suavemente hasta obtener discos de 1‑1,5 cm de grosor. 5. **Cocinar:** - **En sartén:** Calienta una sartén antiadherente con un chorrito de aceite a fuego medio. Coloca las arepas y cocina 5‑6 min por cada lado, hasta que estén doradas. - **Opcional:** Termínalas en horno a 180 °C por 10 min para que queden bien esponjosas por dentro. 6. **Servir:** Ábrelas por la mitad y rellénalas con queso, jamón, aguacate, carne mechada o lo que prefieras. ¡Listo! Disfruta de unas arepas caseras y sabrosas."
+      },
+      {
+        "arm": "C",
+        "q": "Dame una receta corta de arepas.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 536,
+        "answer": "**Arepas rápidas (para 4 personas)** **Ingredientes** - 2 tazas de harina de maíz precocida (tipo P.A.N.) - 2 tazas de agua tibia - 1 cucharadita de sal - 1‑2 cucharadas de aceite (para la masa) - Aceite o mantequilla para freír / asar **Procedimiento** 1. **Mezclar**: En un bol grande combina la harina y la sal. Añade el agua tibia poco a poco mientras remueves con la mano o una cuchara de madera, evitando grumos. 2. **Reposar**: Deja reposar la masa 5 min para que absorba el líquido. 3. **Formar**: Con las manos húmedas forma bolas del tamaño de una pelota de golf y aplánalas hasta obtener discos de unos 1 cm de grosor. 4. **Cocinar**: - *En sartén*: Calienta una sartén antiadherente a fuego medio con un chorrito de aceite. Cocina las arepas 5‑6 min por cada lado, hasta que estén doradas y formen una “corteza” crujiente. - *En horno (opcional)*: Tras sellarlas en la sartén, termina la cocción 10 min a 180 °C para que queden bien esponjosas por dentro. 5. **Abrir y rellenar**: Cuando estén tibias, corta una hendidura con un cuchillo sin llegar al fondo y rellena al gusto (queso, jamón, carne mechada, aguacate, etc.). **Consejo rápido** - Si la masa queda muy seca, agrega una cucharada de agua; si está muy húmeda, incorpora un poco más de harina. - Puedes preparar la masa la noche anterior y guardarla cubierta en el refrigerador; al día siguiente solo forma y cocina. ¡Listas para disfrutar! 🫓"
+      },
+      {
+        "arm": "A",
+        "q": "Dame una receta corta de arepas.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 132,
+        "answer": "**Arepas rápidas** **Ingredientes (para 4 arepas)** - 2 tazas de harina de maíz precocida (tipo P.A.N.) - 2 ½ tazas de agua tibia - 1 cucharadita de sal - 1 cucharada de aceite (para la masa) + un chorrito para freír o dorar **Procedimiento** 1. **Mezclar** la harina y la sal en un bol grande. 2. **Agregar** el agua poco a poco mientras remueves con la mano o una cuchara de madera, hasta obtener una masa suave y homogénea que no se pegue a las manos. 3. **Incorporar** la cucharada de aceite y amasar unos segundos. 4. **Formar** bolas de 10‑12 cm de diámetro y aplastarlas ligeramente hasta que tengan unos 1 cm de grosor. 5. **Cocinar**: - **A la plancha**: calienta una sartén antiadherente a fuego medio, unta ligeramente con aceite y cocina 5‑6 min por cada lado, hasta que estén doradas y suenen huecas al golpearlas. - **Al horno** (opcional): después de dorar, hornea 10 min a 180 °C para que queden bien cocidas por dentro. 6. **Servir** abiertas por la mitad y rellenarlas con queso, jamón, carne mechada, aguacate o lo que prefieras. ¡Listas en menos de 30 min! Buen provecho."
+      },
+      {
+        "arm": "B",
+        "q": "Dame una receta corta de arepas.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 132,
+        "answer": "**Receta rápida de arepas** **Ingredientes (para 4 arepas)** - 2 tazas de harina de maíz precocida (tipo P.A.N.) - 2 ½ tazas de agua tibia - 1 ½ cucharadita de sal - 1 cucharada de aceite (más extra para cocinar) **Procedimiento** 1. **Mezclar**: En un bol, disuelve la sal en el agua. Añade poco a poco la harina mientras revuelves con una cuchara o con las manos hasta obtener una masa suave y sin grumos. 2. **Reposar**: Deja reposar la masa 5 minutos; se hidratará y será más manejable. 3. **Formar**: Con las manos húmedas, forma bolitas del tamaño de una pelota de golf y aplánalas hasta obtener discos de ~1 cm de grosor. 4. **Cocinar**: - **En sartén**: Calienta una sartén antiadherente a fuego medio, agrega una cucharada de aceite y coloca las arepas. Cocina 5‑6 min por cada lado, hasta que estén doradas. - **Opcional**: Para un interior más esponjoso, termina horneándolas 5 min a 180 °C o cúbrelas con una tapa durante los últimos minutos. 5. **Servir**: Ábrelas por la mitad y rellénalas con queso, jamón, aguacate, carne mechada o lo que prefieras. ¡Listas en menos de 30 min! Buen provecho."
+      },
+      {
+        "arm": "C",
+        "q": "Dame una receta corta de arepas.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 536,
+        "answer": "**Arepas rápidas (para 4 porciones)** **Ingredientes** - 2 tazas de harina de maíz precocida (tipo P.A.N.) - 2 ½ tazas de agua tibia - 1 ½ cucharadita de sal - 1 cucharada de aceite (para la masa) - Aceite vegetal o mantequilla para cocinar **Procedimiento** 1. **Mezclar**: En un bol grande combina la harina y la sal. 2. **Agregar agua**: Vierte el agua tibia poco a poco mientras mezclas con la mano o una cuchara de madera, hasta obtener una masa suave y homogénea (no debe quedar pegajosa). 3. **Incorporar aceite**: Añade la cucharada de aceite y amasa unos segundos. 4. **Formar discos**: Divide la masa en 8 porciones y forma bolas. Aplánalas con las palmas hasta que queden de 1‑1,5 cm de grosor y unos 10 cm de diámetro. 5. **Cocinar**: Calienta una sartén antiadherente a fuego medio y unta ligeramente con aceite o mantequilla. Cocina las arepas 5‑6 min por lado, hasta que estén doradas y con una costra crujiente. 6. **Terminar en el horno (opcional)**: Para que queden bien infladas, colócalas en una bandeja y hornea a 200 °C durante 10 min. **Servir** Ábrelas por la mitad y rellénalas con queso, jamón, aguacate, carne mechada o lo que prefieras. ¡Listas para disfrutar!"
+      },
+      {
+        "arm": "A",
+        "q": "Write a haiku about the sea.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "Sea whispers at dusk— foam dances on silver light, endless pulse of blue."
+      },
+      {
+        "arm": "B",
+        "q": "Write a haiku about the sea.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "Endless blue whispers, Waves curl in silver moonlight— Dreams drift with the tide."
+      },
+      {
+        "arm": "C",
+        "q": "Write a haiku about the sea.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 535,
+        "answer": "Ola susurra bajo la luna clara el mar respira"
+      },
+      {
+        "arm": "A",
+        "q": "Write a haiku about the sea.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "Blue horizon sighs, waves whisper ancient secrets— salted dreams awake."
+      },
+      {
+        "arm": "B",
+        "q": "Write a haiku about the sea.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 131,
+        "answer": "Waves whisper at dawn, Salty breezes kiss the shore, Moonlit tides sigh low."
+      },
+      {
+        "arm": "C",
+        "q": "Write a haiku about the sea.",
+        "kind": "general",
+        "ok": true,
+        "leaked": false,
+        "inputTokens": 1047,
+        "answer": "Waves whisper at dawn, Endless blue breathes with moonlight, Sands hold silent dreams."
+      }
+    ]
+  }
+]

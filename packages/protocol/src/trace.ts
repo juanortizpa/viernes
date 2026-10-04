@@ -25,6 +25,11 @@ export const ExecutionTrace = z.object({
   usedLocalIntent: z.boolean(),
   /** The instant layer (ADR-0015) answered fully ("reply", no attempts) or acknowledged before a model ran ("ack"). Keep out of model comparisons. */
   instant: z.enum(["reply", "cache", "ack"]).optional(),
+  /**
+   * Memory that went into the prompt (ADR-0023), recorded so the effect of memory can be measured (ablation). Counts only,
+   * never text. Absent when nothing was added.
+   */
+  context: z.object({ conversationTurns: z.number().int().nonnegative(), memories: z.number().int().nonnegative() }).optional(),
   attempts: z.array(Attempt),
   escalations: z.number().int().nonnegative(),
   finalOutcome: z.enum(["success", "failure", "cancelled"]),

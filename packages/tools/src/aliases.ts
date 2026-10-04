@@ -30,6 +30,7 @@ export const makeAliasesForget = (book: AliasBook): Tool<{ alias: string }, void
   description: "Forget an alias the user taught the assistant",
   risk: "reversible",
   reversible: true,
+  modelCallable: false,
   input: z.object({ alias: z.string().min(1).max(60) }),
   async run({ alias }) {
     const ok = book.forget(alias);
