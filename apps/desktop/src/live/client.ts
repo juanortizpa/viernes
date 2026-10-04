@@ -7,11 +7,13 @@ export interface LiveInfo {
   offline: boolean;
   /** Local speech-to-text is configured in the sidecar. */
   voice: boolean;
+  /** Engines in order; one starting with "groq:" sends audio to Groq. */
+  voiceEngines: string[];
 }
 
 /** What the sidecar tells the UI about a push-to-talk clip. */
 export type VoiceNotice =
-  | { kind: "transcribed"; text: string; audioMs: number; latencyMs: number }
+  | { kind: "transcribed"; text: string; audioMs: number; latencyMs: number; engine?: string; heard?: string }
   | { kind: "rejected"; reason: string; message: string };
 
 export interface SocketLike {
@@ -148,13 +150,13 @@ export class LiveClient {
       }
       const msg = parsed.data;
       if (msg.type === "hello.ok") {
-        this.info = { models: msg.models, offline: msg.offline, voice: msg.voice };
+        this.info = { models: msg.models, offline: msg.offline, voice: msg.voice, voiceEngines: msg.voiceEngines };
         this.setStatus("ready");
       } else if (msg.type === "hello.error") this.fail(msg.message);
       else if (msg.type === "error") this.lastError = msg.message;
       else if (msg.type === "wake.result") this.wakeListeners.forEach((l) => l({ detected: msg.detected, commandRan: msg.commandRan, reason: msg.reason }));
       else if (msg.type === "economy") this.economyListeners.forEach((l) => l(msg.summary));
-      else if (msg.type === "voice.transcribed") this.voiceListeners.forEach((l) => l({ kind: "transcribed", text: msg.text, audioMs: msg.audioMs, latencyMs: msg.latencyMs }));
+      else if (msg.type === "voice.transcribed") this.voiceListeners.forEach((l) => l({ kind: "transcribed", text: msg.text, audioMs: msg.audioMs, latencyMs: msg.latencyMs, ...(msg.engine ? { engine: msg.engine } : {}), ...(msg.heard ? { heard: msg.heard } : {}) }));
       else if (msg.type === "voice.rejected") this.voiceListeners.forEach((l) => l({ kind: "rejected", reason: msg.reason, message: msg.message }));
       else this.eventListeners.forEach((l) => l(msg.event));
     }

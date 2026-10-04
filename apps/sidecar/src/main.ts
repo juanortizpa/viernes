@@ -36,7 +36,7 @@ const server = new SidecarServer({
   send,
   bus,
   createOrchestrator: runtime.createOrchestrator,
-  info: { models: runtime.models, offline: runtime.offline },
+  info: { models: runtime.models, offline: runtime.offline, voiceEngines: runtime.voiceEngines },
   transcriber: runtime.transcriber,
   wakeTranscriber: runtime.wakeTranscriber,
   wakeWords: runtime.wakeWords,

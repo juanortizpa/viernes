@@ -146,7 +146,7 @@ export default function App() {
     const offEconomy = live.onEconomy(setEconomy);
     const offVoice = live.onVoice((n) => {
       clearTimeout(collapseTimer.current);
-      if (n.kind === "transcribed") dispatch({ kind: "voice.heard", text: n.text });
+      if (n.kind === "transcribed") dispatch({ kind: "voice.heard", text: n.text, ...(n.engine ? { engine: n.engine } : {}), ...(n.heard ? { heard: n.heard } : {}) });
       else {
         wakeRef.current?.setPaused(false);
         dispatch({ kind: "voice.rejected", message: n.message });
@@ -395,7 +395,9 @@ export default function App() {
               <option value="off">Crudo (sin procesar)</option>
             </select>
           </label>
-          <span className="muted small">Si cambias esto, vuelve a registrar tu voz de «jarvis». Usa «Prueba de transcripción» para saber cuál va mejor.</span>
+          <span className="muted small">
+            {live.info?.voiceEngines?.length ? `Transcripción: ${live.info.voiceEngines.map((e) => (e === "local" ? "whisper local (no sale del equipo)" : `${e.replaceAll("groq:", "Groq ").replaceAll("gemini:", "Gemini ").replace("+", " + ")} (nube: el audio sale del equipo)`)).join(" → respaldo: ")}. ` : ""}
+            Si cambias esto, vuelve a registrar tu voz de «jarvis». Usa «Prueba de transcripción» para saber cuál va mejor.</span>
         </div>
 
         <WakeSettings

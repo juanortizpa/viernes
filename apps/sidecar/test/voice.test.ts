@@ -162,3 +162,21 @@ describe("wake-word verification (stage 2) over IPC", () => {
     expect(main.calls).toHaveLength(0);
   });
 });
+
+describe("wake + command in one breath uses the accurate engine for the command", () => {
+  it("re-transcribes the same clip with the main engine and keeps the fast one only as a fallback", async () => {
+    const out: ServerMessage[] = [];
+    const tiny = new FakeTranscriber("Jarvis, abre la cálcula");
+    const big: Transcriber = { transcribe: async () => ({ text: "Jarvis, abre la calculadora", audioMs: 900, latencyMs: 300, engine: "groq:whisper-large-v3-turbo" }) };
+    const runtime = buildRuntime(Config.parse({}), { env: {}, launcher: async () => {}, transcriber: big });
+    const server = new SidecarServer({ token: "t", send: (m) => out.push(m), bus: new EventBus(), createOrchestrator: runtime.createOrchestrator, info: { models: [], offline: true }, transcriber: big, wakeTranscriber: tiny });
+    server.handleLine(JSON.stringify({ type: "hello", token: "t", protocol: 1 }));
+    server.handleLine(JSON.stringify({ type: "wake.verify", audio: b64(tone(900)) }));
+    await server.idle();
+    expect(out.find((m) => m.type === "voice.transcribed")).toMatchObject({ text: "abre la calculadora", engine: "groq:whisper-large-v3-turbo" });
+    // ...and it is that accurate text that RUNS (it used to run the fast engine's "abre la cálcula").
+    const started = out.find((m) => m.type === "event" && m.event.type === "task.started") as Extract<ServerMessage, { type: "event" }>;
+    expect(started.event).toMatchObject({ input: "abre la calculadora" });
+    expect(out.some((m) => m.type === "event" && m.event.type === "permission.required")).toBe(false);
+  });
+});

@@ -40,7 +40,7 @@ describe("LiveClient", () => {
     expect(client.status).toBe("connecting");
     socket.receive({ type: "hello.ok", protocol: 1, models: ["m"], offline: true });
     expect(client.status).toBe("ready");
-    expect(client.info).toEqual({ models: ["m"], offline: true, voice: false });
+    expect(client.info).toEqual({ models: ["m"], offline: true, voice: false, voiceEngines: [] });
   });
 
   it("forwards only valid events and ignores garbage", async () => {

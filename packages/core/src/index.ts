@@ -14,3 +14,4 @@ export * from "./style-profile";
 export * from "./task-classifier";
 export * from "./task-state";
 export * from "./trace-store";
+export * from "./text";

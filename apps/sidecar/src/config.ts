@@ -34,8 +34,19 @@ export const Config = z.object({
    */
   voice: z
     .object({
-      binary: z.string().min(1),
-      model: z.string().min(1),
+      /**
+       * "auto": with GROQ_API_KEY and GEMINI_API_KEY, both run in parallel (fast whisper on Groq for clear commands, Gemini to
+       * understand the rest); with one key, that one; local whisper.cpp is always the fallback. Cloud engines send audio OUT of the
+       * machine (free tiers). "groq"/"gemini": only that cloud engine. "local": audio never leaves the machine (ADR-0020).
+       */
+      engine: z.enum(["auto", "groq", "gemini", "local"]).default("auto"),
+      /** Groq-hosted whisper (fast literal transcription, ~0.5 s). */
+      cloudModel: z.string().min(1).default("whisper-large-v3-turbo"),
+      /** Gemini model that transcribes AND interprets what was meant (~1.4 s), used when the fast text is not a clear command. */
+      understandModel: z.string().min(1).default("gemini-3.5-flash-lite"),
+      /** Local whisper.cpp CLI and model (optional when the cloud engine is used). */
+      binary: z.string().min(1).optional(),
+      model: z.string().min(1).optional(),
       language: z.string().regex(/^(auto|[a-z]{2,3})$/).default("es"),
       threads: z.number().int().min(1).max(32).optional(),
       /** Words that wake the assistant (a transcript must START with one). */
@@ -61,6 +72,13 @@ export const Config = z.object({
     calculator: "calc",
     calculadora: "calc",
     paint: "mspaint",
+    "visual studio code": "code",
+    "visual studio": "code",
+    "explorador de archivos": "explorer",
+    "explorador": "explorer",
+    "file explorer": "explorer",
+    "administrador de tareas": "taskmgr",
+    "task manager": "taskmgr",
     navegador: "msedge",
     browser: "msedge",
     "otra pestana": "msedge",

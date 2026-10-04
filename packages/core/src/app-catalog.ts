@@ -1,5 +1,5 @@
 import { MemoryAliasStore, type AliasStore } from "./alias-store";
-import { normalizeText } from "./text";
+import { normalizeText, phoneticKey } from "./text";
 
 export type AliasSource = "scan" | "learned" | "config";
 /** A higher source is never overwritten by a lower one. */
@@ -75,6 +75,15 @@ export class AppCatalog {
     const hits: AppSuggestion[] = [];
     for (const [a, e] of this.entries) {
       if (a.includes(q) || (q.length >= 4 && editDistance(a, q) <= 1)) hits.push({ alias: a, command: e.command });
+    }
+    if (hits.length === 0) {
+      // Sounds-like fallback for speech-recognition slips: same phonetic key, or one/two phonetic edits on longer names.
+      const qk = phoneticKey(q);
+      for (const [a, e] of this.entries) {
+        const ak = phoneticKey(a);
+        const d = ak === qk ? 0 : Math.min(ak.length, qk.length) >= 5 ? editDistance(ak, qk) : 99;
+        if (d === 0 || (d <= 1 && qk.length >= 5) || (d <= 2 && qk.length >= 9)) hits.push({ alias: a, command: e.command });
+      }
     }
     if (new Set(hits.map((h) => h.command)).size !== 1) return undefined;
     return hits.sort((x, y) => x.alias.length - y.alias.length)[0];

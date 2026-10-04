@@ -11,7 +11,7 @@ import {
 } from "@jarvis/providers";
 import { AlwaysCheapestRouter, AlwaysPremiumRouter, AppCatalog, IntentRouter, MemoryTraceStore, Orchestrator, ResponseHeuristicEvaluator, RuleInstantResponder, SemanticCache, StyleTracker, summarizeEconomy, instantControlRules, styleControlRules, RulesRouter, StaticRouter, type AliasStore, type InstantStore, type EventBus, type ModelRouter, type PermissionResolver, type TraceStore } from "@jarvis/core";
 import type { EconomySummary } from "@jarvis/protocol";
-import { WhisperCppTranscriber, type Transcriber } from "@jarvis/voice";
+import { FallbackTranscriber, GeminiTranscriber, GroqTranscriber, RaceTranscriber, WhisperCppTranscriber, type Transcriber } from "@jarvis/voice";
 import {
   ToolRegistry,
   filesRead,
@@ -33,26 +33,25 @@ import {
 } from "@jarvis/tools";
 import type { ModelCapabilities } from "@jarvis/protocol";
 import type { ScannedApp } from "./app-scanner";
-import type { Config } from "./config";
+import { Config } from "./config";
 
 /** Launches only what the catalog knows, accepting either the raw command or a name a person would say. */
-export function makeCatalogLauncher(catalog: Pick<AppCatalog, "hasCommand" | "lookup">, launch: AppLauncher): AppLauncher {
+export function makeCatalogLauncher(catalog: Pick<AppCatalog, "hasCommand" | "lookup" | "suggest">, launch: AppLauncher): AppLauncher {
   return async (nameOrCommand) => {
-    const command = catalog.hasCommand(nameOrCommand) ? nameOrCommand : catalog.lookup(nameOrCommand);
+    // Exact command, then a known name, then ONE unambiguous sounds-like match (a misheard name from voice).
+    const command = catalog.hasCommand(nameOrCommand) ? nameOrCommand : (catalog.lookup(nameOrCommand) ?? catalog.suggest(nameOrCommand)?.command);
     if (!command) throw new Error(`"${nameOrCommand}" is not a known app`);
     await launch(command);
   };
 }
 
 /**
- * Whisper conditions on an initial prompt: naming the apps the user can open makes "abre la calculadora" come out right
- * instead of as a phonetically similar word. Kept short, since long prompts get regurgitated on noise.
+ * Whisper's initial prompt. MEASURED (ADR-0020): a list of app names gets regurgitated — "jarvis, abre paint" came back as
+ * "Jarvis, abre la calculadora, el navegador, Teams." — which would open the WRONG app. So only the assistant's name is primed;
+ * app vocabulary is handled after recognition (phonetic matching, the interpreter, the model).
  */
-export function defaultVoicePrompt(aliases: readonly string[], language: string): string | undefined {
-  const names = aliases.filter((a) => /^[\p{L}\p{N} ]{2,25}$/u.test(a)).slice(0, 4);
-  if (names.length === 0 || language === "en") return undefined;
-  // One natural sentence (a list that repeats "abre" invites the model to loop on it).
-  return `Jarvis, abre ${names.join(", ")}.`;
+export function defaultVoicePrompt(_aliases: readonly string[], language: string): string | undefined {
+  return language === "en" ? undefined : "Jarvis.";
 }
 
 export const OFFLINE_MODEL = "offline-echo";
@@ -95,6 +94,8 @@ export interface Runtime {
   /** Lighter engine for wake-word verification (config.voice.wakeModel). */
   wakeTranscriber?: Transcriber;
   wakeWords: readonly string[];
+  /** Speech engines in the order they are tried, e.g. ["groq:whisper-large-v3-turbo", "local"]. */
+  voiceEngines: string[];
   /** AI Economy aggregate over the stored traces; undefined if the store cannot list. */
   economy(limit: number): EconomySummary | undefined;
   createOrchestrator(io: { bus: EventBus; askPermission: PermissionResolver }): Orchestrator;
@@ -182,22 +183,51 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
           : new StaticRouter(defaultModel);
   const traces = deps.traces ?? new MemoryTraceStore();
 
-  const transcriber =
-    deps.transcriber ??
-    (config.voice
-      ? new WhisperCppTranscriber({ binary: config.voice.binary, model: config.voice.model, language: config.voice.language, threads: config.voice.threads, timeoutMs: config.voice.timeoutMs, beamSize: config.voice.beamSize, prompt: config.voice.prompt ?? defaultVoicePrompt(Object.keys(config.apps), config.voice.language) })
-      : undefined);
-
-  const wakeTranscriber =
-    config.voice?.wakeModel && !deps.transcriber
-      ? new WhisperCppTranscriber({ binary: config.voice.binary, model: config.voice.wakeModel, language: config.voice.language, threads: config.voice.threads, timeoutMs: config.voice.timeoutMs, beamSize: 1, prompt: "Jarvis." })
+  // Speech-to-text engines (ADR-0020). The voice section is optional: with a Groq key and no local setup, cloud STT still works.
+  const v = config.voice ?? Config.shape.voice.unwrap().parse({});
+  const vPrompt = v.prompt ?? defaultVoicePrompt(Object.keys(config.apps), v.language);
+  const local =
+    v.engine !== "groq" && v.binary && v.model
+      ? new WhisperCppTranscriber({ binary: v.binary, model: v.model, language: v.language, threads: v.threads, timeoutMs: v.timeoutMs, beamSize: v.beamSize, prompt: vPrompt })
       : undefined;
+  const groqKey = v.engine === "auto" || v.engine === "groq" ? deps.env.GROQ_API_KEY : undefined;
+  const geminiKey = v.engine === "auto" || v.engine === "gemini" ? (deps.env.GEMINI_API_KEY ?? deps.env.GOOGLE_API_KEY) : undefined;
+  const fetchImpl = deps.fetch as typeof fetch | undefined;
+  const groq = groqKey ? new GroqTranscriber({ apiKey: groqKey, model: v.cloudModel, language: v.language, prompt: vPrompt, fetch: fetchImpl }) : undefined;
+  const gemini = geminiKey ? new GeminiTranscriber({ apiKey: geminiKey, model: v.understandModel, vocabulary: Object.keys(config.apps).slice(0, 20), fetch: fetchImpl }) : undefined;
+  // Fast path: a transcript that the deterministic router already maps to a local command needs no interpretation.
+  const quickRouter = new IntentRouter({ apps: AppCatalog.fromRecord(config.apps), rules: [...instantControlRules, ...styleControlRules] });
+  const isClearCommand = (text: string): boolean => {
+    const r = quickRouter.resolve(text);
+    return r.route === "local" && r.confidence === 1;
+  };
+  const cloudEngine: { name: string; engine: Transcriber } | undefined =
+    groq && gemini
+      ? { name: `groq:${v.cloudModel}+gemini:${v.understandModel}`, engine: new RaceTranscriber({ fast: groq, accurate: gemini, acceptFast: isClearCommand, accurateTimeoutMs: 2_500 }) }
+      : groq
+        ? { name: `groq:${v.cloudModel}`, engine: groq }
+        : gemini
+          ? { name: `gemini:${v.understandModel}`, engine: gemini }
+          : undefined;
+  const engines = [...(cloudEngine ? [cloudEngine] : []), ...(local ? [{ name: "local", engine: local as Transcriber }] : [])];
+  const transcriber = deps.transcriber ?? (engines.length ? new FallbackTranscriber(engines, { onFallback: (from, why) => console.error(`[sidecar] STT ${from} failed (${why}); falling back`) }) : undefined);
+  const voiceEngines = deps.transcriber ? ["injected"] : engines.map((e) => e.name);
+
+  // Wake-word verification needs the LITERAL words ("jarvis …"), fast: local tiny model, else Groq's whisper (never the interpreter).
+  const wakeTranscriber = deps.transcriber
+    ? undefined
+    : v.wakeModel && v.binary && v.engine !== "groq" && v.engine !== "gemini"
+      ? new WhisperCppTranscriber({ binary: v.binary, model: v.wakeModel, language: v.language, threads: v.threads, timeoutMs: v.timeoutMs, beamSize: 1, prompt: "Jarvis." })
+      : groq
+        ? new GroqTranscriber({ apiKey: groqKey!, model: v.cloudModel, language: v.language, prompt: "Jarvis.", fetch: fetchImpl })
+        : undefined;
 
   return {
     providers,
     ...(transcriber ? { transcriber } : {}),
     ...(wakeTranscriber ? { wakeTranscriber } : {}),
-    wakeWords: config.voice?.wakeWords ?? ["jarvis"],
+    wakeWords: v.wakeWords,
+    voiceEngines,
     models,
     offline,
     economy: (limit) => (traces.list ? summarizeEconomy(traces.list(limit)) : undefined),

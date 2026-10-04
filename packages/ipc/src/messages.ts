@@ -40,6 +40,8 @@ export const ServerMessage = z.discriminatedUnion("type", [
     offline: z.boolean(),
     /** A speech-to-text engine is configured, so push-to-talk can work. */
     voice: z.boolean().default(false),
+    /** Speech engines in the order they are tried, e.g. ["groq:whisper-large-v3-turbo", "local"]. A "groq:" engine sends audio to Groq. */
+    voiceEngines: z.array(z.string()).default([]),
   }),
   /** Reply to `economy.get`; `summary` is absent when the trace store cannot be listed. */
   z.object({ type: z.literal("economy"), summary: EconomySummary.optional() }),
@@ -50,7 +52,7 @@ export const ServerMessage = z.discriminatedUnion("type", [
     commandRan: z.boolean(),
     reason: z.enum(["unavailable", "failed", "cancelled"]).optional(),
   }),
-  z.object({ type: z.literal("voice.transcribed"), text: z.string(), audioMs: z.number(), latencyMs: z.number(), language: z.string().optional() }),
+  z.object({ type: z.literal("voice.transcribed"), text: z.string(), audioMs: z.number(), latencyMs: z.number(), language: z.string().optional(), engine: z.string().optional(), /** Literal words when `text` is an interpretation (misrecognitions fixed). */ heard: z.string().optional() }),
   z.object({
     type: z.literal("voice.rejected"),
     reason: z.enum(["invalid", "too_short", "too_long", "silence", "empty", "unavailable", "failed", "cancelled"]),

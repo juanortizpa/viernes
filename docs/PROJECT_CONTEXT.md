@@ -63,7 +63,7 @@ Reglas duras:
 | Herramientas | Registro interno único; MCP como adaptador (consumir/exponer) | propuesto |
 | Proveedores MVP | Anthropic + OpenRouter + Ollama (3 adaptadores para probar la abstracción) | propuesto |
 | Respuesta inmediata | R1 plantillas ES/EN + acuse como evento (MVP); R2 caché semántico con embedding local <100 MB (V2); R3 perfil de estilo por contadores, sin modelo propio (ADR-0015) | propuesto |
-| Voz | Push-to-talk + STT local con whisper.cpp (binario y modelo del usuario, ADR-0016) hecho; TTS (ADR-0017) y wake word en dos etapas con tu voz + whisper tiny + ventana de 10 s (ADR-0018) implementados, **sin probar con voz real** | parcial |
+| Voz | STT: carrera Groq whisper + Gemini (entiende lo que quisiste decir) con whisper local de respaldo (ADR-0020); push-to-talk + STT local con whisper.cpp (binario y modelo del usuario, ADR-0016) hecho; TTS (ADR-0017) y wake word en dos etapas con tu voz + whisper tiny + ventana de 10 s (ADR-0018) implementados, **sin probar con voz real** | parcial |
 
 ## 5. Niveles de permiso
 

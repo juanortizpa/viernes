@@ -12,12 +12,23 @@ export interface Transcript {
   audioMs: number;
   /** Time spent transcribing. */
   latencyMs: number;
+  /** Which engine produced it (e.g. "groq:whisper-large-v3-turbo", "local"). */
+  engine?: string;
+  /** 0..1 from the engine's own token probabilities, when it reports them. */
+  confidence?: number;
+  /**
+   * Literal transcription when the engine also INTERPRETED it (then `text` is what the user most likely meant, with
+   * misrecognitions and fillers fixed). Undefined when `text` is the literal transcription.
+   */
+  heard?: string;
 }
 
 export interface TranscribeOptions {
   /** ISO 639-1 code, or "auto". */
   language?: string;
   signal?: AbortSignal;
+  /** Overrides the engine's vocabulary prompt for this call. */
+  prompt?: string;
 }
 
 /** A speech-to-text engine. Receives a 16 kHz mono PCM16 WAV that already passed `prepareClip`. */

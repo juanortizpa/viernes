@@ -1,5 +1,5 @@
 import { AppCatalog } from "./app-catalog";
-import { normalizeText } from "./text";
+import { cleanSpoken, normalizeText } from "./text";
 
 export interface FollowUp {
   tool: string;
@@ -26,9 +26,9 @@ export interface IntentRouterOptions {
 }
 
 // Spoken requests are wordier than typed ones: "puedes abrir la calculadora por favor", "open the notepad".
-const LEAD = "(?:(?:hey|oye|ok|jarvis|por favor|please|puedes|puedes tu|podrias|podria|podes|me puedes|me podes|me podrias|quiero que|necesito que|can you|could you|would you|will you|i want you to|i need you to|ahora|ya|vamos a)\\s+)*";
-const OPEN_VERB = "(?:abre|abrir|abri|abrime|abreme|abrirme|abrirlo|abras|open|launch|inicia|iniciar|ejecuta|ejecutar|lanza|lanzar|arranca|arrancar)";
-const OPEN_REQUEST = new RegExp(`^${LEAD}${OPEN_VERB}\\s+(.+)$`);
+const LEAD = "(?:(?:hey|oye|ok|che|jarvis|por favor|please|puedes|puedes tu|podrias|podria|podes|me puedes|me podes|me podrias|quiero que|necesito que|can you|could you|would you|will you|i want you to|i need you to|ahora|ya|vamos a)\\s+)*";
+const OPEN_VERB = "(?:abre|abris|abrir|abriendo|abri|abrime|abreme|abrirme|abrirlo|abras|open|launch|inicia|iniciar|ejecuta|ejecutar|lanza|lanzar|arranca|arrancar)";
+const OPEN_REQUEST = new RegExp(`^${LEAD}(?:me\\s+)?${OPEN_VERB}\\s+(.+)$`);
 const FILLER_WORDS = /^(?:(?:me|up|la|el|los|las|un|una|the|a|an|mi|my|app|aplicacion|programa|application|program|de|of)\s+)+/;
 const TRAILING = /(?:\s+(?:por favor|please|ahora|now|gracias|thanks|ya))+$/;
 
@@ -43,7 +43,7 @@ export function extractOpenTarget(text: string): { raw: string; clean: string } 
 
 const DAY_WORD = "(hoy|today|manana|tomorrow|ayer|yesterday)";
 const DAY_QUERY = new RegExp(
-  `^(?:que dia (?:es|sera|fue)|what day (?:is|will be|was)|que fecha es|what(?:'s| is) the date)(?:\\s+${DAY_WORD})?$`,
+  `^(?:que dia (?:es|sera|fue)|what day (?:is|will be|was)|que fecha es|what(?:'s| is) the date)(?:\\s+(?:el\\s+)?${DAY_WORD})?$`,
 );
 
 /** Deterministic, LLM-free intent rules (ES/EN). Anything unmatched falls through to the LLM. */
@@ -55,7 +55,8 @@ export class IntentRouter {
   }
 
   resolve(input: string): Intent {
-    const text = normalizeText(input);
+    // Spoken requests carry fillers and stutters ("che, eh, abrime el, el paint"); rules match the cleaned form.
+    const text = cleanSpoken(normalizeText(input));
 
     if (/^(que hora es|what time is it|hora actual|current time)$/.test(text)) {
       return { route: "local", intent: "time.now", tool: "time.now", args: {}, confidence: 1 };

@@ -7,3 +7,6 @@ export * from "./wake-controller";
 export * from "./spotter";
 export * from "./mfcc";
 export * from "./dtw";
+export * from "./groq-stt";
+export * from "./gemini-stt";
+export * from "./race-stt";

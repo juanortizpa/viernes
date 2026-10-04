@@ -46,7 +46,7 @@ export type IslandAction =
   | { kind: "voice.recording" }
   | { kind: "voice.level"; level: number }
   | { kind: "voice.transcribing" }
-  | { kind: "voice.heard"; text: string }
+  | { kind: "voice.heard"; text: string; /** e.g. "groq:whisper-large-v3-turbo" */ engine?: string; /** literal words when `text` was interpreted */ heard?: string }
   | { kind: "voice.rejected"; message: string }
   | { kind: "speech"; speaking: boolean }
   | { kind: "wake"; state: "off" | "idle" | "verifying" | "command" | "busy" | "followUp"; followUpMs?: number };
@@ -83,7 +83,14 @@ export function islandReducer(state: IslandState, action: IslandAction): IslandS
     case "voice.transcribing":
       return { ...state, mode: "thinking", headline: "Transcribiendo…", detail: undefined, level: undefined };
     case "voice.heard":
-      return { ...state, mode: "thinking", headline: "Escuché", detail: action.text, level: undefined };
+      // Show what was understood; when it was interpreted (misrecognitions fixed), show what was literally heard too.
+      return {
+        ...state,
+        mode: "thinking",
+        headline: action.heard ? "Entendí" : action.engine && action.engine !== "local" ? "Escuché (nube)" : "Escuché",
+        detail: action.heard ? `${action.text} · (oí: «${action.heard}»)` : action.text,
+        level: undefined,
+      };
     case "voice.rejected":
       return { ...initialState, mode: "warning", headline: action.message, speaking: state.speaking, wake: state.wake };
   }

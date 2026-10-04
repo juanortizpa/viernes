@@ -141,14 +141,34 @@ describe("opening apps by the name a person (or a model) says", () => {
     await expect(launch("calc.exe && evil")).rejects.toThrow(/not a known app/);
   });
 
-  it("builds a short vocabulary prompt for speech recognition, only from plain app names", () => {
-    expect(defaultVoicePrompt(["vs code", "calculadora", "otra pestana"], "es")).toBe("Jarvis, abre vs code, calculadora, otra pestana.");
-    expect(defaultVoicePrompt(["a;b", "x".repeat(40)], "es")).toBeUndefined();
+  it("primes speech recognition with the assistant's name only: an app list gets regurgitated as if it had been said", () => {
+    expect(defaultVoicePrompt(["vs code", "calculadora", "paint"], "es")).toBe("Jarvis.");
     expect(defaultVoicePrompt(["paint"], "en")).toBeUndefined();
   });
 
   it("tells the model which app names exist", async () => {
     const { makeAppsOpen } = await import("@jarvis/tools");
     expect(makeAppsOpen(async () => {}, ["calculadora", "paint"]).description).toMatch(/known apps: calculadora, paint/);
+  });
+});
+
+describe("speech engine selection (ADR-0020)", () => {
+  const rt = (voice: unknown, env: Record<string, string> = {}) => buildRuntime(Config.parse({ voice }), { env, launcher: noop });
+  it("auto: Groq first when there is a key, local whisper as fallback; neither -> no voice", () => {
+    expect(rt({ binary: "w.exe", model: "m.bin" }, { GROQ_API_KEY: "k" }).voiceEngines).toEqual(["groq:whisper-large-v3-turbo", "local"]);
+    expect(rt({ binary: "w.exe", model: "m.bin" }).voiceEngines).toEqual(["local"]);
+    expect(rt(undefined, { GROQ_API_KEY: "k" }).voiceEngines).toEqual(["groq:whisper-large-v3-turbo"]);
+    expect(rt(undefined).transcriber).toBeUndefined();
+  });
+  it("local never sends audio out even with a key; groq never runs the local engine; the cloud model is configurable", () => {
+    expect(rt({ engine: "local", binary: "w.exe", model: "m.bin" }, { GROQ_API_KEY: "k" }).voiceEngines).toEqual(["local"]);
+    expect(rt({ engine: "groq", binary: "w.exe", model: "m.bin" }, { GROQ_API_KEY: "k" }).voiceEngines).toEqual(["groq:whisper-large-v3-turbo"]);
+    expect(rt({ cloudModel: "whisper-large-v3" }, { GROQ_API_KEY: "k" }).voiceEngines).toEqual(["groq:whisper-large-v3"]);
+  });
+  it("with both keys: fast whisper and the interpreter race; with only Gemini: the interpreter; gemini mode never touches Groq", () => {
+    expect(rt({ binary: "w.exe", model: "m.bin" }, { GROQ_API_KEY: "k", GEMINI_API_KEY: "g" }).voiceEngines).toEqual(["groq:whisper-large-v3-turbo+gemini:gemini-3.5-flash-lite", "local"]);
+    expect(rt(undefined, { GEMINI_API_KEY: "g" }).voiceEngines).toEqual(["gemini:gemini-3.5-flash-lite"]);
+    expect(rt({ engine: "gemini" }, { GROQ_API_KEY: "k", GEMINI_API_KEY: "g" }).voiceEngines).toEqual(["gemini:gemini-3.5-flash-lite"]);
+    expect(rt({ engine: "local", binary: "w", model: "m" }, { GROQ_API_KEY: "k", GEMINI_API_KEY: "g" }).voiceEngines).toEqual(["local"]);
   });
 });

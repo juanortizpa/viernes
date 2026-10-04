@@ -103,6 +103,12 @@ describe("islandReducer voice states (real mic / STT, not orchestrator progress)
     expect(s).toMatchObject({ headline: "Escuché", detail: "abre vscode" });
   });
 
+  it("shows what was understood and, when it was interpreted, what was literally heard", () => {
+    expect(islandReducer(initialState, { kind: "voice.heard", text: "abre la calculadora", engine: "groq:whisper-large-v3-turbo" })).toMatchObject({ headline: "Escuché (nube)", detail: "abre la calculadora" });
+    expect(islandReducer(initialState, { kind: "voice.heard", text: "abrime el bloc de notas por favor", heard: "abrimos el bloc de notas puesto bar", engine: "gemini:x" })).toMatchObject({ headline: "Entendí", detail: "abrime el bloc de notas por favor · (oí: «abrimos el bloc de notas puesto bar»)" });
+    expect(islandReducer(initialState, { kind: "voice.heard", text: "hola", engine: "local" })).toMatchObject({ headline: "Escuché" });
+  });
+
   it("a rejected clip warns and is not shown as success", () => {
     expect(islandReducer(initialState, { kind: "voice.rejected", message: "No se detectó voz" })).toMatchObject({ mode: "warning", headline: "No se detectó voz" });
   });

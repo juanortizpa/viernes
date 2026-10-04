@@ -10,7 +10,7 @@ export interface SidecarServerOptions {
   /** Builds the orchestrator wired to this connection's bus and permission channel. */
   createOrchestrator: (io: { bus: EventBus; askPermission: PermissionResolver }) => Orchestrator;
   bus: EventBus;
-  info: { models: string[]; offline: boolean };
+  info: { models: string[]; offline: boolean; voiceEngines?: string[] };
   /** Local speech-to-text. Without it, `voice.submit` is answered with `voice.rejected(unavailable)`. */
   transcriber?: Transcriber;
   /** Lighter engine for wake-word verification; falls back to `transcriber`. */
@@ -63,7 +63,7 @@ export class SidecarServer {
         return this.fatal("handshake rejected");
       }
       this.authed = true;
-      return this.opts.send({ type: "hello.ok", protocol: IPC_VERSION, ...this.opts.info, voice: this.opts.transcriber !== undefined });
+      return this.opts.send({ type: "hello.ok", protocol: IPC_VERSION, models: this.opts.info.models, offline: this.opts.info.offline, voice: this.opts.transcriber !== undefined, voiceEngines: this.opts.info.voiceEngines ?? [] });
     }
     if (!parsed.success) return this.opts.send({ type: "error", message: "invalid message" });
 
@@ -128,9 +128,25 @@ export class SidecarServer {
         const m = matchWakeWord(t.text, this.opts.wakeWords);
         if (!m.matched) return result(false, false); // not for the assistant: the text is dropped here
         if (!m.rest) return result(true, false);
-        this.opts.send({ type: "voice.transcribed", text: m.rest, audioMs: clip.audioMs, latencyMs: t.latencyMs, ...(t.language ? { language: t.language } : {}) });
+        // The wake check used the small/fast engine; the command itself deserves the accurate one (same audio, one more pass).
+        let text = m.rest;
+        let heard = t;
+        const main = this.opts.transcriber;
+        if (main && main !== engine) {
+          try {
+            const better = await main.transcribe(clip.wav, { signal: ac.signal });
+            const m2 = matchWakeWord(better.text, this.opts.wakeWords);
+            if (m2.matched && m2.rest) (text = m2.rest), (heard = better);
+            // An interpreting engine may already have dropped the wake word from what was meant: then its text IS the command.
+            else if (!m2.matched && better.heard && matchWakeWord(better.heard, this.opts.wakeWords).matched && better.text) (text = better.text), (heard = better);
+          } catch {
+            /* keep the fast engine's text */
+          }
+          if (ac.signal.aborted) return result(false, false, "cancelled");
+        }
+        this.opts.send({ type: "voice.transcribed", text, audioMs: clip.audioMs, latencyMs: heard.latencyMs, ...(heard.language ? { language: heard.language } : {}), ...(heard.engine ? { engine: heard.engine } : {}), ...(heard.heard ? { heard: heard.heard } : {}) });
         result(true, true);
-        this.submit(m.rest.slice(0, 10_000), "voice");
+        this.submit(text.slice(0, 10_000), "voice"); // the accurate text, not the fast engine's
       } catch (e) {
         if (ac.signal.aborted) return result(false, false, "cancelled");
         if (e instanceof VoiceRejected) return result(false, false); // silence/too short: nothing to report
@@ -155,7 +171,7 @@ export class SidecarServer {
         const t = await transcriber.transcribe(clip.wav, { language, signal: ac.signal });
         if (ac.signal.aborted) return reject("cancelled", "Cancelado");
         if (!t.text) return reject("empty", "No entendí nada");
-        this.opts.send({ type: "voice.transcribed", text: t.text, audioMs: clip.audioMs, latencyMs: t.latencyMs, ...(t.language ? { language: t.language } : {}) });
+        this.opts.send({ type: "voice.transcribed", text: t.text, audioMs: clip.audioMs, latencyMs: t.latencyMs, ...(t.language ? { language: t.language } : {}), ...(t.engine ? { engine: t.engine } : {}), ...(t.heard ? { heard: t.heard } : {}) });
         this.submit(t.text.slice(0, 10_000), "voice");
       } catch (e) {
         if (ac.signal.aborted) return reject("cancelled", "Cancelado");

@@ -178,3 +178,20 @@ Si al hablar normal transcribe mal:
 4. **Pégame la tabla** (`.jarvis\bench\report.md`): modelos, error de palabras, latencia. Con eso decido si hace falta un modelo mayor o ajustar otra cosa.
 
 Mientras tanto, prueba también: habla a ~20–30 cm del micrófono, sin fondo de música/TV, y en hands-free di «jarvis» + pausa corta + la orden: ahora ya no se pierde el principio.
+
+## H. Transcripción en la nube + "entendí lo que quisiste decir" (ADR-0020)
+
+1. `git pull` y reinicia `start.bat` (no hace falta `setup.bat`: usa tus claves de Groq y Gemini de `jarvis.env`).
+2. En el panel, junto a «Audio del navegador», debe decir **"Transcripción: Groq whisper-large-v3-turbo + Gemini gemini-3.5-flash-lite (nube…) → respaldo: whisper local"**.
+3. Habla **normal y rápido**, como hablás siempre:
+
+| # | Di | Esperado |
+|---|---|---|
+| N1 | "che, abrime la calculadora" | Se abre en ~0,5 s (vía rápida). Isla: "Escuché (nube)" |
+| N2 | "eh… abrime el, el bloc de notas" | Isla: "Entendí: abrime el bloc de notas (oí: …)" y se abre |
+| N3 | "decime qué día es mañana" | Responde la fecha |
+| N4 | "necesito que me abras el explorador de archivos" | Se abre |
+| N5 | Una pregunta larga dicha con dudas | La entiende aunque no la digas perfecta |
+| N6 | Desconecta internet y di "abre paint" | Funciona igual con el whisper local (más lento) |
+
+Dime en cuáles falla y qué mostró la isla en "Entendí/Escuché". Si quieres privacidad total: en `jarvis.config.json` pon `"voice": { "engine": "local", … }`.
