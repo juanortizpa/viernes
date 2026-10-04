@@ -7,3 +7,5 @@ export * from "./replay";
 export * from "./report";
 export * from "./stats";
 export * from "./suites/seed";
+export * from "./instant-eval";
+export * from "./suites/instant-pairs";

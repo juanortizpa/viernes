@@ -53,9 +53,9 @@ export function islandReducer(state: IslandState, action: IslandAction): IslandS
 
     case "instant.issued":
       // Receipt or pleasantry from the deterministic instant layer; the UI says so rather than pretending a model spoke.
-      return e.kind === "reply"
-        ? { ...state, route: "local", mode: "thinking", headline: "Respuesta rápida", detail: e.text }
-        : { ...state, mode: "thinking", headline: "Recibido", detail: e.text };
+      return e.kind === "ack"
+        ? { ...state, mode: "thinking", headline: "Recibido", detail: e.text }
+        : { ...state, route: "local", mode: "thinking", headline: e.kind === "cache" ? "Respuesta guardada" : "Respuesta rápida", detail: e.text };
 
     case "route.decided":
       return {

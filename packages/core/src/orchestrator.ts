@@ -5,6 +5,7 @@ import type { ChatMessage, ProviderRegistry, ToolCall } from "@jarvis/providers"
 import type { AnyTool, Checkpoint, ToolRegistry } from "@jarvis/tools";
 import { EventBus, TaskEmitter } from "./bus";
 import type { InstantResponder } from "./instant";
+import type { InstantCache } from "./instant-cache";
 import type { FollowUp, IntentRouter } from "./intent";
 import { runEvaluators, toolPostconditionVerdict, type Evaluator } from "./evaluator";
 import { escalationLadder, estimateCostUsd, premiumModel, type ModelRouter, type RouteRequest } from "./model-router";
@@ -29,6 +30,8 @@ export interface OrchestratorDeps {
   intents: IntentRouter;
   /** Optional instant layer (ADR-0015): pleasantries and receipt acknowledgements without a model. */
   instant?: InstantResponder;
+  /** Optional semantic cache of verified answers to repeated questions (ADR-0015, R2). */
+  cache?: InstantCache;
   router: ModelRouter;
   providers: ProviderRegistry;
   tools: ToolRegistry;
@@ -74,6 +77,8 @@ interface ToolRunCtx {
 
 /** What one model attempt did to the world; decides whether escalating is safe. */
 interface AttemptState {
+  /** Any tool ran (even read-only): the answer then depends on machine state and must not be cached. */
+  usedTools: boolean;
   /** A tool above `read` risk ran. */
   sideEffects: boolean;
   /** One of those had no checkpoint, so it cannot be undone. */
@@ -130,6 +135,17 @@ export class Orchestrator {
         summary = reply;
         return trace;
       }
+      const cached = intent.route === "llm" ? this.deps.cache?.lookup(input) : undefined;
+      if (cached) {
+        out.emit({ type: "intent.resolved", route: "local", intent: "instant.cache", confidence: cached.score });
+        out.emit({ type: "instant.issued", kind: "cache", text: cached.entry.response });
+        trace.usedLocalIntent = true;
+        trace.taskType = classifyTask(input).taskType;
+        trace.instant = "cache";
+        trace.finalOutcome = "success";
+        summary = cached.entry.response;
+        return trace;
+      }
       out.emit({
         type: "intent.resolved",
         route: intent.route,
@@ -146,12 +162,20 @@ export class Orchestrator {
         }
       }
 
-      const result =
+      const result: { outcome: "success" | "failure"; summary?: string; learn?: string } =
         intent.route === "local"
           ? await this.runLocal(taskId, intent.tool, intent.args, intent.then, out, machine, trace)
           : await this.runModel(taskId, input, out, machine, trace, opts.signal);
       trace.finalOutcome = opts.signal?.aborted ? "cancelled" : result.outcome;
       summary = result.summary;
+      if (result.learn !== undefined && trace.finalOutcome === "success") {
+        // A cache failure must never fail the user's task.
+        try {
+          this.deps.cache?.learn(input, result.learn, { model: trace.attempts.at(-1)?.model });
+        } catch {
+          /* ignore */
+        }
+      }
     } catch (e) {
       const cancelled = opts.signal?.aborted === true;
       if (!cancelled) out.emit({ type: "task.error", message: e instanceof Error ? e.message : String(e), recoverable: false });
@@ -213,6 +237,7 @@ export class Orchestrator {
     }
 
     machine.to("running");
+    if (ctx.attempt) ctx.attempt.usedTools = true;
     if (ctx.attempt && tool.risk !== "read") {
       ctx.attempt.sideEffects = true;
       const checkpoint = tool.checkpoint ? await tool.checkpoint(parsed.data, { taskId }).catch(() => undefined) : undefined;
@@ -238,7 +263,7 @@ export class Orchestrator {
     machine: TaskMachine,
     trace: ExecutionTrace,
     signal?: AbortSignal,
-  ): Promise<{ outcome: "success" | "failure"; summary?: string }> {
+  ): Promise<{ outcome: "success" | "failure"; summary?: string; /** An answer safe to remember (ADR-0015). */ learn?: string }> {
     // A model only "supports tools" if its adapter can also send them.
     const caps = this.deps.providers
       .capabilities()
@@ -254,9 +279,10 @@ export class Orchestrator {
     const maxEscalations = evaluators.length > 0 ? (this.deps.maxEscalations ?? 0) : 0;
     const taint = new TaintTracker(); // spans the whole task, across attempts: untrusted content stays in context
     machine.to("running");
+    let anyTools = false;
 
     for (;;) {
-      const state: AttemptState = { sideEffects: false, irreversible: false, checkpoints: [] };
+      const state: AttemptState = { sideEffects: false, irreversible: false, usedTools: false, checkpoints: [] };
       const attempt = await this.runAttempt(taskId, input, decision, caps, { out, machine, trace, taint, attempt: state }, signal, maxEscalations > 0);
       let verdict = await runEvaluators(evaluators, { input, taskType: cls.taskType, response: attempt.text, failure: attempt.failure });
       // A broken attempt is a failure whatever the evaluators say (some skip, some only read the text).
@@ -268,9 +294,15 @@ export class Orchestrator {
         if (verdict.usage) trace.totalCostUsd += verdict.usage.estimatedCostUsd;
       }
       this.finishAttempt(trace, decision, attempt.usage, verdict);
+      anyTools ||= state.usedTools;
 
       const failed = attempt.failure !== undefined || verdict?.outcome === "failure";
-      if (!verdict || !shouldEscalate(verdict)) return failed ? { outcome: "failure", summary: attempt.failure ?? verdict?.evidence } : { outcome: "success" };
+      if (!verdict || !shouldEscalate(verdict)) {
+        if (failed) return { outcome: "failure", summary: attempt.failure ?? verdict?.evidence };
+        // Remember only what a judge accepted, that no tool touched, and that carries no untrusted or sensitive content.
+        const learnable = verdict?.outcome === "success" && verdict.confidence >= 0.5 && !anyTools && !taint.isTainted && !req.sensitive;
+        return { outcome: "success", ...(learnable ? { learn: attempt.text } : {}) };
+      }
 
       const next = this.nextModel(req, caps, decision.model!);
       const reason = attempt.failure ?? verdict.evidence;

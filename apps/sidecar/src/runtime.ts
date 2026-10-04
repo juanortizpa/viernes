@@ -9,7 +9,7 @@ import {
   ProviderRegistry,
   type FetchLike,
 } from "@jarvis/providers";
-import { AlwaysCheapestRouter, AlwaysPremiumRouter, AppCatalog, IntentRouter, MemoryTraceStore, Orchestrator, ResponseHeuristicEvaluator, RuleInstantResponder, RulesRouter, StaticRouter, type AliasStore, type EventBus, type ModelRouter, type PermissionResolver, type TraceStore } from "@jarvis/core";
+import { AlwaysCheapestRouter, AlwaysPremiumRouter, AppCatalog, IntentRouter, MemoryTraceStore, Orchestrator, ResponseHeuristicEvaluator, RuleInstantResponder, SemanticCache, instantControlRules, RulesRouter, StaticRouter, type AliasStore, type InstantStore, type EventBus, type ModelRouter, type PermissionResolver, type TraceStore } from "@jarvis/core";
 import {
   ToolRegistry,
   filesRead,
@@ -17,6 +17,10 @@ import {
   makeAliasesForget,
   makeAliasesLearn,
   makeAliasesList,
+  makeInstantClear,
+  makeInstantForget,
+  makeInstantList,
+  makeInstantToggle,
   makeAppsOpen,
   timeDate,
   timeNow,
@@ -49,6 +53,8 @@ export interface RuntimeDeps {
   traces?: TraceStore;
   /** Where learned aliases persist; in-memory when omitted. */
   aliases?: AliasStore;
+  /** Where the semantic cache persists; in-memory when omitted. */
+  instantStore?: InstantStore;
   /** Apps discovered on the machine; lowest-priority aliases. */
   scanned?: ScannedApp[];
 }
@@ -106,6 +112,14 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
     if (!catalog.hasCommand(command)) throw new Error(`"${command}" is not a known app`);
     await deps.launcher(command);
   };
+  const cache = new SemanticCache({
+    store: deps.instantStore,
+    enabled: config.instantCache.enabled,
+    minSeen: config.instantCache.minSeen,
+    threshold: config.instantCache.threshold,
+    maxEntries: config.instantCache.maxEntries,
+    ttlMs: config.instantCache.ttlDays * 86_400_000,
+  });
   const tools = new ToolRegistry()
     .register(timeNow)
     .register(timeDate)
@@ -114,7 +128,11 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
     .register(makeAppsOpen(launcher))
     .register(makeAliasesLearn(catalog))
     .register(makeAliasesForget(catalog))
-    .register(makeAliasesList(catalog));
+    .register(makeAliasesList(catalog))
+    .register(makeInstantList(cache))
+    .register(makeInstantForget(cache))
+    .register(makeInstantClear(cache))
+    .register(makeInstantToggle(cache));
   const makeRouter = (): ModelRouter =>
     config.router === "always_premium"
       ? new AlwaysPremiumRouter()
@@ -132,8 +150,8 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
     createOrchestrator: ({ bus, askPermission }) =>
       new Orchestrator({
         bus,
-        intents: new IntentRouter({ apps: catalog }),
-        ...(config.instantResponses ? { instant: new RuleInstantResponder() } : {}),
+        intents: new IntentRouter({ apps: catalog, rules: instantControlRules }),
+        ...(config.instantResponses ? { instant: new RuleInstantResponder(), cache } : {}),
         router: makeRouter(),
         providers,
         tools,

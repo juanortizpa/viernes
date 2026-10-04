@@ -15,6 +15,17 @@ export const Config = z.object({
   maxEscalations: z.number().int().min(0).max(3).default(1),
   /** Instant layer (ADR-0015): fixed pleasantry replies and a receipt acknowledgement on long tasks. No model involved. */
   instantResponses: z.boolean().default(true),
+  /** Semantic cache of verified answers to repeated questions (ADR-0015, R2). Needs a data dir to persist across runs. */
+  instantCache: z
+    .object({
+      enabled: z.boolean().default(true),
+      /** Verified model answers required before a question is served from cache. */
+      minSeen: z.number().int().min(1).default(2),
+      threshold: z.number().min(0.5).max(1).default(0.8),
+      maxEntries: z.number().int().min(10).max(20_000).default(2_000),
+      ttlDays: z.number().min(1).default(30),
+    })
+    .default({}),
   /** Refuse to start if any configured model has a non-zero price. */
   freeOnly: z.boolean().default(false),
   /** Discover installed apps (Windows Start Menu) so "abre X" works without hand-written aliases. */

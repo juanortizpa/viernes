@@ -5,7 +5,7 @@ import { AnthropicProvider, GoogleProvider, GroqProvider, OllamaProvider, OpenRo
 import { z } from "zod";
 import {
   CellTable, alwaysCheapest, alwaysPremium, analyze, buildReplayData, cascadePolicy, crossValidatedPolicy, heuristicJudge, oracleJudge, oraclePolicy,
-  renderMarkdown, routerPolicy, runCounterfactual, seedSuite, type Policy, type PriceBook,
+  evalInstantCache, renderInstantEval, renderMarkdown, routerPolicy, runCounterfactual, seedSuite, type Policy, type PriceBook,
 } from "./index";
 import { AlwaysCheapestRouter } from "@jarvis/core";
 
@@ -79,6 +79,7 @@ async function listModels(provider: string): Promise<void> {
 
 async function main(): Promise<void> {
   const { cmd, flags } = parseArgs(process.argv.slice(2));
+  if (cmd === "instant-eval") return console.log(renderInstantEval(evalInstantCache([0.5, 0.6, 0.7, 0.8, 0.9])));
   if (cmd === "list-models") return listModels(flags.get("provider") ?? "");
   const tablePath = flags.get("table") ?? "data/counterfactual.jsonl";
   const tasks = seedSuite.slice(0, flags.has("limit") ? Number(flags.get("limit")) : undefined);
@@ -120,7 +121,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.log("usage:\n  harness list-models --provider groq|google\n  harness run    --config <json> [--table path] [--models a,b] [--limit N] [--concurrency N] [--budget N] [--max-tokens N]\n  harness report --config <json> [--table path] [--prices json] [--out file.md] [--seed N]");
+  console.log("usage:\n  harness instant-eval\n  harness list-models --provider groq|google\n  harness run    --config <json> [--table path] [--models a,b] [--limit N] [--concurrency N] [--budget N] [--max-tokens N]\n  harness report --config <json> [--table path] [--prices json] [--out file.md] [--seed N]");
 }
 
 main().catch((e) => {

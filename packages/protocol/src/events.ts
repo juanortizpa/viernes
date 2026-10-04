@@ -31,9 +31,10 @@ export const OrchestratorEvent = z.discriminatedUnion("type", [
     type: z.literal("instant.issued"),
     /**
      * Served by the deterministic instant layer, never by a model (ADR-0015).
-     * "reply": the complete answer (greeting, thanks). "ack": only confirms the request was received; the model is still working.
+     * "reply": the complete answer (greeting, thanks). "cache": a previously verified model answer to a repeated question.
+     * "ack": only confirms the request was received; the model is still working.
      */
-    kind: z.enum(["reply", "ack"]),
+    kind: z.enum(["reply", "cache", "ack"]),
     text: z.string(),
   }),
   z.object({ ...base, type: z.literal("route.decided"), decision: RoutingDecision }),

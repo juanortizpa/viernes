@@ -3,6 +3,7 @@ export * from "./app-catalog";
 export * from "./bus";
 export * from "./evaluator";
 export * from "./instant";
+export * from "./instant-cache";
 export * from "./intent";
 export * from "./model-router";
 export * from "./orchestrator";

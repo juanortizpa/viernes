@@ -213,3 +213,13 @@ describe("runCounterfactual", () => {
     expect([...a].some((id) => Number(id.slice(-3)) > 10)).toBe(true);
   });
 });
+
+describe("instant cache evaluation (ADR-0015, R2)", () => {
+  it("never serves a look-alike or another group's answer, and catches most rewordings at the default threshold", async () => {
+    const { evalInstantCache } = await import("../src");
+    const [row] = evalInstantCache([0.8]);
+    expect(row!.falsePositives).toBe(0);
+    expect(row!.probes).toBeGreaterThan(500);
+    expect(row!.hitRate).toBeGreaterThanOrEqual(0.9);
+  });
+});

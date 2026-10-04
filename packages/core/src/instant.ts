@@ -41,7 +41,7 @@ const LOOKUP = new Map<string, { kind: Kind; lang: Lang }>();
 for (const [kind, langs] of Object.entries(PHRASES) as [Kind, { es: string[]; en: string[] }][])
   for (const lang of ["es", "en"] as const) for (const p of langs[lang]) LOOKUP.set(p, { kind, lang });
 
-const ES_HINT = /[áéíóúñ¿¡]|\b(el|la|los|las|un|una|que|por|para|con|mi|me|tu|de|en|es|y|crea|escribe|explica|haz|revisa|analiza|investiga|compara|arregla)\b/i;
+const ES_HINT = /[áéíóúñ¿¡]|\b(el|la|los|las|un|una|que|por|para|con|mi|tu|de|en|es|y|crea|escribe|explica|haz|revisa|analiza|investiga|compara|arregla)\b/i;
 const EN_HINT = /\b(the|a|an|to|of|and|is|my|me|please|create|write|explain|make|check|analy[sz]e|research|compare|fix)\b/i;
 
 export function detectLanguage(input: string): Lang {

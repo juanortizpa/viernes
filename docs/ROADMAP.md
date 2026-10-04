@@ -11,7 +11,7 @@
 | 1 | Columna vertebral (orquestador, proveedores, herramientas, policy) | ✅ completa en lo que no requiere Windows (quedan relevo Tauri y herramientas de Windows) | Tarea de texto de punta a punta, sin UI compleja |
 | 2 | Router y evaluador, escalado | ✅ (dry-run y plan→aprobación diferidos a V2; evaluador de tests sin runner en vivo) | Escalado automático con evaluador de tests |
 | 3 | Arnés de experimento | 🟦 tabla completa para 7 modelos (Groq + Google); faltan tareas más difíciles | Primer resultado de brazos A–D (¡temprano!) |
-| R | Respuesta inmediata (acuse, saludos, caché) | 🟦 R1 hecho y medido (acuse 1 ms vs 1 s) | Saludos y acuses <50 ms, sin progreso falso |
+| R | Respuesta inmediata (acuse, saludos, caché) | 🟦 R1 y R2 hechos y medidos (acuse 1 ms vs 1 s; caché 1 ms vs ~500 ms, 0 falsos positivos) | Saludos y acuses <50 ms, sin progreso falso |
 | 4 | Shell y UI completos | ⬜ | Isla con estados reales, permisos, panel Economy |
 | 5 | Memoria + optimización de contexto | ⬜ | Recuperación medida con ablación |
 | 6 | Router aprendido + experimento final | ⬜ | Frontera de Pareto costo vs éxito |
@@ -114,7 +114,7 @@ exista algo visible, no solo logs.
 - [ ] Cargadores HumanEval/MBPP/SWE-bench-Lite (requieren sandbox real, contenedor)
 - [ ] Baseline RouteLLM real (Fase 6); varias muestras por celda para la varianza de muestreo
 
-## Fase R — Respuesta inmediata (ADR-0015) 🟦 R1 hecho; R2/R3 en curso
+## Fase R — Respuesta inmediata (ADR-0015) 🟦 R1 y R2 hechos; R3 en curso
 **Meta:** que lo repetitivo responda al instante y lo largo acuse recibo al instante, sin progreso falso y sin falsos positivos.
 **Entregable de validación:** latencia al primer mensaje <50 ms en saludos y acuses, 0 respuestas servidas fuera de la lista permitida.
 
@@ -124,11 +124,12 @@ exista algo visible, no solo logs.
 - [x] Acuse al clasificar tarea larga o con herramientas; el texto solo confirma recepción
 - [x] Prueba e2e por el sidecar: acuse llega antes que la primera respuesta del modelo
 
-### R2 — Caché semántico (V2; solo si R1 y los datos de uso lo justifican)
-- [ ] Medir primero: tasa de preguntas repetidas en trazas reales (SQLite) y en la suite del arnés
-- [ ] Interfaz `InstantStore` (embedding + sqlite-vec), umbral alto, reglas de entrada y exclusión del ADR
-- [ ] Evaluar con el arnés: aciertos vs. respuesta correcta del modelo; tasa de falsos positivos objetivo ≈ 0
-- [ ] Control del usuario: listar, borrar, desactivar (se integra con Fase 5)
+### R2 — Caché semántico ✅
+- [ ] Medir tasa de preguntas repetidas en uso real (las trazas no guardan el texto; ver `instant.list`: `seen`/`hits`). Pendiente de datos reales
+- [x] `SemanticCache` + `InstantStore` (SQLite, embedder hasheado intercambiable), umbral alto, reglas de entrada y exclusión del ADR
+- [x] Evaluar con el arnés (`harness instant-eval`): 94.7 % de aciertos, 0 falsos positivos / 776 sondas. Con conjunto escrito por mí; falta validarlo con uso real
+- [x] Control del usuario: listar, borrar, desactivar (herramientas `instant.*` + frases locales; se integra con Fase 5)
+- [ ] Embedding neuronal (≈20–80 MB) solo si el real-world hit rate lo justifica
 
 ### R3 — Estilo y preferencias (Investigación, ⏸)
 - [ ] Decidir con datos de R2 si hace falta un modelo propio; por defecto, preferencias como memoria en el prompt
@@ -186,3 +187,4 @@ exista algo visible, no solo logs.
 | 2026-10-04 | Propuesta de respuesta inmediata registrada. |
 | 2026-10-04 | Contexto actualizado: capa de respuesta inmediata como Fase R (R1 acuse/saludos MVP, R2 caché semántico V2, R3 estilo investigación), ADR-0015 con reglas duras (lista de exclusión, `source: instant`, control del usuario). Nada implementado aún. |
 | 2026-10-04 | Fase R1 hecha: `RuleInstantResponder`, evento `instant.issued`, `ExecutionTrace.instant`, reducer de la isla, opción `instantResponses`. 181 tests. Medido con Groq real: acuse a 1 ms frente a ~1 s del primer token; saludos sin red. Tests antiguos que usaban "hola" como prompt de modelo se cambiaron. |
+| 2026-10-04 | Fase R2 hecha: `SemanticCache`, `SqliteInstantStore`, guarda `sameContent`, aprendizaje solo tras veredicto de éxito sin herramientas/taint/sensibles, controles del usuario, `harness instant-eval`. 196 tests. Bugs que atrapó la validación: el coseno podía dar 1.0000002 y el esquema `confidence ≤ 1` lo rechazaba; mi lista de exclusión bloqueaba "tell me"/"más grande". Verificado con Groq real (1 ms vs ~500 ms; Francia ≠ Italia). Riesgo abierto: una respuesta errónea aprobada por el evaluador heurístico puede guardarse. |

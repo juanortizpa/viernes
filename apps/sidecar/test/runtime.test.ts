@@ -94,3 +94,33 @@ describe("launchApp", () => {
     await expect(launchApp("true")).resolves.toBeUndefined();
   });
 });
+
+describe("instant cache in the runtime", () => {
+  it("keeps learned answers and the user's switch across restarts, and the user can inspect and clear them in plain words", async () => {
+    const { mkdtempSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const { SqliteInstantStore } = await import("@jarvis/storage");
+    const path = join(mkdtempSync(join(tmpdir(), "jarvis-rt-")), "instant.db");
+    const ask = async (instantStore: InstanceType<typeof SqliteInstantStore>, input: string) => {
+      const events: string[] = [];
+      const bus = new EventBus();
+      bus.subscribe((e) => events.push(e.type === "instant.issued" ? `instant.${e.kind}` : e.type));
+      const r = buildRuntime(Config.parse({ instantCache: { minSeen: 1 } }), { env: {}, launcher: noop, instantStore });
+      await r.createOrchestrator({ bus, askPermission: async () => true }).run(input);
+      return events;
+    };
+
+    const s1 = new SqliteInstantStore(path);
+    expect(await ask(s1, "cuál es la capital de Francia")).toContain("response.delta"); // offline-echo answers and is verified
+    s1.close();
+
+    const s2 = new SqliteInstantStore(path);
+    expect(await ask(s2, "dime la capital de Francia")).toContain("instant.cache");
+    expect(await ask(s2, "qué respuestas guardadas tienes")).toContain("tool.completed");
+    expect(await ask(s2, "borra todas las respuestas guardadas")).toContain("permission.required"); // bulk delete needs confirmation
+    expect(s2.all()).toHaveLength(0);
+    expect(await ask(s2, "dime la capital de Francia")).not.toContain("instant.cache");
+    s2.close();
+  });
+});
