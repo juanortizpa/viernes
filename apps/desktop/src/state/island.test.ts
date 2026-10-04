@@ -65,6 +65,19 @@ describe("islandReducer", () => {
     expect(some.fraction).toBe(0.4);
   });
 
+  it("instant replies and acks are labelled as such and are not model progress", () => {
+    const reply = run([
+      { type: "task.started", input: "hola", modality: "text" },
+      { type: "intent.resolved", route: "local", intent: "instant.reply", confidence: 1 },
+      { type: "instant.issued", kind: "reply", text: "¡Hola!" },
+      { type: "task.finished", outcome: "success", summary: "¡Hola!" },
+    ]);
+    expect(reply).toMatchObject({ mode: "success", route: "local", tokens: 0, costUsd: 0, detail: "¡Hola!" });
+    const ack = run([{ type: "task.started", input: "x", modality: "text" }, { type: "instant.issued", kind: "ack", text: "Entendido" }]);
+    expect(ack).toMatchObject({ mode: "thinking", headline: "Recibido", detail: "Entendido" });
+    expect(ack.fraction).toBeUndefined();
+  });
+
   it("reset returns to idle", () => {
     expect(islandReducer({ ...initialState, mode: "error" }, { kind: "reset" })).toEqual(initialState);
   });

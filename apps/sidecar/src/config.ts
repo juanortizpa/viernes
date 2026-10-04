@@ -13,6 +13,8 @@ export const Config = z.object({
   traceDb: z.string().optional(),
   /** How many times a failed/uncertain answer may move up to the next, stronger model (cascade, ADR-0011). 0 disables it. */
   maxEscalations: z.number().int().min(0).max(3).default(1),
+  /** Instant layer (ADR-0015): fixed pleasantry replies and a receipt acknowledgement on long tasks. No model involved. */
+  instantResponses: z.boolean().default(true),
   /** Refuse to start if any configured model has a non-zero price. */
   freeOnly: z.boolean().default(false),
   /** Discover installed apps (Windows Start Menu) so "abre X" works without hand-written aliases. */

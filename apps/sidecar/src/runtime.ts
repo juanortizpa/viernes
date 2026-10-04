@@ -9,7 +9,7 @@ import {
   ProviderRegistry,
   type FetchLike,
 } from "@jarvis/providers";
-import { AlwaysCheapestRouter, AlwaysPremiumRouter, AppCatalog, IntentRouter, MemoryTraceStore, Orchestrator, ResponseHeuristicEvaluator, RulesRouter, StaticRouter, type AliasStore, type EventBus, type ModelRouter, type PermissionResolver, type TraceStore } from "@jarvis/core";
+import { AlwaysCheapestRouter, AlwaysPremiumRouter, AppCatalog, IntentRouter, MemoryTraceStore, Orchestrator, ResponseHeuristicEvaluator, RuleInstantResponder, RulesRouter, StaticRouter, type AliasStore, type EventBus, type ModelRouter, type PermissionResolver, type TraceStore } from "@jarvis/core";
 import {
   ToolRegistry,
   filesRead,
@@ -133,6 +133,7 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
       new Orchestrator({
         bus,
         intents: new IntentRouter({ apps: catalog }),
+        ...(config.instantResponses ? { instant: new RuleInstantResponder() } : {}),
         router: makeRouter(),
         providers,
         tools,

@@ -48,7 +48,15 @@ describe("sidecar over real stdio", () => {
 
     s.send({ type: "task.submit", input: "hola" });
     await s.until((m) => m.filter((x) => x.type === "event" && x.event.type === "task.finished").length === 2);
-    expect(s.messages.some((m) => m.type === "event" && m.event.type === "response.delta")).toBe(true);
+    expect(s.messages.some((m) => m.type === "event" && m.event.type === "instant.issued")).toBe(true);
+    expect(s.messages.some((m) => m.type === "event" && m.event.type === "response.delta")).toBe(false);
+
+    s.send({ type: "task.submit", input: "crea un proyecto de api con tests" });
+    await s.until((m) => m.filter((x) => x.type === "event" && x.event.type === "task.finished").length === 3);
+    const evs = s.messages.flatMap((m) => (m.type === "event" ? [m.event.type] : []));
+    const ackAt = evs.lastIndexOf("instant.issued");
+    expect(ackAt).toBeGreaterThan(evs.indexOf("task.finished", 0));
+    expect(ackAt).toBeLessThan(evs.lastIndexOf("response.delta"));
 
     s.child.stdin.end();
     expect(await s.exited).toBe(0);

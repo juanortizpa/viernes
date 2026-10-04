@@ -4,11 +4,13 @@ import { TaintTracker, type PolicyEngine } from "@jarvis/policy";
 import type { ChatMessage, ProviderRegistry, ToolCall } from "@jarvis/providers";
 import type { AnyTool, Checkpoint, ToolRegistry } from "@jarvis/tools";
 import { EventBus, TaskEmitter } from "./bus";
+import type { InstantResponder } from "./instant";
 import type { FollowUp, IntentRouter } from "./intent";
 import { runEvaluators, toolPostconditionVerdict, type Evaluator } from "./evaluator";
 import { escalationLadder, estimateCostUsd, premiumModel, type ModelRouter, type RouteRequest } from "./model-router";
 import { detectSensitive } from "./sensitivity";
 import { routeRequestFor } from "./route-request";
+import { classifyTask } from "./task-classifier";
 import { TaskMachine } from "./task-state";
 import type { TraceStore } from "./trace-store";
 
@@ -25,6 +27,8 @@ export type PermissionResolver = (req: PermissionRequest) => Promise<boolean>;
 export interface OrchestratorDeps {
   bus: EventBus;
   intents: IntentRouter;
+  /** Optional instant layer (ADR-0015): pleasantries and receipt acknowledgements without a model. */
+  instant?: InstantResponder;
   router: ModelRouter;
   providers: ProviderRegistry;
   tools: ToolRegistry;
@@ -114,12 +118,33 @@ export class Orchestrator {
     try {
       machine.to("routing");
       const intent = this.deps.intents.resolve(input);
+      const reply = intent.route === "llm" ? this.deps.instant?.reply(input) : undefined;
+      if (reply !== undefined) {
+        // Served without a model: "local" is truthful (nothing reached an LLM) and keeps the UI off "choosing a model".
+        out.emit({ type: "intent.resolved", route: "local", intent: "instant.reply", confidence: 1 });
+        out.emit({ type: "instant.issued", kind: "reply", text: reply });
+        trace.usedLocalIntent = true;
+        trace.taskType = "qa_simple";
+        trace.instant = "reply";
+        trace.finalOutcome = "success";
+        summary = reply;
+        return trace;
+      }
       out.emit({
         type: "intent.resolved",
         route: intent.route,
         intent: intent.route === "local" ? intent.intent : undefined,
         confidence: intent.confidence,
       });
+
+      if (intent.route === "llm") {
+        // Receipt only, emitted before routing so it precedes anything the model can produce.
+        const ack = this.deps.instant?.ack(input, classifyTask(input));
+        if (ack !== undefined) {
+          out.emit({ type: "instant.issued", kind: "ack", text: ack });
+          trace.instant = "ack";
+        }
+      }
 
       const result =
         intent.route === "local"

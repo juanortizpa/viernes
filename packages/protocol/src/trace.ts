@@ -23,6 +23,8 @@ export const ExecutionTrace = z.object({
   taskType: TaskType,
   inputTokensEstimate: z.number().int().nonnegative(),
   usedLocalIntent: z.boolean(),
+  /** The instant layer (ADR-0015) answered fully ("reply", no attempts) or acknowledged before a model ran ("ack"). Keep out of model comparisons. */
+  instant: z.enum(["reply", "ack"]).optional(),
   attempts: z.array(Attempt),
   escalations: z.number().int().nonnegative(),
   finalOutcome: z.enum(["success", "failure", "cancelled"]),

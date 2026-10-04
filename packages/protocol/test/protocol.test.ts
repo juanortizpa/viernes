@@ -65,3 +65,16 @@ describe("risk ordering and trace", () => {
     expect(t.success).toBe(true);
   });
 });
+
+describe("instant layer contract", () => {
+  it("validates instant.issued and rejects an unknown kind; trace.instant is optional", () => {
+    const base = { id: "e", taskId: "t", seq: 0, ts: 1, type: "instant.issued" };
+    expect(OrchestratorEvent.safeParse({ ...base, kind: "ack", text: "Entendido" }).success).toBe(true);
+    expect(OrchestratorEvent.safeParse({ ...base, kind: "progress", text: "x" }).success).toBe(false);
+    const t = ExecutionTrace.safeParse({
+      taskId: "t", startedAt: 1, taskType: "qa_simple", inputTokensEstimate: 1, usedLocalIntent: true, instant: "reply",
+      attempts: [], escalations: 0, finalOutcome: "success", totalCostUsd: 0, totalLatencyMs: 1,
+    });
+    expect(t.success).toBe(true);
+  });
+});

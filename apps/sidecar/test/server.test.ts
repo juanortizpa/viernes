@@ -66,11 +66,11 @@ describe("SidecarServer tasks", () => {
   it("runs the model path against the offline provider", async () => {
     const h = harness();
     h.hello();
-    h.send({ type: "task.submit", input: "hola" });
+    h.send({ type: "task.submit", input: "dime algo breve" });
     await h.server.idle();
     const text = h.events().flatMap((e) => (e.type === "response.delta" ? [e.text] : [])).join("");
     expect(text).toContain("offline-echo");
-    expect(text).toContain("hola");
+    expect(text).toContain("dime algo breve");
   });
 
   it("reports malformed input without dying", () => {

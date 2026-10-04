@@ -11,7 +11,7 @@
 | 1 | Columna vertebral (orquestador, proveedores, herramientas, policy) | ✅ completa en lo que no requiere Windows (quedan relevo Tauri y herramientas de Windows) | Tarea de texto de punta a punta, sin UI compleja |
 | 2 | Router y evaluador, escalado | ✅ (dry-run y plan→aprobación diferidos a V2; evaluador de tests sin runner en vivo) | Escalado automático con evaluador de tests |
 | 3 | Arnés de experimento | 🟦 tabla completa para 7 modelos (Groq + Google); faltan tareas más difíciles | Primer resultado de brazos A–D (¡temprano!) |
-| R | Respuesta inmediata (acuse, saludos, caché) | ⬜ propuesta (ADR-0015) | Saludos y acuses <50 ms, sin progreso falso |
+| R | Respuesta inmediata (acuse, saludos, caché) | 🟦 R1 hecho y medido (acuse 1 ms vs 1 s) | Saludos y acuses <50 ms, sin progreso falso |
 | 4 | Shell y UI completos | ⬜ | Isla con estados reales, permisos, panel Economy |
 | 5 | Memoria + optimización de contexto | ⬜ | Recuperación medida con ablación |
 | 6 | Router aprendido + experimento final | ⬜ | Frontera de Pareto costo vs éxito |
@@ -114,15 +114,15 @@ exista algo visible, no solo logs.
 - [ ] Cargadores HumanEval/MBPP/SWE-bench-Lite (requieren sandbox real, contenedor)
 - [ ] Baseline RouteLLM real (Fase 6); varias muestras por celda para la varianza de muestreo
 
-## Fase R — Respuesta inmediata (ADR-0015) ⬜ propuesta, antes de Fase 4
+## Fase R — Respuesta inmediata (ADR-0015) 🟦 R1 hecho; R2/R3 en curso
 **Meta:** que lo repetitivo responda al instante y lo largo acuse recibo al instante, sin progreso falso y sin falsos positivos.
 **Entregable de validación:** latencia al primer mensaje <50 ms en saludos y acuses, 0 respuestas servidas fuera de la lista permitida.
 
 ### R1 — Acuse y respuestas fijas (MVP)
-- [ ] Contrato: evento `ack.issued` en `packages/protocol` (+ reducer de la isla y etiqueta en UI) y `source: instant` en la traza
-- [ ] Reglas ES/EN para saludos/cortesías (`packages/core`, junto al intent router), con tests de lo que NO debe capturar
-- [ ] Acuse al clasificar tarea larga o con herramientas; el texto solo confirma recepción
-- [ ] Prueba e2e por el sidecar: acuse llega antes que la primera respuesta del modelo
+- [x] Contrato: evento `instant.issued` en `packages/protocol` (+ reducer de la isla y etiqueta en UI) y `source: instant` en la traza
+- [x] Reglas ES/EN para saludos/cortesías (`packages/core`, junto al intent router), con tests de lo que NO debe capturar
+- [x] Acuse al clasificar tarea larga o con herramientas; el texto solo confirma recepción
+- [x] Prueba e2e por el sidecar: acuse llega antes que la primera respuesta del modelo
 
 ### R2 — Caché semántico (V2; solo si R1 y los datos de uso lo justifican)
 - [ ] Medir primero: tasa de preguntas repetidas en trazas reales (SQLite) y en la suite del arnés
@@ -185,3 +185,4 @@ exista algo visible, no solo logs.
 | 2026-10-04 | Claves de Groq y Gemini en el entorno: adaptadores Groq y Google **validados en vivo**. IDs de Llama de la config de ejemplo ya no existían; Gemini 2.5 no está disponible para cuentas nuevas. Modelos usables: gpt-oss-20b/120b y qwen3.8-27b (Groq); gemma-4-26b/31b, gemini-3.1/3.5-flash-lite (Google). Tabla contrafactual completa (7×43) e informe regenerado; un 500 transitorio de Gemma se reintentó. Pendiente: tareas más difíciles, probar herramientas con Groq/Google. |
 | 2026-10-04 | Propuesta de respuesta inmediata registrada. |
 | 2026-10-04 | Contexto actualizado: capa de respuesta inmediata como Fase R (R1 acuse/saludos MVP, R2 caché semántico V2, R3 estilo investigación), ADR-0015 con reglas duras (lista de exclusión, `source: instant`, control del usuario). Nada implementado aún. |
+| 2026-10-04 | Fase R1 hecha: `RuleInstantResponder`, evento `instant.issued`, `ExecutionTrace.instant`, reducer de la isla, opción `instantResponses`. 181 tests. Medido con Groq real: acuse a 1 ms frente a ~1 s del primer token; saludos sin red. Tests antiguos que usaban "hola" como prompt de modelo se cambiaron. |

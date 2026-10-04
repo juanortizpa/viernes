@@ -41,7 +41,7 @@ describe("bundled sidecar (plain node, no tsx)", () => {
     await waitFor(() => messages.some((m) => m.type === "hello.ok"));
     child.stdin.write(encodeLine({ type: "task.submit", input: "qué hora es?" }));
     await waitFor(() => finished.length === 1);
-    child.stdin.write(encodeLine({ type: "task.submit", input: "hola" }));
+    child.stdin.write(encodeLine({ type: "task.submit", input: "dime algo breve" }));
     await waitFor(() => finished.length === 2);
     child.stdin.end();
     expect(await exited).toBe(0);

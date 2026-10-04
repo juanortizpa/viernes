@@ -51,6 +51,12 @@ export function islandReducer(state: IslandState, action: IslandAction): IslandS
         ? { ...state, route: "local", mode: "executing", headline: "Acción local", detail: e.intent }
         : { ...state, route: "llm", mode: "thinking", headline: "Eligiendo modelo…" };
 
+    case "instant.issued":
+      // Receipt or pleasantry from the deterministic instant layer; the UI says so rather than pretending a model spoke.
+      return e.kind === "reply"
+        ? { ...state, route: "local", mode: "thinking", headline: "Respuesta rápida", detail: e.text }
+        : { ...state, mode: "thinking", headline: "Recibido", detail: e.text };
+
     case "route.decided":
       return {
         ...state,
