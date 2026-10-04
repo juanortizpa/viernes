@@ -6,7 +6,7 @@ import { createInterface } from "node:readline/promises";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
-import { PINNED_WHISPER_ZIP, PROVIDER_KEYS, WHISPER_MODELS, buildConfig, describeAssets, findFile, nodeOk, parseEnvFile, pickFromReleases, serializeEnv } from "./lib.mjs";
+import { PINNED_WHISPER_ZIP, isDeprecatedWhisperStub, PROVIDER_KEYS, WHISPER_MODELS, buildConfig, describeAssets, findFile, nodeOk, parseEnvFile, pickFromReleases, serializeEnv } from "./lib.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -86,7 +86,7 @@ if (!flag("no-voice")) {
   const model = WHISPER_MODELS[opt("model", "base")] ?? WHISPER_MODELS.base;
   mkdirSync(dir, { recursive: true });
   try {
-    let bin = findFile(dir, ["whisper-cli.exe", "main.exe"]);
+    let bin = findFile(dir, ["whisper-cli.exe", "main.exe"]); // order = preference
     if (!win) say("  ⚠ No es Windows: salto la descarga del binario (whisper-cli.exe). Usa --no-voice o configura voice a mano.");
     else {
       // Options: --whisper-bin <whisper-cli.exe you already have>, --whisper-zip <local zip or https URL>
@@ -122,6 +122,7 @@ if (!flag("no-voice")) {
         bin = findFile(dir, ["whisper-cli.exe", "main.exe"]);
         if (!bin) throw new Error("el zip no contiene whisper-cli.exe ni main.exe");
       } else say("  Binario ya presente.");
+      if (isDeprecatedWhisperStub(bin)) throw new Error(`${bin} es un binario obsoleto que no transcribe; hace falta whisper-cli.exe`);
       const modelPath = join(dir, model.file);
       if (!existsSync(modelPath) || statSync(modelPath).size < model.minBytes) {
         say(`  Descargando modelo ${model.file}…`);

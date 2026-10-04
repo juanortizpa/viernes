@@ -74,16 +74,39 @@ export const describeAssets = (releases, n = 5) =>
 /** Last resort if the API is unreachable or lists nothing usable. */
 export const PINNED_WHISPER_ZIP = "https://github.com/ggml-org/whisper.cpp/releases/download/v1.7.5/whisper-bin-x64.zip";
 
-/** First file with one of `names` under `dir` (depth-first). */
-export function findFile(dir, names) {
+/** First file named like one of `names`, depth-first. */
+function findFirst(dir, name) {
   for (const e of readdirSync(dir)) {
     const p = join(dir, e);
     if (statSync(p).isDirectory()) {
-      const r = findFile(p, names);
+      const r = findFirst(p, name);
       if (r) return r;
-    } else if (names.includes(e.toLowerCase())) return p;
+    } else if (e.toLowerCase() === name) return p;
   }
   return undefined;
+}
+
+/**
+ * Searches for the names IN ORDER OF PREFERENCE: every match of the first name beats any match of the next one.
+ * (whisper.cpp zips also ship a deprecated `main.exe` stub that only prints a warning; it must never win over whisper-cli.exe.)
+ */
+export function findFile(dir, names) {
+  for (const n of names) {
+    const r = findFirst(dir, n);
+    if (r) return r;
+  }
+  return undefined;
+}
+
+/** True for whisper.cpp's deprecated stub, which cannot transcribe. */
+export const isDeprecatedWhisperStub = (path) => /(^|[\\/])main(\.exe)?$/i.test(path);
+
+/** Windows exit codes that mean "could not even start" (shown in hex, as Windows documents them). */
+export function explainExitCode(code) {
+  const hex = code === null || code === undefined ? "?" : "0x" + (code >>> 0).toString(16).toUpperCase();
+  if (code === 3221225781 || code === -1073741515) return `${hex}: falta una DLL junto al ejecutable (copia TODO el contenido del zip, no solo el .exe; puede faltar el "Visual C++ Redistributable")`;
+  if (code === 3221225477 || code === -1073741819) return `${hex}: el programa se cerró por un fallo de memoria (¿modelo corrupto o incompleto? vuelve a descargarlo)`;
+  return hex;
 }
 
 export const WHISPER_MODELS = {

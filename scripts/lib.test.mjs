@@ -1,8 +1,8 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync as rmSyncQuiet, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildConfig, describeAssets, findFile, nodeOk, parseEnvFile, pickFromReleases, pickWhisperAsset, serializeEnv } from "./lib.mjs";
+import { buildConfig, describeAssets, explainExitCode, findFile, isDeprecatedWhisperStub, nodeOk, parseEnvFile, pickFromReleases, pickWhisperAsset, serializeEnv } from "./lib.mjs";
 
 const base = {
   defaultModel: "openai/gpt-oss-20b", router: "rules", freeOnly: true,
@@ -82,5 +82,24 @@ describe("pickWhisperAsset / findFile", () => {
     writeFileSync(join(d, "Release", "Whisper-CLI.exe"), "x");
     expect(findFile(d, ["whisper-cli.exe"])).toBe(join(d, "Release", "Whisper-CLI.exe"));
     expect(findFile(d, ["nope.exe"])).toBeUndefined();
+  });
+});
+
+describe("whisper binary choice and diagnostics", () => {
+  it("prefers whisper-cli.exe over the deprecated main.exe wherever they are", () => {
+    const d = mkdtempSync(join(tmpdir(), "jarvis-pref-"));
+    mkdirSync(join(d, "a"));
+    mkdirSync(join(d, "z"));
+    writeFileSync(join(d, "a", "main.exe"), "x"); // sorts first, must still lose
+    writeFileSync(join(d, "z", "whisper-cli.exe"), "x");
+    expect(findFile(d, ["whisper-cli.exe", "main.exe"])).toBe(join(d, "z", "whisper-cli.exe"));
+    rmSyncQuiet(join(d, "z", "whisper-cli.exe"));
+    expect(findFile(d, ["whisper-cli.exe", "main.exe"])).toBe(join(d, "a", "main.exe"));
+  });
+  it("recognises the stub and explains Windows start-up failures", () => {
+    expect(isDeprecatedWhisperStub("C:\\t\\main.exe")).toBe(true);
+    expect(isDeprecatedWhisperStub("C:/t/whisper-cli.exe")).toBe(false);
+    expect(explainExitCode(3221225781)).toMatch(/0xC0000135.*DLL/);
+    expect(explainExitCode(1)).toBe("0x1");
   });
 });

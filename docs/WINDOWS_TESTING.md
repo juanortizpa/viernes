@@ -10,6 +10,8 @@
 4. **Doble clic en `start.bat`.** Arranca y abre `http://localhost:5173`. Solo escucha en tu propio PC (127.0.0.1), nadie de tu red puede entrar.
 5. Sigue las tablas **B2** y **C** de abajo. Para repetir: cierra la ventana negra y vuelve a abrir `start.bat`.
 
+**Si la voz dice "No pude transcribir el audio":** haz `git pull`, ejecuta `setup.bat` otra vez y luego **doble clic en `check-voice.bat`**: comprueba el binario, el modelo y ejecuta whisper de verdad, mostrando el error real (DLL faltante, `main.exe` obsoleto, modelo incompleto…). Copia su salida.
+
 Si `setup.bat` falla, copia el mensaje de error. Cada paso es idempotente: puedes volver a lanzarlo sin romper nada (no vuelve a descargar lo que ya tiene).
 **Aviso honesto:** estos scripts los probé en Linux (instalación, configuración y arranque con modelos reales) pero **no en Windows**; la descarga/descompresión de whisper.cpp
 y la apertura del navegador son lo que más probablemente falle. El plan B manual es lo que sigue, desde la sección A.

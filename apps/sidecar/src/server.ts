@@ -127,7 +127,7 @@ export class SidecarServer {
         if (ac.signal.aborted) return reject("cancelled", "Cancelado");
         if (e instanceof VoiceRejected) return reject(e.reason, e.message);
         this.opts.log?.(`transcription failed: ${e instanceof Error ? e.message : String(e)}`);
-        reject("failed", "No pude transcribir el audio");
+        reject("failed", "No pude transcribir el audio (el detalle está en la ventana negra de start.bat; o ejecuta check-voice.bat)");
       }
     })().finally(() => this.active.delete(entry));
     this.active.add(entry);
