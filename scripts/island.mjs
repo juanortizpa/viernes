@@ -34,9 +34,18 @@ const env = {
   COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
 };
 
-const pnpm = [["pnpm"], ["corepack", "pnpm"]].find((c) => spawnSync(c[0], [...c.slice(1), "--version"], { shell: win, env }).status === 0);
+/** Runs `cmd args` (fixed strings, never user input). On Windows through one command line: `shell: true` with an args array is deprecated (DEP0190). */
+const sh = (cmd, argv, opts = {}) => (win ? spawnSync([cmd, ...argv].join(" "), { shell: true, env, ...opts }) : spawnSync(cmd, argv, { env, ...opts }));
+
+const pnpm = [["pnpm"], ["corepack", "pnpm"]].find((c) => sh(c[0], [...c.slice(1), "--version"]).status === 0);
 if (!pnpm) fail("No encuentro pnpm. Ejecuta: npm install -g pnpm");
-if (spawnSync("cargo", ["--version"], { shell: win }).status !== 0) {
+
+// Pulling new code can add dependencies (the Tauri CLI came with the island itself): install them instead of failing later.
+if (!existsSync(join(desktop, "node_modules/@tauri-apps/cli"))) {
+  console.log("… faltan dependencias (las añadió una actualización); ejecutando pnpm install");
+  if (sh(pnpm[0], [...pnpm.slice(1), "install", "--frozen-lockfile"], { cwd: root, stdio: "inherit" }).status !== 0) fail("pnpm install falló. Copia el error de arriba.");
+}
+if (sh("cargo", ["--version"]).status !== 0) {
   fail("Falta Rust para compilar la isla. Instálalo desde https://rustup.rs (opción por defecto, MSVC), cierra y vuelve a abrir island.bat.\n  Mientras tanto, start.bat abre JARVIS en el navegador.");
 }
 
@@ -45,7 +54,7 @@ const { buildSidecar } = await import(pathToFileURL(join(root, "apps/sidecar/scr
 await buildSidecar(sidecar);
 console.log("✔ sidecar empaquetado");
 
-const run = (argv) => spawnSync(pnpm[0], [...pnpm.slice(1), "--filter", "@jarvis/desktop", "exec", "tauri", ...argv], { cwd: root, env, stdio: "inherit", shell: win });
+const run = (argv) => sh(pnpm[0], [...pnpm.slice(1), "--filter", "@jarvis/desktop", "exec", "tauri", ...argv], { cwd: root, stdio: "inherit" });
 
 if (args.has("--dev")) {
   const r = run(["dev"]);
