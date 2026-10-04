@@ -1,6 +1,22 @@
 # Guía de pruebas en Windows
 
-Orden recomendado: **A** (instalar) → **B** (modo navegador con sidecar real: aquí se prueba casi todo) → **C** (voz con whisper.cpp real) → **D** (shell Tauri, solo overlay).
+## Camino rápido (2 dobles clics)
+
+1. Instala **Node.js 22.13 o superior** (LTS de https://nodejs.org) y **Git**. Es lo único manual.
+2. Clona el repo: `git clone https://github.com/juanortizpa/viernes.git` y entra en la carpeta.
+3. **Doble clic en `setup.bat`.** Instala dependencias, te pide tus claves (Groq, OpenRouter, Gemini: Enter para saltar las que no tengas),
+   **descarga whisper.cpp y el modelo `base`** (≈ 150 MB) y escribe la configuración. Las claves quedan solo en `jarvis.env` (ignorado por git; no se sube).
+   Opciones: `setup.bat --model tiny` (más rápido) o `--model small` (mejor), `--no-voice` (sin voz), `--test` (corre los tests).
+4. **Doble clic en `start.bat`.** Arranca y abre `http://localhost:5173`. Solo escucha en tu propio PC (127.0.0.1), nadie de tu red puede entrar.
+5. Sigue las tablas **B2** y **C** de abajo. Para repetir: cierra la ventana negra y vuelve a abrir `start.bat`.
+
+Si `setup.bat` falla, copia el mensaje de error. Cada paso es idempotente: puedes volver a lanzarlo sin romper nada (no vuelve a descargar lo que ya tiene).
+**Aviso honesto:** estos scripts los probé en Linux (instalación, configuración y arranque con modelos reales) pero **no en Windows**; la descarga/descompresión de whisper.cpp
+y la apertura del navegador son lo que más probablemente falle. El plan B manual es lo que sigue, desde la sección A.
+
+## Camino manual
+
+Orden recomendado (manual): **A** (instalar) → **B** (modo navegador con sidecar real: aquí se prueba casi todo) → **C** (voz con whisper.cpp real) → **D** (shell Tauri, solo overlay).
 Anota los resultados en la tabla del final y en `docs/SPIKE_OVERLAY.md`. Todo lo que está marcado **[SIN PROBAR]** nunca se ha ejecutado en Windows.
 
 ## A. Instalar (10 min)

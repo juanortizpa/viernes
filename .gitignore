@@ -5,3 +5,7 @@ target
 .DS_Store
 .playwright
 jarvis.config.json
+jarvis.env
+tools
+.jarvis
+jarvis.config.json.bak
