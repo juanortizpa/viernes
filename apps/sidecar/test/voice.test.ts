@@ -15,7 +15,7 @@ function harness(transcriber?: Transcriber) {
   const runtime = buildRuntime(Config.parse({}), { env: {}, launcher: async () => {}, transcriber });
   const server = new SidecarServer({
     token: "t", send: (m) => out.push(m), bus: new EventBus(), createOrchestrator: runtime.createOrchestrator,
-    info: { models: runtime.models, offline: runtime.offline }, transcriber: runtime.transcriber,
+    info: { models: runtime.models, offline: runtime.offline }, transcriber: runtime.transcriber, economy: runtime.economy,
   });
   const send = (m: unknown) => server.handleLine(JSON.stringify(m));
   send({ type: "hello", token: "t", protocol: 1 });
@@ -80,5 +80,17 @@ describe("push-to-talk over IPC", () => {
     await h.server.idle();
     expect(seen?.aborted).toBe(true);
     expect(h.out.at(-1)).toMatchObject({ type: "voice.rejected", reason: "cancelled" });
+  });
+});
+
+describe("economy over IPC", () => {
+  it("summarises the stored traces of finished tasks", async () => {
+    const h = harness();
+    h.send({ type: "task.submit", input: "qué hora es" });
+    h.send({ type: "task.submit", input: "hola" });
+    await h.server.idle();
+    h.send({ type: "economy.get" });
+    const m = h.out.find((x) => x.type === "economy") as Extract<ServerMessage, { type: "economy" }>;
+    expect(m.summary).toMatchObject({ tasks: 2, byKind: { local: 1, instant: 1, model: 0, cache: 0 }, costUsd: 0, savedPct: null });
   });
 });

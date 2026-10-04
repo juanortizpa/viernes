@@ -1,6 +1,7 @@
 export * from "./alias-store";
 export * from "./app-catalog";
 export * from "./bus";
+export * from "./economy";
 export * from "./evaluator";
 export * from "./instant";
 export * from "./instant-cache";

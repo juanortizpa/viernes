@@ -12,10 +12,10 @@
 | 2 | Router y evaluador, escalado | ✅ (dry-run y plan→aprobación diferidos a V2; evaluador de tests sin runner en vivo) | Escalado automático con evaluador de tests |
 | 3 | Arnés de experimento | 🟦 tabla completa para 7 modelos (Groq + Google); faltan tareas más difíciles | Primer resultado de brazos A–D (¡temprano!) |
 | R | Respuesta inmediata (acuse, saludos, caché) | ✅ R1–R3 hechos y medidos (acuse 1 ms vs 1 s; caché 1 ms vs ~500 ms, 0 falsos positivos; perfil de estilo) | Saludos y acuses <50 ms, sin progreso falso |
-| 4 | Shell y UI completos | ⬜ | Isla con estados reales, permisos, panel Economy |
+| 4 | Shell y UI completos | 🟦 hecho en navegador/dev; falta Windows (overlay, pantalla completa, multi-monitor, DPI real) | Isla con estados reales, permisos, panel Economy |
 | 5 | Memoria + optimización de contexto | ⬜ | Recuperación medida con ablación |
 | 6 | Router aprendido + experimento final | ⬜ | Frontera de Pareto costo vs éxito |
-| 7 | Voz | ⏸ | Push-to-talk → respuesta hablada |
+| 7 | Voz | 🟦 push-to-talk + STT local hecho (sin whisper real probado); faltan TTS y wake word | Push-to-talk → respuesta hablada |
 
 ---
 
@@ -136,10 +136,17 @@ exista algo visible, no solo logs.
 - [x] Decisión: no se entrena un modelo; se reconsidera solo con datos de uso real
 - [ ] Medir si el usuario prefiere las respuestas con perfil (necesita señal de satisfacción: Fase 4/5)
 
-## Fase 4 — Shell y UI (3–4 semanas) ⬜
-- [ ] Isla con todos los estados reales; prompts de permiso; panel AI Economy
-- [ ] Cuervo con animaciones completas
-- [ ] Pruebas de pantalla completa, multi-monitor, DPI
+## Fase 4 — Shell y UI (3–4 semanas) 🟦
+- [x] Isla con todos los estados reales: escuchando (micrófono abierto), transcribiendo, recibido/rápida/caché (capa inmediata), pensando, ejecutando, permiso, éxito, error, aviso
+- [x] Prompts de permiso: `Denegar` con foco por defecto y atajo `Esc`; nunca se concede por accidente con Enter
+- [x] Botón **Cancelar** real (`task.cancel`; aborta también una transcripción); solo aparece con una tarea del sidecar, nunca en demos
+- [x] **Panel AI Economy** (`economy.get`): tareas, éxito, gasto, tokens, tareas sin LLM (locales/rápidas/caché), escaladas, latencias y modelos más usados, calculado desde las trazas. Sin precios configurados **no inventa ahorro** (lo dice). Se abre con clic en la isla
+- [x] Cuervo: aros de escucha con el nivel real del micrófono; `prefers-reduced-motion` respetado (`MotionConfig reducedMotion="user"`)
+- [x] Diseño verificado en Chromium a DPR 1/1.25/1.5/2 en una ventana de 420 px (sin desbordes)
+- [ ] **Relevo del sidecar en Tauri** (sin él, la app Tauri no tiene voz, economía ni órdenes reales) — Windows
+- [ ] Pruebas de pantalla completa, multi-monitor y DPI reales — Windows (lista en `docs/SPIKE_OVERLAY.md`)
+- [ ] Atajo global de push-to-talk (la ventana de la isla no tiene foco) — Tauri/Windows
+- [ ] Animaciones del cuervo para "hablando" (cuando haya TTS) y revisión de diseño con el usuario
 
 ## Fase 5 — Memoria y contexto (3 semanas) ⬜
 - [ ] Memoria factual/preferencia/conductual/operacional, política de escritura, olvido, control del usuario
@@ -151,10 +158,14 @@ exista algo visible, no solo logs.
 - [ ] Dogfood real 3–4 semanas; calibración del juez LLM vs etiquetas humanas (κ)
 - [ ] Redacción de resultados
 
-## Fase 7 — Voz ⏸
-- [ ] Push-to-talk → STT local → respuesta → TTS
-- [ ] Wake word personalizable
-- [ ] Métricas: time-to-first-audio
+## Fase 7 — Voz 🟦 (ADR-0016)
+- [x] Push-to-talk (botón mantenido o Ctrl+Espacio con la ventana enfocada) → WAV 16 kHz → sidecar → STT local → tarea de voz por el pipeline normal
+- [x] `packages/voice`: WAV, puerta de silencio anti-alucinación, `Transcriber`, adaptador whisper.cpp por argv (binario/modelo que pone el usuario)
+- [ ] **Probar whisper.cpp real** (precisión ES/EN, latencia por modelo). Hoy solo hay pruebas con un binario de mentira
+- [ ] Atajo global y micrófono en WebView2 (Windows)
+- [ ] TTS (respuesta hablada) y métrica time-to-first-audio
+- [ ] Wake word personalizable ("jarvis"): detección continua local, con indicador visible y opción de desactivar; después de validar push-to-talk
+- [ ] STT en streaming (V2)
 
 ---
 
@@ -191,3 +202,4 @@ exista algo visible, no solo logs.
 | 2026-10-04 | Fase R1 hecha: `RuleInstantResponder`, evento `instant.issued`, `ExecutionTrace.instant`, reducer de la isla, opción `instantResponses`. 181 tests. Medido con Groq real: acuse a 1 ms frente a ~1 s del primer token; saludos sin red. Tests antiguos que usaban "hola" como prompt de modelo se cambiaron. |
 | 2026-10-04 | Fase R2 hecha: `SemanticCache`, `SqliteInstantStore`, guarda `sameContent`, aprendizaje solo tras veredicto de éxito sin herramientas/taint/sensibles, controles del usuario, `harness instant-eval`. 196 tests. Bugs que atrapó la validación: el coseno podía dar 1.0000002 y el esquema `confidence ≤ 1` lo rechazaba; mi lista de exclusión bloqueaba "tell me"/"más grande". Verificado con Groq real (1 ms vs ~500 ms; Francia ≠ Italia). Riesgo abierto: una respuesta errónea aprobada por el evaluador heurístico puede guardarse. |
 | 2026-10-04 | Fase R3 hecha: `StyleTracker` (registro voseo/tuteo/usted y preferencia por brevedad, solo contadores), hint de frases fijas en el prompt, controles del usuario, opción `styleProfile`. 202 tests. A/B con Groq real (1 muestra): con perfil respondió en voseo y más breve. Un 429 de Groq (8000 tokens/min) durante la prueba se reportó correctamente como `task.error`. Decisión: no se entrena un modelo propio. |
+| 2026-10-04 | Voz (ADR-0016): `packages/voice`, `voice.submit` por IPC, push-to-talk con micrófono abierto solo al pulsar, puerta de silencio, cancelación. **Reconocimiento real NO probado**: compilar whisper.cpp fue denegado por el sistema de permisos, así que se probó con un binario stand-in. Fase 4 en navegador: panel AI Economy desde trazas (no inventa ahorro sin precios), Cancelar, permisos con Deny por defecto, cuervo con nivel real, reduce-motion, DPR 1–2 verificado. 231 tests. Pendiente en Windows: relevo Tauri, overlay, multi-monitor, atajo global. |

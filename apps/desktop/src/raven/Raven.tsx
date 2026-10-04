@@ -57,7 +57,8 @@ const eyeBlink = (mode: Mode) =>
     ? { scaleY: [1, 1, 0.08, 1, 1], transition: { duration: 4.5, repeat: Infinity, times: [0, 0.86, 0.9, 0.94, 1] } }
     : { scaleY: mode === "error" ? 0.7 : 1 };
 
-export function Raven({ mode, size = 56 }: { mode: Mode; size?: number }) {
+/** `level`: real microphone level (0..1) while listening; drives the sound rings. */
+export function Raven({ mode, size = 56, level }: { mode: Mode; size?: number; level?: number }) {
   const listening = mode === "listening" || mode === "permission";
   const thinking = mode === "thinking";
   const warn = mode === "warning" || mode === "permission";
@@ -117,6 +118,21 @@ export function Raven({ mode, size = 56 }: { mode: Mode; size?: number }) {
         </motion.g>
         {mode === "error" && <path d="M58 33 L72 36" stroke="#12152e" strokeWidth="2.4" strokeLinecap="round" />}
       </motion.g>
+
+      {/* listening: rings whose size follows the real microphone level (flat when no level is known) */}
+      {mode === "listening" &&
+        [0, 1].map((i) => (
+          <motion.circle
+            key={i}
+            cx="58"
+            cy="46"
+            fill="none"
+            stroke={iris}
+            strokeWidth="1.6"
+            animate={{ r: 30 + i * 9 + (level ?? 0) * 16, opacity: 0.55 - i * 0.2 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          />
+        ))}
 
       {/* thinking particles orbiting the head */}
       {thinking && (

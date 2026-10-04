@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { OrchestratorEvent } from "@jarvis/protocol";
+import { EconomySummary, OrchestratorEvent } from "@jarvis/protocol";
 
 export const IPC_VERSION = 1 as const;
 
@@ -16,6 +16,8 @@ export const ClientMessage = z.discriminatedUnion("type", [
    * then runs the text as a voice task. Silence and unusable clips come back as `voice.rejected` and never reach the engine.
    */
   z.object({ type: z.literal("voice.submit"), audio: z.string().min(100).max(1_600_000), language: z.string().regex(/^(auto|[a-z]{2,3})$/).optional() }),
+  /** Aggregate of the most recent stored traces, for the AI Economy panel. */
+  z.object({ type: z.literal("economy.get"), limit: z.number().int().min(1).max(5000).default(500) }),
   /** Cancels every active task of this connection. */
   z.object({ type: z.literal("task.cancel") }),
   z.object({ type: z.literal("permission.answer"), requestId: z.string(), granted: z.boolean() }),
@@ -33,6 +35,8 @@ export const ServerMessage = z.discriminatedUnion("type", [
     /** A speech-to-text engine is configured, so push-to-talk can work. */
     voice: z.boolean().default(false),
   }),
+  /** Reply to `economy.get`; `summary` is absent when the trace store cannot be listed. */
+  z.object({ type: z.literal("economy"), summary: EconomySummary.optional() }),
   z.object({ type: z.literal("voice.transcribed"), text: z.string(), audioMs: z.number(), latencyMs: z.number(), language: z.string().optional() }),
   z.object({
     type: z.literal("voice.rejected"),

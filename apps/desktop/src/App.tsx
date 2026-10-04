@@ -6,7 +6,8 @@ import { Island } from "./island/Island";
 import { LiveClient } from "./live/client";
 import { MicUnavailable, startMic, type MicSession } from "./voice/mic";
 import { toBase64 } from "./voice/pcm-buffer";
-import type { OrchestratorEvent } from "@jarvis/protocol";
+import type { EconomySummary, OrchestratorEvent } from "@jarvis/protocol";
+import { EconomyPanel } from "./economy/EconomyPanel";
 import { Raven } from "./raven/Raven";
 import type { Mode } from "./state/island";
 
@@ -16,6 +17,8 @@ const GALLERY: Mode[] = ["idle", "listening", "thinking", "executing", "permissi
 
 export default function App() {
   const [state, dispatch] = useReducer(islandReducer, initialState);
+  const [economy, setEconomy] = useState<EconomySummary>();
+  const [showEconomy, setShowEconomy] = useState(false);
   const stateRef = useRef(state);
   stateRef.current = state;
   const player = useMemo(() => new DemoPlayer(), []);
@@ -35,10 +38,12 @@ export default function App() {
       clearTimeout(collapseTimer.current);
       dispatch({ kind: "event", event });
       const terminal = event.type === "task.finished" || event.type === "task.error";
+      if (event.type === "task.finished" && live.status === "ready") live.requestEconomy();
       if (terminal) collapseTimer.current = setTimeout(() => dispatch({ kind: "reset" }), 4500);
     };
     const offDemo = player.subscribe(onEvent);
     const offLive = live.onEvent(onEvent);
+    const offEconomy = live.onEconomy(setEconomy);
     const offVoice = live.onVoice((n) => {
       clearTimeout(collapseTimer.current);
       if (n.kind === "transcribed") dispatch({ kind: "voice.heard", text: n.text });
@@ -52,9 +57,18 @@ export default function App() {
       offDemo();
       offLive();
       offVoice();
+      offEconomy();
       live.close();
     };
   }, [player, live]);
+
+  const toggleEconomy = () => {
+    setShowEconomy((open) => {
+      if (!open && live.status === "ready") live.requestEconomy();
+      return !open;
+    });
+  };
+  const cancel = () => live.cancel();
 
   const warn = (message: string) => {
     clearTimeout(collapseTimer.current);
@@ -144,7 +158,7 @@ export default function App() {
   if (inTauri) {
     return (
       <div className="stage stage--tauri">
-        <Island state={state} onPermission={answerPermission} />
+        <Island state={state} onPermission={answerPermission} economy={economy} showEconomy={showEconomy} onToggleEconomy={toggleEconomy} />
       </div>
     );
   }
@@ -152,7 +166,14 @@ export default function App() {
   return (
     <div className="stage">
       <div className="stage__island">
-        <Island state={state} onPermission={answerPermission} />
+        <Island
+          state={state}
+          onPermission={answerPermission}
+          onCancel={sourceLabel === "live" && live.status === "ready" ? cancel : undefined}
+          economy={economy}
+          showEconomy={showEconomy}
+          onToggleEconomy={live.status === "ready" ? toggleEconomy : undefined}
+        />
       </div>
 
       <main className="panel">
@@ -197,6 +218,16 @@ export default function App() {
         <p className="muted small">
           Sidecar: {live.status === "ready" ? "conectado" : live.status === "connecting" ? "conectando…" : `no disponible${live.lastError ? ` (${live.lastError})` : ""} — solo escenarios demo`}
         </p>
+
+        <h2>AI Economy</h2>
+        {live.status === "ready" ? (
+          <>
+            <EconomyPanel summary={economy} />
+            <button className="scenario" onClick={() => live.requestEconomy()}>Actualizar</button>
+          </>
+        ) : (
+          <p className="muted small">Disponible con el sidecar conectado.</p>
+        )}
 
         <h2>Escenarios guionados</h2>
 

@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { ClientMessage, IPC_VERSION, type ServerMessage } from "@jarvis/ipc";
 import type { EventBus, Orchestrator, PermissionResolver } from "@jarvis/core";
+import type { EconomySummary } from "@jarvis/protocol";
 import { VoiceRejected, prepareClip, type Transcriber } from "@jarvis/voice";
 
 export interface SidecarServerOptions {
@@ -12,6 +13,8 @@ export interface SidecarServerOptions {
   info: { models: string[]; offline: boolean };
   /** Local speech-to-text. Without it, `voice.submit` is answered with `voice.rejected(unavailable)`. */
   transcriber?: Transcriber;
+  /** Aggregates the last `limit` stored traces; undefined when the trace store cannot be listed. */
+  economy?: (limit: number) => EconomySummary | undefined;
   /** Unanswered permission prompts are denied after this long. */
   permissionTimeoutMs?: number;
   /** Called after a failed handshake; the host should drop the connection. */
@@ -67,6 +70,8 @@ export class SidecarServer {
         return this.opts.send({ type: "error", message: "already authenticated" });
       case "task.submit":
         return this.submit(msg.input, msg.modality);
+      case "economy.get":
+        return this.opts.send({ type: "economy", summary: this.opts.economy?.(msg.limit) });
       case "voice.submit":
         return this.voice(msg.audio, msg.language);
       case "task.cancel":

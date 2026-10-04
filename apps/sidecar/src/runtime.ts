@@ -9,7 +9,8 @@ import {
   ProviderRegistry,
   type FetchLike,
 } from "@jarvis/providers";
-import { AlwaysCheapestRouter, AlwaysPremiumRouter, AppCatalog, IntentRouter, MemoryTraceStore, Orchestrator, ResponseHeuristicEvaluator, RuleInstantResponder, SemanticCache, StyleTracker, instantControlRules, styleControlRules, RulesRouter, StaticRouter, type AliasStore, type InstantStore, type EventBus, type ModelRouter, type PermissionResolver, type TraceStore } from "@jarvis/core";
+import { AlwaysCheapestRouter, AlwaysPremiumRouter, AppCatalog, IntentRouter, MemoryTraceStore, Orchestrator, ResponseHeuristicEvaluator, RuleInstantResponder, SemanticCache, StyleTracker, summarizeEconomy, instantControlRules, styleControlRules, RulesRouter, StaticRouter, type AliasStore, type InstantStore, type EventBus, type ModelRouter, type PermissionResolver, type TraceStore } from "@jarvis/core";
+import type { EconomySummary } from "@jarvis/protocol";
 import { WhisperCppTranscriber, type Transcriber } from "@jarvis/voice";
 import {
   ToolRegistry,
@@ -71,6 +72,8 @@ export interface Runtime {
   offline: boolean;
   /** Present when `voice` is configured (or injected for tests). */
   transcriber?: Transcriber;
+  /** AI Economy aggregate over the stored traces; undefined if the store cannot list. */
+  economy(limit: number): EconomySummary | undefined;
   createOrchestrator(io: { bus: EventBus; askPermission: PermissionResolver }): Orchestrator;
 }
 
@@ -167,6 +170,7 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
     ...(transcriber ? { transcriber } : {}),
     models,
     offline,
+    economy: (limit) => (traces.list ? summarizeEconomy(traces.list(limit)) : undefined),
     createOrchestrator: ({ bus, askPermission }) =>
       new Orchestrator({
         bus,

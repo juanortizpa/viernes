@@ -44,3 +44,17 @@ pnpm tauri dev
   por defecto y la UI la activa cuando el cursor entra al rectángulo de la isla.
 - La ventana mide 420×240 y la isla se dibuja dentro; el resto es transparente.
 - Dentro de Tauri, el frontend detecta `__TAURI_INTERNALS__` y muestra solo la isla (sin el panel de demo).
+
+## Pruebas adicionales de Fase 4 y voz (Windows)
+
+| # | Prueba | Resultado |
+|---|---|---|
+| 9 | Permiso de micrófono en WebView2: aparece una vez, se recuerda, y el indicador de Windows se apaga al soltar el botón | ☐ |
+| 10 | Atajo global de push-to-talk con la isla sin foco (hay que añadirlo en Tauri) | ☐ |
+| 11 | Panel AI Economy abre/cierra con clic sin robar clics a la app de abajo (hit-test) | ☐ |
+| 12 | Permiso: `Esc` deniega aunque el foco esté en otra app (hoy solo con la ventana enfocada) | ☐ |
+| 13 | Isla visible y sin recortes con un monitor a 100 % y otro a 150 % al arrastrarla entre ambos | ☐ |
+| 14 | Con "Reducir animaciones" de Windows activado el cuervo no tiene bucles | ☐ |
+| 15 | whisper.cpp real: frase en español y en inglés → precisión y latencia con tiny/base/small | ☐ |
+
+Config de ejemplo para la voz: `jarvis.config.voice.example.json` (binario y modelo de whisper.cpp que pones tú).

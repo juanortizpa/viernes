@@ -63,7 +63,7 @@ Reglas duras:
 | Herramientas | Registro interno único; MCP como adaptador (consumir/exponer) | propuesto |
 | Proveedores MVP | Anthropic + OpenRouter + Ollama (3 adaptadores para probar la abstracción) | propuesto |
 | Respuesta inmediata | R1 plantillas ES/EN + acuse como evento (MVP); R2 caché semántico con embedding local <100 MB (V2); R3 perfil de estilo por contadores, sin modelo propio (ADR-0015) | propuesto |
-| Voz | Último: push-to-talk → wake word (openWakeWord/Porcupine), whisper.cpp | diferido |
+| Voz | Push-to-talk + STT local con whisper.cpp (binario y modelo del usuario, ADR-0016) hecho; TTS y wake word (openWakeWord/Porcupine) después | parcial |
 
 ## 5. Niveles de permiso
 
@@ -78,7 +78,7 @@ disparar SENSITIVE/CRITICAL sin confirmación.
   escalado con checkpoints + telemetría completa.
 - **MVP-0.5 (respuesta inmediata R1–R3, hecho):** saludos por reglas, acuse rápido, caché semántico de respuestas verificadas y perfil de estilo (ADR-0015).
 - **MVP-1:** memoria, router aprendido (bandit), panel AI Economy, animaciones del cuervo.
-- **MVP-2:** voz (push-to-talk primero), consciencia de contexto.
+- **MVP-2:** voz (push-to-talk + STT local ya hecho; TTS y wake word pendientes), consciencia de contexto.
 - **V2:** bóveda de credenciales, visión, multiagente, proactividad, sync, grafo de conocimiento.
 - **Investigación:** tabla contrafactual, brazos A–D + oráculo + baseline tipo RouteLLM, curva de
   aprendizaje, test de deriva.
@@ -92,7 +92,8 @@ disparar SENSITIVE/CRITICAL sin confirmación.
 5. Cascada vs. ruteo predictivo: decisión explícita (ADR pendiente).
 6. Overlay en Windows (WebView2): spike en Fase 0.
 7. Caché semántico: un falso positivo responde otra pregunta; se mide con el arnés antes de activarlo y ante duda va al modelo.
-8. Alcance: voz y pulido de UI no deben consumir el tiempo del experimento.
+8. Voz: el motor de STT real no está probado (solo stand-ins); un motor tipo Whisper alucina en silencio, por eso hay una puerta de silencio previa.
+9. Alcance: voz y pulido de UI no deben consumir el tiempo del experimento.
 
 ## 8. Cómo trabajar (reglas para Claude y para el equipo)
 

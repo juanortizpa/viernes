@@ -1,5 +1,5 @@
 import { ServerMessage, encodeLine, IPC_VERSION } from "@jarvis/ipc";
-import type { OrchestratorEvent } from "@jarvis/protocol";
+import type { EconomySummary, OrchestratorEvent } from "@jarvis/protocol";
 
 export type LiveStatus = "idle" | "connecting" | "ready" | "unavailable";
 export interface LiveInfo {
@@ -47,6 +47,7 @@ export class LiveClient {
   lastError?: string;
   private socket?: SocketLike;
   private readonly eventListeners = new Set<(e: OrchestratorEvent) => void>();
+  private readonly economyListeners = new Set<(s: EconomySummary | undefined) => void>();
   private readonly voiceListeners = new Set<(n: VoiceNotice) => void>();
   private readonly statusListeners = new Set<() => void>();
 
@@ -55,6 +56,11 @@ export class LiveClient {
   onEvent(l: (e: OrchestratorEvent) => void): () => void {
     this.eventListeners.add(l);
     return () => this.eventListeners.delete(l);
+  }
+
+  onEconomy(l: (s: EconomySummary | undefined) => void): () => void {
+    this.economyListeners.add(l);
+    return () => this.economyListeners.delete(l);
   }
 
   onVoice(l: (n: VoiceNotice) => void): () => void {
@@ -94,6 +100,11 @@ export class LiveClient {
     this.send({ type: "voice.submit", audio: wavBase64 });
   }
 
+  /** Ask for the AI Economy aggregate; the answer arrives through `onEconomy`. */
+  requestEconomy(limit = 500): void {
+    this.send({ type: "economy.get", limit });
+  }
+
   cancel(): void {
     this.send({ type: "task.cancel" });
   }
@@ -130,6 +141,7 @@ export class LiveClient {
         this.setStatus("ready");
       } else if (msg.type === "hello.error") this.fail(msg.message);
       else if (msg.type === "error") this.lastError = msg.message;
+      else if (msg.type === "economy") this.economyListeners.forEach((l) => l(msg.summary));
       else if (msg.type === "voice.transcribed") this.voiceListeners.forEach((l) => l({ kind: "transcribed", text: msg.text, audioMs: msg.audioMs, latencyMs: msg.latencyMs }));
       else if (msg.type === "voice.rejected") this.voiceListeners.forEach((l) => l({ kind: "rejected", reason: msg.reason, message: msg.message }));
       else this.eventListeners.forEach((l) => l(msg.event));
