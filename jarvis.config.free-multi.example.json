@@ -1,24 +1,11 @@
 {
-  "defaultModel": "llama-3.1-8b-instant",
+  "defaultModel": "openai/gpt-oss-20b",
   "router": "rules",
   "maxEscalations": 3,
   "freeOnly": true,
   "traceDb": "./.jarvis/traces.db",
   "groq": {
     "models": [
-      {
-        "model": "llama-3.1-8b-instant",
-        "provider": "groq",
-        "supportsVision": false,
-        "supportsTools": true,
-        "supportsStreaming": true,
-        "contextWindow": 131072,
-        "estimatedInputCost": 0,
-        "estimatedOutputCost": 0,
-        "expectedLatency": 400,
-        "isLocal": false,
-        "tier": 2
-      },
       {
         "model": "openai/gpt-oss-20b",
         "provider": "groq",
@@ -33,7 +20,7 @@
         "tier": 3
       },
       {
-        "model": "llama-3.3-70b-versatile",
+        "model": "qwen/qwen3.8-27b",
         "provider": "groq",
         "supportsVision": false,
         "supportsTools": true,
@@ -41,9 +28,9 @@
         "contextWindow": 131072,
         "estimatedInputCost": 0,
         "estimatedOutputCost": 0,
-        "expectedLatency": 700,
+        "expectedLatency": 800,
         "isLocal": false,
-        "tier": 5
+        "tier": 4
       },
       {
         "model": "openai/gpt-oss-120b",
@@ -87,6 +74,36 @@
         "expectedLatency": 4000,
         "isLocal": false,
         "tier": 7
+      }
+    ]
+  },
+  "google": {
+    "models": [
+      {
+        "model": "gemini-3.1-flash-lite",
+        "provider": "google",
+        "supportsVision": false,
+        "supportsTools": true,
+        "supportsStreaming": true,
+        "contextWindow": 1048576,
+        "estimatedInputCost": 0,
+        "estimatedOutputCost": 0,
+        "expectedLatency": 1200,
+        "isLocal": false,
+        "tier": 5
+      },
+      {
+        "model": "gemini-3.5-flash-lite",
+        "provider": "google",
+        "supportsVision": false,
+        "supportsTools": true,
+        "supportsStreaming": true,
+        "contextWindow": 1048576,
+        "estimatedInputCost": 0,
+        "estimatedOutputCost": 0,
+        "expectedLatency": 1500,
+        "isLocal": false,
+        "tier": 5.5
       }
     ]
   }

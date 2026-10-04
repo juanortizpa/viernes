@@ -54,7 +54,7 @@ describe("buildRuntime", () => {
 
   it("the multi-provider free example is free, tiered, and its escalation ladder strictly climbs across providers", async () => {
     const cfg = loadConfig(new URL("../../../jarvis.config.free-multi.example.json", import.meta.url).pathname);
-    const r = buildRuntime(cfg, { env: { GROQ_API_KEY: "k", OPENROUTER_API_KEY: "k" }, launcher: noop });
+    const r = buildRuntime(cfg, { env: { GROQ_API_KEY: "k", OPENROUTER_API_KEY: "k", GEMINI_API_KEY: "k" }, launcher: noop });
     const { escalationLadder } = await import("@jarvis/core");
     const ladder = escalationLadder({ input: "x", taskType: "other", complexity: 0.4 }, r.providers.capabilities());
     expect(ladder.map((c) => c.provider)).toContain("groq");

@@ -10,7 +10,7 @@
 | 0 | Reducir riesgos, contratos, demo visual mínima | 🟦 casi listo (falta spike en Windows) | Demo de isla + cuervo sobre eventos del protocolo |
 | 1 | Columna vertebral (orquestador, proveedores, herramientas, policy) | ✅ completa en lo que no requiere Windows (quedan relevo Tauri y herramientas de Windows) | Tarea de texto de punta a punta, sin UI compleja |
 | 2 | Router y evaluador, escalado | ✅ (dry-run y plan→aprobación diferidos a V2; evaluador de tests sin runner en vivo) | Escalado automático con evaluador de tests |
-| 3 | Arnés de experimento | 🟦 maquinaria lista; faltan datos (cuota gratis diaria) | Primer resultado de brazos A–D (¡temprano!) |
+| 3 | Arnés de experimento | 🟦 tabla completa para 7 modelos (Groq + Google); faltan tareas más difíciles | Primer resultado de brazos A–D (¡temprano!) |
 | 4 | Shell y UI completos | ⬜ | Isla con estados reales, permisos, panel Economy |
 | 5 | Memoria + optimización de contexto | ⬜ | Recuperación medida con ablación |
 | 6 | Router aprendido + experimento final | ⬜ | Frontera de Pareto costo vs éxito |
@@ -69,6 +69,7 @@ exista algo visible, no solo logs.
 - [x] Orquestador: máquina de estados de tarea (`TaskMachine`) + bus de eventos validado contra el protocolo (`packages/core`)
 - [x] Registro de proveedores + adaptadores Anthropic, OpenRouter, Ollama + `FakeProvider` (`packages/providers`; tests con `fetch` simulado)
   - [x] **OpenRouter validado contra la API real** (streaming, uso y costo; el costo calculado coincide con el que cobra OpenRouter). Prueba opt-in: `JARVIS_LIVE=1 OPENROUTER_API_KEY=… pnpm test`
+  - [x] Groq y Google validados contra las APIs reales (solo texto, sin herramientas; 301 celdas del arnés)
   - [ ] Anthropic y Ollama siguen validados solo con `fetch` simulado, y **sin soporte de herramientas** (rechazan `tools` con error explícito)
 - [x] Intent router local por reglas (ES/EN; solo apps conocidas, nada de adivinar)
 - [ ] Intent router: clasificador pequeño (diferido; reglas cubren el MVP)
@@ -106,8 +107,8 @@ exista algo visible, no solo logs.
 - [x] Baselines: A premium, B barato, C reglas, oráculo, cascada (evaluador heurístico real y evaluador perfecto), `learned_cv_simplified` (**no** es RouteLLM)
 - [x] Análisis: bootstrap pareado (IC 95 %, semilla fija), Δ éxito y ahorro vs A, frontera de Pareto, calibración del evaluador contra ground truth
 - [x] CLI: `pnpm --filter @jarvis/harness harness run|report`; guard que se niega a usar modelos de pago sin `--allow-paid`
-- [ ] **Completar la tabla** (68 de 172 celdas, 66 válidas): OpenRouter gratis permite 50 peticiones/día. Alternativa: añadir modelos de Groq/Google (ADR-0014) cuando haya claves en el entorno; la tabla es por modelo, así que se puede ampliar sin rehacer lo hecho
-- [ ] Primer análisis con la tabla completa (hoy solo hay 15 tareas completas y son las fáciles: todos los modelos aciertan 100 %, sin discriminación)
+- [x] **Tabla completa** para 7 modelos de Groq y Google × 43 tareas (301 celdas, 0 errores; `harness.config.multi.json`). Los 4 modelos de OpenRouter gratis siguen parciales (50 peticiones/día) y quedan fuera del informe
+- [x] Primer análisis con la tabla completa (`data/report.md`, precios supuestos): qwen3.8-27b 86 %, gpt-oss-20b 97.7 %, el resto 100 %. B/cascada heurística ahorran ~36 % con −2.3 % de éxito (IC incluye 0); el evaluador heurístico dio 7 falsos positivos y 0 rechazos. Aún poca discriminación: la suite es fácil
 - [ ] Ampliar la suite (tareas más difíciles; hoy no hay separación entre modelos en las fáciles)
 - [ ] Cargadores HumanEval/MBPP/SWE-bench-Lite (requieren sandbox real, contenedor)
 - [ ] Baseline RouteLLM real (Fase 6); varias muestras por celda para la varianza de muestreo
@@ -161,3 +162,4 @@ exista algo visible, no solo logs.
 | 2026-10-04 | Cierre de Fase 2: `detectSensitive` + `needsTools` como restricciones duras del ruteo, `Tool.checkpoint` con rollback antes de escalar (`files.write`), prueba en vivo de la cascada con modelos gratis. Hallazgo real: un error del proveedor no escalaba si los evaluadores abstenían o ignoraban `failure`; ahora un intento roto es siempre un fallo. |
 | 2026-10-04 | Inicio de Fase 3 (ADR-0013): `packages/harness` (suite semilla, sandbox, tabla contrafactual, replay, baselines, bootstrap, CLI). 163 tests. Corrida real con 4 modelos gratuitos (2.6B–550B): OpenRouter gratis corta a 50 peticiones/día, así que la tabla va en 68/172 celdas; el informe parcial no discrimina (tareas fáciles, 100 % en todos), lo cual es resultado de la muestra, no del router. Gemma gratis está limitada de forma persistente (429) y quedó fuera de la escalera del arnés. |
 | 2026-10-04 | Proveedores Groq (OpenAI-compatible, generalizado desde OpenRouter) y Google AI Studio (adaptador propio) + `ModelCapabilities.tier` para ordenar modelos de igual precio entre proveedores (ADR-0014). `harness list-models` y config de ejemplo multi-proveedor. 172 tests con `fetch` simulado. **Sin validar contra las APIs reales (faltan `GROQ_API_KEY` y `GEMINI_API_KEY` en el entorno).** Captura de cuotas de AI Studio del usuario: los modelos de texto (Gemini 2 Flash/Flash Lite) muestran límite 0/0 en esa cuenta y los "ilimitados" son Live API (audio en tiempo real), inutilizables para texto: hay que ver qué modelos de texto tienen cuota. |
+| 2026-10-04 | Claves de Groq y Gemini en el entorno: adaptadores Groq y Google **validados en vivo**. IDs de Llama de la config de ejemplo ya no existían; Gemini 2.5 no está disponible para cuentas nuevas. Modelos usables: gpt-oss-20b/120b y qwen3.8-27b (Groq); gemma-4-26b/31b, gemini-3.1/3.5-flash-lite (Google). Tabla contrafactual completa (7×43) e informe regenerado; un 500 transitorio de Gemma se reintentó. Pendiente: tareas más difíciles, probar herramientas con Groq/Google. |

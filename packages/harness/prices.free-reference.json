@@ -9,10 +9,38 @@
   },
   "nvidia/nemotron-3-super-120b-a12b:free": {
     "input": 0.3,
-    "output": 1.0
+    "output": 1
   },
   "nvidia/nemotron-3-ultra-550b-a55b:free": {
     "input": 0.9,
-    "output": 3.0
+    "output": 3
+  },
+  "openai/gpt-oss-20b": {
+    "input": 0.05,
+    "output": 0.2
+  },
+  "qwen/qwen3.8-27b": {
+    "input": 0.1,
+    "output": 0.4
+  },
+  "openai/gpt-oss-120b": {
+    "input": 0.15,
+    "output": 0.6
+  },
+  "gemma-4-26b-a4b-it": {
+    "input": 0.08,
+    "output": 0.3
+  },
+  "gemma-4-31b-it": {
+    "input": 0.12,
+    "output": 0.45
+  },
+  "gemini-3.1-flash-lite": {
+    "input": 0.1,
+    "output": 0.4
+  },
+  "gemini-3.5-flash-lite": {
+    "input": 0.25,
+    "output": 1
   }
 }
