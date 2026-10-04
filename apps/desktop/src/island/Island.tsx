@@ -15,13 +15,15 @@ interface Props {
   showEconomy?: boolean;
   /** Click on the idle island toggles the economy panel. Omit to disable. */
   onToggleEconomy?: () => void;
+  /** Shown while the synthesiser is really speaking. */
+  onStopSpeaking?: () => void;
 }
 
 const RUNNING = new Set(["thinking", "executing"]);
 
-export function Island({ state, onPermission, onCancel, economy, showEconomy = false, onToggleEconomy }: Props) {
+export function Island({ state, onPermission, onCancel, economy, showEconomy = false, onToggleEconomy, onStopSpeaking }: Props) {
   const economyOpen = showEconomy && state.mode === "idle";
-  const expanded = state.mode !== "idle" || economyOpen;
+  const expanded = state.mode !== "idle" || economyOpen || state.speaking === true;
   const showTokenChips = state.tokens > 0 || state.route === "local";
 
   return (
@@ -41,7 +43,7 @@ export function Island({ state, onPermission, onCancel, economy, showEconomy = f
     >
       <motion.div layout="position" className="island__head">
         <motion.div layout className="island__raven">
-          <Raven mode={state.mode} size={expanded ? 52 : 34} level={state.level} />
+          <Raven mode={state.mode} size={expanded ? 52 : 34} level={state.level} speaking={state.speaking} />
         </motion.div>
 
         <div className="island__text">
@@ -75,6 +77,13 @@ export function Island({ state, onPermission, onCancel, economy, showEconomy = f
         {economyOpen && (
           <motion.div key="economy" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <EconomyPanel summary={economy} compact />
+          </motion.div>
+        )}
+
+        {state.speaking && onStopSpeaking && (
+          <motion.div key="speaking" className="island__chips" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <span className="chip">🔊 hablando</span>
+            <button className="btn btn--ghost" onClick={(e) => (e.stopPropagation(), onStopSpeaking())}>Callar <kbd>Esc</kbd></button>
           </motion.div>
         )}
 

@@ -6,6 +6,9 @@ import { Island } from "./island/Island";
 import { LiveClient } from "./live/client";
 import { MicUnavailable, startMic, type MicSession } from "./voice/mic";
 import { toBase64 } from "./voice/pcm-buffer";
+import { SpeechController, type SynthLike } from "./speech/controller";
+import { SPEAK_MODES, parseSpeakMode, type SpeakMode } from "./speech/policy";
+import { TaskSpeaker } from "./speech/task-speaker";
 import type { EconomySummary, OrchestratorEvent } from "@jarvis/protocol";
 import { EconomyPanel } from "./economy/EconomyPanel";
 import { Raven } from "./raven/Raven";
@@ -28,18 +31,76 @@ export default function App() {
   const [sourceLabel, setSourceLabel] = useState<"demo" | "live">("demo");
   const [input, setInput] = useState("");
   const mic = useRef<{ session?: MicSession; wantStop: boolean; busy: boolean }>({ wantStop: false, busy: false });
+
+  // Text-to-speech through the voices the OS/browser already has (nothing to download). Absent in some shells.
+  const [speakMode, setSpeakMode] = useState<SpeakMode>(() => {
+    try {
+      return parseSpeakMode(localStorage.getItem("jarvis.speakMode"));
+    } catch {
+      return "voice";
+    }
+  });
+  const speakModeRef = useRef(speakMode);
+  speakModeRef.current = speakMode;
+  const [speechNote, setSpeechNote] = useState<string>();
+  const [ttfa, setTtfa] = useState<number>();
+  const taskStartedAt = useRef<number>(0);
+  const speechSupported = typeof window !== "undefined" && "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined";
+  const speech = useMemo(
+    () =>
+      speechSupported
+        ? new SpeechController(
+            window.speechSynthesis as unknown as SynthLike,
+            (t) => new SpeechSynthesisUtterance(t) as never,
+            {
+              onStart: () => {
+                dispatch({ kind: "speech", speaking: true });
+                if (taskStartedAt.current) (setTtfa(Math.round(performance.now() - taskStartedAt.current)), (taskStartedAt.current = 0));
+              },
+              onIdle: () => dispatch({ kind: "speech", speaking: false }),
+              onNoVoice: (lang) => setSpeechNote(`No hay una voz instalada para ${lang === "es" ? "español" : "inglés"}: añádela en Configuración de Windows › Hora e idioma › Voz.`),
+            },
+          )
+        : undefined,
+    [speechSupported],
+  );
+  const taskSpeaker = useMemo(
+    () => (speech ? new TaskSpeaker({ speak: (t, l) => speech.speak(t, l), cancel: () => speech.cancel() }, () => speakModeRef.current) : undefined),
+    [speech],
+  );
+  const speakingRef = useRef(false);
+  speakingRef.current = state.speaking === true;
+  const chooseSpeakMode = (m: SpeakMode) => {
+    setSpeakMode(m);
+    if (m === "never") speech?.cancel();
+    try {
+      localStorage.setItem("jarvis.speakMode", m);
+    } catch {
+      /* private mode: the choice just lasts for this session */
+    }
+  };
   useSyncExternalStore(
     (cb) => live.onStatus(cb),
     () => live.status,
   );
 
+  /** Collapse the island after `ms`, but not while it is still talking. */
+  const scheduleReset = (ms: number) => {
+    collapseTimer.current = setTimeout(function tick() {
+      if (speakingRef.current) collapseTimer.current = setTimeout(tick, 800);
+      else dispatch({ kind: "reset" });
+    }, ms);
+  };
+
   useEffect(() => {
     const onEvent = (event: OrchestratorEvent) => {
       clearTimeout(collapseTimer.current);
+      if (event.type === "task.started") taskStartedAt.current = performance.now();
+      taskSpeaker?.onEvent(event);
       dispatch({ kind: "event", event });
       const terminal = event.type === "task.finished" || event.type === "task.error";
       if (event.type === "task.finished" && live.status === "ready") live.requestEconomy();
-      if (terminal) collapseTimer.current = setTimeout(() => dispatch({ kind: "reset" }), 4500);
+      if (terminal) scheduleReset(4500);
     };
     const offDemo = player.subscribe(onEvent);
     const offLive = live.onEvent(onEvent);
@@ -49,7 +110,7 @@ export default function App() {
       if (n.kind === "transcribed") dispatch({ kind: "voice.heard", text: n.text });
       else {
         dispatch({ kind: "voice.rejected", message: n.message });
-        collapseTimer.current = setTimeout(() => dispatch({ kind: "reset" }), 4500);
+        scheduleReset(4500);
       }
     });
     if (!inTauri) void live.connect();
@@ -60,7 +121,7 @@ export default function App() {
       offEconomy();
       live.close();
     };
-  }, [player, live]);
+  }, [player, live, taskSpeaker]);
 
   const toggleEconomy = () => {
     setShowEconomy((open) => {
@@ -73,7 +134,7 @@ export default function App() {
   const warn = (message: string) => {
     clearTimeout(collapseTimer.current);
     dispatch({ kind: "voice.rejected", message });
-    collapseTimer.current = setTimeout(() => dispatch({ kind: "reset" }), 4500);
+    scheduleReset(4500);
   };
 
   /** Push-to-talk: the microphone is open only while this is held. */
@@ -83,6 +144,7 @@ export default function App() {
     if (live.status !== "ready" || !live.info?.voice) return warn("Voz no configurada en el sidecar");
     m.busy = true;
     m.wantStop = false;
+    speech?.cancel(); // talking over it interrupts it (and keeps the mic from hearing the speaker)
     clearTimeout(collapseTimer.current);
     player.stop();
     source.current = "live"; // a real microphone and a real sidecar: never label this as a demo
@@ -121,6 +183,7 @@ export default function App() {
     const down = (e: KeyboardEvent) => {
       if (isTalkKey(e) && !e.repeat) (e.preventDefault(), void startTalk());
       else if (e.key === "Escape") {
+        if (speakingRef.current) speech?.cancel();
         if (mic.current.busy) void stopTalk(true);
         else if (stateRef.current.pending) answerPermission(false);
       }
@@ -173,6 +236,7 @@ export default function App() {
           economy={economy}
           showEconomy={showEconomy}
           onToggleEconomy={live.status === "ready" ? toggleEconomy : undefined}
+          onStopSpeaking={speech ? () => speech.cancel() : undefined}
         />
       </div>
 
@@ -218,6 +282,23 @@ export default function App() {
         <p className="muted small">
           Sidecar: {live.status === "ready" ? "conectado" : live.status === "connecting" ? "conectando…" : `no disponible${live.lastError ? ` (${live.lastError})` : ""} — solo escenarios demo`}
         </p>
+
+        <div className="speak">
+          <label>
+            Hablar:{" "}
+            <select value={speakMode} disabled={!speech} onChange={(e) => chooseSpeakMode(parseSpeakMode(e.target.value))}>
+              {SPEAK_MODES.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span className="muted small">
+            {speech ? (ttfa !== undefined ? `primer audio: ${ttfa} ms tras enviar` : "") : "este entorno no tiene síntesis de voz"}
+            {speechNote ? ` · ${speechNote}` : ""}
+          </span>
+        </div>
 
         <h2>AI Economy</h2>
         {live.status === "ready" ? (

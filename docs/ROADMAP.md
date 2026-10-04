@@ -15,7 +15,7 @@
 | 4 | Shell y UI completos | 🟦 hecho en navegador/dev; falta Windows (overlay, pantalla completa, multi-monitor, DPI real) | Isla con estados reales, permisos, panel Economy |
 | 5 | Memoria + optimización de contexto | ⬜ | Recuperación medida con ablación |
 | 6 | Router aprendido + experimento final | ⬜ | Frontera de Pareto costo vs éxito |
-| 7 | Voz | 🟦 push-to-talk + STT local hecho (sin whisper real probado); faltan TTS y wake word | Push-to-talk → respuesta hablada |
+| 7 | Voz | 🟦 push-to-talk + STT local (probado por el usuario en Windows) y TTS (audio sin probar); falta wake word | Push-to-talk → respuesta hablada |
 
 ---
 
@@ -146,7 +146,8 @@ exista algo visible, no solo logs.
 - [ ] **Relevo del sidecar en Tauri** (sin él, la app Tauri no tiene voz, economía ni órdenes reales) — Windows
 - [ ] Pruebas de pantalla completa, multi-monitor y DPI reales — Windows (lista en `docs/SPIKE_OVERLAY.md`)
 - [ ] Atajo global de push-to-talk (la ventana de la isla no tiene foco) — Tauri/Windows
-- [ ] Animaciones del cuervo para "hablando" (cuando haya TTS) y revisión de diseño con el usuario
+- [x] Cuervo "hablando" (pico animado, solo cuando el sintetizador informa que habla)
+- [ ] Revisión de diseño con el usuario
 
 ## Fase 5 — Memoria y contexto (3 semanas) ⬜
 - [ ] Memoria factual/preferencia/conductual/operacional, política de escritura, olvido, control del usuario
@@ -163,7 +164,8 @@ exista algo visible, no solo logs.
 - [x] `packages/voice`: WAV, puerta de silencio anti-alucinación, `Transcriber`, adaptador whisper.cpp por argv (binario/modelo que pone el usuario)
 - [ ] **Probar whisper.cpp real** (precisión ES/EN, latencia por modelo). Hoy solo hay pruebas con un binario de mentira
 - [ ] Atajo global y micrófono en WebView2 (Windows)
-- [ ] TTS (respuesta hablada) y métrica time-to-first-audio
+- [x] TTS con voces del sistema (ADR-0017): acuse hablado, respuestas, interrupción con Esc/al hablar, modos Solo si hablo/Siempre/Nunca, cuervo con pico animado, métrica time-to-first-audio (**audio real sin probar**)
+- [ ] Voces: probar calidad en Windows; excluir voces en línea si se quiere privacidad total; TTS neuronal local si no basta
 - [ ] Wake word personalizable ("jarvis"): detección continua local, con indicador visible y opción de desactivar; después de validar push-to-talk
 - [ ] STT en streaming (V2)
 
@@ -205,3 +207,4 @@ exista algo visible, no solo logs.
 | 2026-10-04 | Voz (ADR-0016): `packages/voice`, `voice.submit` por IPC, push-to-talk con micrófono abierto solo al pulsar, puerta de silencio, cancelación. **Reconocimiento real NO probado**: compilar whisper.cpp fue denegado por el sistema de permisos, así que se probó con un binario stand-in. Fase 4 en navegador: panel AI Economy desde trazas (no inventa ahorro sin precios), Cancelar, permisos con Deny por defecto, cuervo con nivel real, reduce-motion, DPR 1–2 verificado. 231 tests. Pendiente en Windows: relevo Tauri, overlay, multi-monitor, atajo global. |
 | 2026-10-04 | `setup.bat`/`start.bat` + `scripts/` (Node): instalación en un paso (pnpm, claves en `jarvis.env`, whisper.cpp + modelo, config según las claves presentes) y arranque solo en 127.0.0.1. Probado en Linux con modelos reales (la cascada escaló sola de OpenRouter, cuota diaria agotada, a Groq); **sin probar en Windows**. |
 | 2026-10-04 | Primer contacto con voz real en Windows: transcribe, pero "abre la calculadora" no abría nada. Causas (mías): (1) el router local solo entendía "abre calculadora" exacto, no artículos/cortesías/formas habladas ("puedes abrir la…, por favor", "abrime", "open the…"), así que la orden iba al LLM; (2) el LLM llamaba `apps.open` con un nombre en inglés (`calculator`) que no era el comando (`calc`) y se rechazaba. Arreglo: `extractOpenTarget`, el lanzador resuelve nombres vía catálogo (sigue rechazando todo lo desconocido), la herramienta le dice al modelo qué apps existen, whisper por defecto en `es` con un prompt de vocabulario de tus apps. Verificado con Groq real. 264 tests. |
+| 2026-10-04 | TTS (ADR-0017): `speech/` (texto hablable sin markdown/código/tablas, elección de voz rioplatense, controlador con cola y cancelación, `TaskSpeaker` desde eventos), modos de habla, cuervo hablando, métrica time-to-first-audio. 281 tests. Probado en Chromium con sintetizador simulado; **audio real pendiente en Windows**. Riesgo abierto para wake word: eco del propio asistente. |

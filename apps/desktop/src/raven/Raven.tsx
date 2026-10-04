@@ -58,7 +58,8 @@ const eyeBlink = (mode: Mode) =>
     : { scaleY: mode === "error" ? 0.7 : 1 };
 
 /** `level`: real microphone level (0..1) while listening; drives the sound rings. */
-export function Raven({ mode, size = 56, level }: { mode: Mode; size?: number; level?: number }) {
+/** `speaking`: the speech synthesiser is really playing; the beak opens and closes. */
+export function Raven({ mode, size = 56, level, speaking = false }: { mode: Mode; size?: number; level?: number; speaking?: boolean }) {
   const listening = mode === "listening" || mode === "permission";
   const thinking = mode === "thinking";
   const warn = mode === "warning" || mode === "permission";
@@ -109,6 +110,14 @@ export function Raven({ mode, size = 56, level }: { mode: Mode; size?: number; l
         <circle cx="58" cy="46" r="23" fill="url(#rv-body)" />
         {/* beak */}
         <path d="M78 44 L100 52 L78 58 Z" fill="#ffb454" />
+        {/* lower beak: swings open while speaking */}
+        <motion.path
+          d="M78 52 L100 52 L78 58 Z"
+          fill="#e8962f"
+          animate={speaking ? { rotate: [0, 14, 0, 10, 0] } : { rotate: 0 }}
+          transition={speaking ? { duration: 0.55, repeat: Infinity, ease: "easeInOut" } : { duration: 0.15 }}
+          style={{ transformBox: "fill-box", transformOrigin: "0% 0%" }}
+        />
         <path d="M78 52 L100 52" stroke="#c9822a" strokeWidth="1.2" />
         {/* eyes */}
         <motion.g animate={eyeBlink(mode)} style={box}>

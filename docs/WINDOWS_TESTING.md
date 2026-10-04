@@ -121,3 +121,22 @@ Recuerda: **Tauri aún no arranca el sidecar**, así que aquí solo existen los 
 3. La tabla C con los tiempos de V10 y si el reconocimiento en español fue bueno.
 4. La tabla de `SPIKE_OVERLAY.md` (D) si llegas a ella.
 5. Nunca pegues tus claves; si pegas la config, bórralas antes.
+
+## E. Respuestas habladas (TTS) **[SIN PROBAR con audio real]**
+
+Panel principal › **Hablar:** (por defecto "Solo si hablo"). Con los altavoces encendidos:
+
+| # | Haz | Esperado |
+|---|---|---|
+| T1 | Pulsa 🎙 y di "hola" | Oyes "¡Hola! ¿En qué te puedo ayudar?" y el cuervo mueve el pico; la isla dice "🔊 hablando" |
+| T2 | Di "crea un proyecto de api con tests" | **Oyes "Entendido, me pongo con eso" casi al instante**, y luego la respuesta |
+| T3 | Di "qué hora es" | Oyes la hora, no un texto en inglés |
+| T4 | Di "abre la calculadora" | Se abre y oyes "Listo." |
+| T5 | Mientras habla, pulsa **Esc** o el botón *Callar* | Se calla al instante |
+| T6 | Mientras habla, mantén 🎙 | Se calla al empezar a grabar |
+| T7 | Pide algo con código ("escribe una función que sume") | Dice una frase corta y "Te dejé el detalle en pantalla"; **no** lee el código |
+| T8 | Cambia a "Siempre" y escribe "hola" | Habla aunque lo hayas escrito; en "Nunca" no habla |
+| T9 | Mira el texto "primer audio: N ms tras enviar" | Anota N (objetivo < 600 ms con el acuse) |
+| T10 | Si dice "No hay una voz instalada para español" | Instala la voz en Configuración › Hora e idioma › Voz y recarga |
+
+Anota **qué voz suena** y si te gusta; si es una voz en línea de Edge (el texto sale a Microsoft) dímelo, hay que decidir si se excluyen.

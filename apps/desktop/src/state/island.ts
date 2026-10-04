@@ -24,6 +24,8 @@ export interface IslandState {
   escalations: number;
   /** Real microphone level (0..1) while recording; undefined otherwise. */
   level?: number;
+  /** The speech synthesiser is really playing audio. */
+  speaking?: boolean;
 }
 
 export const initialState: IslandState = {
@@ -42,7 +44,8 @@ export type IslandAction =
   | { kind: "voice.level"; level: number }
   | { kind: "voice.transcribing" }
   | { kind: "voice.heard"; text: string }
-  | { kind: "voice.rejected"; message: string };
+  | { kind: "voice.rejected"; message: string }
+  | { kind: "speech"; speaking: boolean };
 
 /**
  * Pure reducer: OrchestratorEvent -> island state. This is the ONLY way the UI learns what
@@ -51,9 +54,11 @@ export type IslandAction =
 export function islandReducer(state: IslandState, action: IslandAction): IslandState {
   switch (action.kind) {
     case "reset":
-      return initialState;
+      return { ...initialState, speaking: state.speaking };
+    case "speech":
+      return { ...state, speaking: action.speaking };
     case "voice.recording":
-      return { ...initialState, mode: "listening", headline: "Escuchando…", detail: "Suelta para enviar", level: 0 };
+      return { ...initialState, mode: "listening", headline: "Escuchando…", detail: "Suelta para enviar", level: 0, speaking: state.speaking };
     case "voice.level":
       return state.mode === "listening" ? { ...state, level: action.level } : state;
     case "voice.transcribing":
