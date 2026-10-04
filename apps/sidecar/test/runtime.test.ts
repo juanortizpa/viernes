@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { EventBus } from "@jarvis/core";
+import { SqliteTraceStore } from "@jarvis/storage";
 import { Config, loadConfig } from "../src/config";
 import { buildRuntime } from "../src/runtime";
 import { launchApp } from "../src/launcher";
@@ -30,6 +32,15 @@ describe("buildRuntime", () => {
 
   it("rejects a defaultModel nobody offers", () => {
     expect(() => buildRuntime(Config.parse({ defaultModel: "ghost" }), { env: {}, launcher: noop })).toThrow(/ghost/);
+  });
+
+  it("persists the trace of a finished task into the injected store", async () => {
+    const traces = new SqliteTraceStore(":memory:");
+    const r = buildRuntime(Config.parse({}), { env: {}, launcher: noop, traces });
+    const orch = r.createOrchestrator({ bus: new EventBus(), askPermission: async () => false });
+    const trace = await orch.run("hola");
+    expect(traces.get(trace.taskId)?.finalOutcome).toBe("success");
+    expect(traces.count()).toBe(1);
   });
 
   it("loadConfig tolerates a missing file", () => {

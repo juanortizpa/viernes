@@ -72,6 +72,9 @@ importers:
       '@jarvis/providers':
         specifier: workspace:*
         version: link:../../packages/providers
+      '@jarvis/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
       '@jarvis/tools':
         specifier: workspace:*
         version: link:../../packages/tools
@@ -127,6 +130,16 @@ importers:
       '@jarvis/protocol':
         specifier: workspace:*
         version: link:../protocol
+
+  packages/storage:
+    dependencies:
+      '@jarvis/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.5
 
   packages/tools:
     dependencies:

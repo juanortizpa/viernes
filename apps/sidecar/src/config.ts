@@ -7,6 +7,8 @@ const Models = z.array(ModelCapabilities).default([]);
 /** Prices and latencies are the user's estimates; the sidecar never invents them. */
 export const Config = z.object({
   defaultModel: z.string().optional(),
+  /** SQLite file for execution traces. Overridden by JARVIS_DATA_DIR/traces.db when that env var is set. */
+  traceDb: z.string().optional(),
   apps: z.record(z.string()).default({
     "vs code": "code",
     vscode: "code",

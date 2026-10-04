@@ -1,6 +1,8 @@
+import { join } from "node:path";
 import { createInterface } from "node:readline";
 import { encodeLine, type ServerMessage } from "@jarvis/ipc";
-import { EventBus } from "@jarvis/core";
+import { EventBus, MemoryTraceStore } from "@jarvis/core";
+import { SqliteTraceStore } from "@jarvis/storage";
 import { loadConfig } from "./config";
 import { launchApp } from "./launcher";
 import { buildRuntime } from "./runtime";
@@ -17,7 +19,11 @@ if (!token) {
   process.exit(2);
 }
 
-const runtime = buildRuntime(loadConfig(process.env.JARVIS_CONFIG), { env: process.env, launcher: launchApp });
+const config = loadConfig(process.env.JARVIS_CONFIG);
+const dataDir = process.env.JARVIS_DATA_DIR;
+const traceDb = dataDir ? join(dataDir, "traces.db") : config.traceDb;
+const traces = traceDb ? new SqliteTraceStore(traceDb) : new MemoryTraceStore();
+const runtime = buildRuntime(config, { env: process.env, launcher: launchApp, traces });
 const send = (m: ServerMessage): void => void process.stdout.write(encodeLine(m));
 const bus = new EventBus();
 
@@ -35,6 +41,7 @@ const rl = createInterface({ input: process.stdin });
 rl.on("line", (line) => server.handleLine(line));
 rl.on("close", () => {
   server.close();
+  if (traces instanceof SqliteTraceStore) traces.close();
   process.exit(0);
 });
-console.error(`[sidecar] ready (offline=${runtime.offline}, models=${runtime.models.join(",")})`);
+console.error(`[sidecar] ready (offline=${runtime.offline}, models=${runtime.models.join(",")}, traces=${traceDb ?? "memory"})`);

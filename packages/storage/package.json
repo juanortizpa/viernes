@@ -1,0 +1,11 @@
+{
+  "name": "@jarvis/storage",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": { "typecheck": "tsc -p tsconfig.json" },
+  "dependencies": { "@jarvis/protocol": "workspace:*" },
+  "devDependencies": { "@types/node": "^22.0.0" }
+}

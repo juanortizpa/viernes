@@ -7,7 +7,7 @@ import {
   ProviderRegistry,
   type FetchLike,
 } from "@jarvis/providers";
-import { IntentRouter, MemoryTraceStore, Orchestrator, StaticRouter, type EventBus, type PermissionResolver } from "@jarvis/core";
+import { IntentRouter, MemoryTraceStore, Orchestrator, StaticRouter, type EventBus, type PermissionResolver, type TraceStore } from "@jarvis/core";
 import { ToolRegistry, filesRead, filesWrite, makeAppsOpen, timeNow, type AppLauncher } from "@jarvis/tools";
 import type { ModelCapabilities } from "@jarvis/protocol";
 import type { Config } from "./config";
@@ -31,6 +31,8 @@ export interface RuntimeDeps {
   env: Record<string, string | undefined>;
   launcher: AppLauncher;
   fetch?: FetchLike;
+  /** Where execution traces go; defaults to an in-memory store. */
+  traces?: TraceStore;
 }
 
 export interface Runtime {
@@ -69,7 +71,7 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
   if (!models.includes(defaultModel)) throw new Error(`defaultModel "${defaultModel}" is not offered by any configured provider`);
 
   const tools = new ToolRegistry().register(timeNow).register(filesRead).register(filesWrite).register(makeAppsOpen(deps.launcher));
-  const traces = new MemoryTraceStore();
+  const traces = deps.traces ?? new MemoryTraceStore();
 
   return {
     providers,
