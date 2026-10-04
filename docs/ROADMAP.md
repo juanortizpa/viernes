@@ -8,7 +8,7 @@
 | Fase | Objetivo | Estado | Entregable de validación |
 |---|---|---|---|
 | 0 | Reducir riesgos, contratos, demo visual mínima | 🟦 casi listo (falta spike en Windows) | Demo de isla + cuervo sobre eventos del protocolo |
-| 1 | Columna vertebral (orquestador, proveedores, herramientas, policy) | 🟦 en curso (falta SQLite, bucle de herramientas con LLM, relevo Tauri) | Tarea de texto de punta a punta, sin UI compleja |
+| 1 | Columna vertebral (orquestador, proveedores, herramientas, policy) | ✅ completa en lo que no requiere Windows (quedan relevo Tauri y herramientas de Windows) | Tarea de texto de punta a punta, sin UI compleja |
 | 2 | Router y evaluador, escalado | ⬜ | Escalado automático con evaluador de tests |
 | 3 | Arnés de experimento | ⬜ | Primer resultado de brazos A–D (¡temprano!) |
 | 4 | Shell y UI completos | ⬜ | Isla con estados reales, permisos, panel Economy |
@@ -65,20 +65,23 @@ exista algo visible, no solo logs.
 
 ---
 
-## Fase 1 — Columna vertebral (3–4 semanas) 🟦
+## Fase 1 — Columna vertebral (3–4 semanas) ✅ (salvo ítems de Windows)
 - [x] Orquestador: máquina de estados de tarea (`TaskMachine`) + bus de eventos validado contra el protocolo (`packages/core`)
-- [x] Registro de proveedores + adaptadores Anthropic, OpenRouter, Ollama + `FakeProvider` (`packages/providers`; probados con `fetch` simulado, **no contra APIs reales**)
+- [x] Registro de proveedores + adaptadores Anthropic, OpenRouter, Ollama + `FakeProvider` (`packages/providers`; tests con `fetch` simulado)
+  - [x] **OpenRouter validado contra la API real** (streaming, uso y costo; el costo calculado coincide con el que cobra OpenRouter). Prueba opt-in: `JARVIS_LIVE=1 OPENROUTER_API_KEY=… pnpm test`
+  - [ ] Anthropic y Ollama siguen validados solo con `fetch` simulado, y **sin soporte de herramientas** (rechazan `tools` con error explícito)
 - [x] Intent router local por reglas (ES/EN; solo apps conocidas, nada de adivinar)
 - [ ] Intent router: clasificador pequeño (diferido; reglas cubren el MVP)
 - [x] Registro de herramientas con `ToolDescriptor` (`packages/tools`): `time.now`, `files.read`, `files.write`, `apps.open` (lanzador inyectado)
 - [ ] Herramientas de Windows reales (lanzador de apps, portapapeles) → requieren host Windows
 - [x] Policy engine: 4 niveles, confirmación, taint, deny/allow lists, log de auditoría (`packages/policy`)
-- [ ] Bucle de herramientas propuesto por el LLM (hoy solo intents locales ejecutan herramientas; el taint se activa cuando exista)
+- [x] Bucle de herramientas propuesto por el LLM (ADR-0009): `invokeTool` único para intents locales y llamadas del modelo, máx. 5 pasos, salida no confiable acotada y etiquetada, taint a nivel de tarea. Verificado con modelo real
 - [x] Sidecar + IPC (`packages/ipc`, `apps/sidecar`, ADR-0008): NDJSON sobre stdio, token en handshake, permisos con timeout; la demo envía órdenes reales (verificado en Chromium)
 - [ ] Relevo del sidecar en el shell Tauri (spawn + stdio↔eventos); requiere Windows
-- [ ] Empaquetar el sidecar (hoy corre con `tsx`)
-- [ ] Telemetría persistida (SQLite; hoy `MemoryTraceStore` detrás de la interfaz `TraceStore`)
-- [ ] Probar un adaptador contra una API real (Ollama local o clave de proveedor del usuario)
+- [x] Empaquetar el sidecar: `pnpm --filter @jarvis/sidecar build` → `dist/sidecar.mjs` (un solo archivo, corre con `node` sin `tsx`; probado en e2e)
+- [ ] Binario autocontenido del sidecar para distribuir (Node SEA o similar); requiere host Windows
+- [x] Telemetría persistida: `SqliteTraceStore` (`packages/storage`, `node:sqlite`, sin dependencias nativas); el sidecar la usa con `JARVIS_DATA_DIR` o `traceDb` en la config
+- [x] Probar un adaptador contra una API real (OpenRouter, ver arriba)
 
 ## Fase 2 — Router y evaluador (3 semanas) ⬜
 - [ ] Estrategias de router intercambiables (siempre-premium, siempre-barato, reglas)
@@ -135,3 +138,4 @@ exista algo visible, no solo logs.
 | 2026-10-03 | Fase 0 casi cerrada: monorepo, `packages/protocol` (7 tests), demo de isla + cuervo (`pnpm dev`, 9 tests de reducer y player, verificada con capturas en Chromium), 7 ADRs, esqueleto Tauri. **Pendiente:** spike de overlay en Windows (`docs/SPIKE_OVERLAY.md`), no compilado ni probado. |
 | 2026-10-04 | Fase 1, primer corte vertical: `policy`, `tools`, `providers`, `core` (orquestador + bus + intent router + `StaticRouter` provisional). 44 tests y typecheck en verde. Rama local-intent y rama modelo emiten `OrchestratorEvent` válidos y guardan `ExecutionTrace`. Pendiente: sidecar/IPC, SQLite, bucle de herramientas con LLM. |
 | 2026-10-04 | Fase 1, sidecar + IPC: `packages/ipc` (mensajes zod + NDJSON), `apps/sidecar` (servidor por stdio, config, lanzador de apps por alias, runtime), puente solo-dev en Vite y fuente "live" en la UI (ADR-0008). 73 tests, incluido un e2e que lanza el proceso real. Sin proveedor configurado responde `offline-echo`, etiquetado como tal. El flujo de permiso en el navegador solo está probado en tests del servidor (no hay regla local sensible en la UI aún). |
+| 2026-10-04 | Fase 1 cerrada salvo Windows: OpenRouter probado con la API real; `packages/storage` (SQLite); bucle de herramientas con LLM (ADR-0009); sidecar empaquetado como un solo `.mjs`. Hallazgo de la prueba real: OpenAI/OpenRouter rechazan nombres de función con punto (`time.now`), así que el adaptador los codifica en el borde; las pruebas con `fetch` simulado no podían detectarlo. Un modelo real (gpt-4o-mini) resistió una inyección de prompt; la garantía de que el policy engine bloquea está en los tests deterministas, no en esa prueba. |
