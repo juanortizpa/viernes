@@ -24,8 +24,10 @@ inferencia manteniendo la efectividad de las tareas en un agente personal multim
 |---|---|
 | Isla, cuervo, voz, PC control, memoria | Router, evaluador, escalado, telemetría |
 
-La tesis no necesita la UI. Ante conflicto de tiempo, **gana la tesis** (pendiente de confirmar con
-el usuario si hay fecha límite; ver "Preguntas abiertas" en ROADMAP).
+**Decidido (2026-10-04): es un producto personal**, no una tesis con fecha límite. Ante conflicto, gana la utilidad diaria;
+el experimento de ruteo sigue siendo el diferenciador técnico, pero sin plazo. Restricción dura: **100 % gratis** (APIs gratuitas
++ las suscripciones Claude Pro y Gemini del usuario, usadas a través de sus CLIs locales). Idioma: **solo español**.
+Uso: asistente general con foco en programar; la capacidad de programar se aprovecha para manejar las demás apps.
 
 ## 3. Arquitectura (separación de responsabilidades que debe mantenerse)
 
