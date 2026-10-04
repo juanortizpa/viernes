@@ -4,7 +4,7 @@ import { TaintTracker, type PolicyEngine } from "@jarvis/policy";
 import type { ChatMessage, ProviderRegistry, ToolCall } from "@jarvis/providers";
 import type { AnyTool, ToolRegistry } from "@jarvis/tools";
 import { EventBus, TaskEmitter } from "./bus";
-import type { IntentRouter } from "./intent";
+import type { FollowUp, IntentRouter } from "./intent";
 import type { ModelRouter } from "./model-router";
 import { TaskMachine } from "./task-state";
 import type { TraceStore } from "./trace-store";
@@ -106,7 +106,7 @@ export class Orchestrator {
 
       const result =
         intent.route === "local"
-          ? await this.runLocal(taskId, intent.tool, intent.args, out, machine, trace)
+          ? await this.runLocal(taskId, intent.tool, intent.args, intent.then, out, machine, trace)
           : await this.runModel(taskId, input, out, machine, trace, opts.signal);
       trace.finalOutcome = opts.signal?.aborted ? "cancelled" : result.outcome;
       summary = result.summary;
@@ -127,6 +127,7 @@ export class Orchestrator {
     taskId: string,
     toolName: string,
     rawArgs: Record<string, unknown>,
+    then: FollowUp | undefined,
     out: TaskEmitter,
     machine: TaskMachine,
     trace: ExecutionTrace,
@@ -136,7 +137,10 @@ export class Orchestrator {
 
     const tool = this.deps.tools.get(toolName);
     if (!tool) return { outcome: "failure", summary: `unknown tool ${toolName}` };
-    const r = await this.invokeTool({ taskId, out, machine, trace, taint: new TaintTracker() }, tool, rawArgs);
+    const ctx = { taskId, out, machine, trace, taint: new TaintTracker() };
+    const r = await this.invokeTool(ctx, tool, rawArgs);
+    const next = r.ok && then ? this.deps.tools.get(then.tool) : undefined;
+    if (next && then) await this.invokeTool(ctx, next, then.args);
     return { outcome: r.ok ? "success" : "failure", summary: r.summary };
   }
 

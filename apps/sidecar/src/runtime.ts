@@ -7,9 +7,21 @@ import {
   ProviderRegistry,
   type FetchLike,
 } from "@jarvis/providers";
-import { IntentRouter, MemoryTraceStore, Orchestrator, StaticRouter, type EventBus, type PermissionResolver, type TraceStore } from "@jarvis/core";
-import { ToolRegistry, filesRead, filesWrite, makeAppsOpen, timeDate, timeNow, type AppLauncher } from "@jarvis/tools";
+import { AppCatalog, IntentRouter, MemoryTraceStore, Orchestrator, StaticRouter, type AliasStore, type EventBus, type PermissionResolver, type TraceStore } from "@jarvis/core";
+import {
+  ToolRegistry,
+  filesRead,
+  filesWrite,
+  makeAliasesForget,
+  makeAliasesLearn,
+  makeAliasesList,
+  makeAppsOpen,
+  timeDate,
+  timeNow,
+  type AppLauncher,
+} from "@jarvis/tools";
 import type { ModelCapabilities } from "@jarvis/protocol";
+import type { ScannedApp } from "./app-scanner";
 import type { Config } from "./config";
 
 export const OFFLINE_MODEL = "offline-echo";
@@ -33,6 +45,10 @@ export interface RuntimeDeps {
   fetch?: FetchLike;
   /** Where execution traces go; defaults to an in-memory store. */
   traces?: TraceStore;
+  /** Where learned aliases persist; in-memory when omitted. */
+  aliases?: AliasStore;
+  /** Apps discovered on the machine; lowest-priority aliases. */
+  scanned?: ScannedApp[];
 }
 
 export interface Runtime {
@@ -70,7 +86,25 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
   const defaultModel = config.defaultModel ?? models[0]!;
   if (!models.includes(defaultModel)) throw new Error(`defaultModel "${defaultModel}" is not offered by any configured provider`);
 
-  const tools = new ToolRegistry().register(timeNow).register(timeDate).register(filesRead).register(filesWrite).register(makeAppsOpen(deps.launcher));
+  const catalog = new AppCatalog(deps.aliases);
+  for (const [alias, command] of Object.entries(config.apps)) catalog.add(alias, command, "config");
+  for (const a of deps.scanned ?? []) catalog.add(a.alias, a.command, "scan");
+  catalog.restore();
+
+  // Only commands the catalog knows can be launched, whoever asks (local intent or model).
+  const launcher: AppLauncher = async (command) => {
+    if (!catalog.hasCommand(command)) throw new Error(`"${command}" is not a known app`);
+    await deps.launcher(command);
+  };
+  const tools = new ToolRegistry()
+    .register(timeNow)
+    .register(timeDate)
+    .register(filesRead)
+    .register(filesWrite)
+    .register(makeAppsOpen(launcher))
+    .register(makeAliasesLearn(catalog))
+    .register(makeAliasesForget(catalog))
+    .register(makeAliasesList(catalog));
   const traces = deps.traces ?? new MemoryTraceStore();
 
   return {
@@ -80,7 +114,7 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
     createOrchestrator: ({ bus, askPermission }) =>
       new Orchestrator({
         bus,
-        intents: new IntentRouter({ apps: config.apps }),
+        intents: new IntentRouter({ apps: catalog }),
         router: new StaticRouter(defaultModel),
         providers,
         tools,

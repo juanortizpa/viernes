@@ -9,6 +9,8 @@ export const Config = z.object({
   defaultModel: z.string().optional(),
   /** SQLite file for execution traces. Overridden by JARVIS_DATA_DIR/traces.db when that env var is set. */
   traceDb: z.string().optional(),
+  /** Discover installed apps (Windows Start Menu) so "abre X" works without hand-written aliases. */
+  scanApps: z.boolean().default(true),
   apps: z.record(z.string()).default({
     "vs code": "code",
     vscode: "code",
