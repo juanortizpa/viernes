@@ -15,14 +15,17 @@ interface Props {
   wakeEnabled: boolean;
   onToggleWake: (on: boolean) => void;
   onRetry: () => void;
+  settingsOpen: boolean;
+  onToggleSettings: () => void;
+  /** Global push-to-talk combination from the shell, if registered. */
+  pttShortcut?: string | null;
 }
 
 /**
- * The island's own controls inside the Tauri window: one compact row under the island. Settings that need room
- * (voice enrolment, speaking mode, calibration) stay in the browser panel for now. It never shows progress of its own:
- * the island above renders the sidecar's events.
+ * The island's own controls inside the Tauri window: one compact row under the island (⚙ opens `IslandSettings`).
+ * It never shows progress of its own: the island above renders the sidecar's events.
  */
-export function IslandDock({ status, lastError, voice, talking, input, onInput, onSubmit, onTalkStart, onTalkStop, wakeEnabled, onToggleWake, onRetry }: Props) {
+export function IslandDock({ status, lastError, voice, talking, input, onInput, onSubmit, onTalkStart, onTalkStop, wakeEnabled, onToggleWake, onRetry, settingsOpen, onToggleSettings, pttShortcut }: Props) {
   if (status !== "ready") {
     return (
       <div className="dock dock--status" role="status">
@@ -50,7 +53,7 @@ export function IslandDock({ status, lastError, voice, talking, input, onInput, 
         type="button"
         className={`dock__btn mic${talking ? " mic--on" : ""}`}
         disabled={!voice}
-        title={voice ? "Mantén pulsado para hablar (o Ctrl+Espacio con la isla enfocada)" : "Voz no configurada (ver setup.bat)"}
+        title={voice ? `Mantén pulsado para hablar (o ${pttShortcut ? pttShortcut.replace("Space", "Espacio") : "Ctrl+Espacio con la isla enfocada"})` : "Voz no configurada (ver setup.bat)"}
         aria-label="Pulsar para hablar"
         onPointerDown={(e) => (e.currentTarget.setPointerCapture(e.pointerId), onTalkStart())}
         onPointerUp={() => onTalkStop()}
@@ -67,6 +70,9 @@ export function IslandDock({ status, lastError, voice, talking, input, onInput, 
         onClick={() => onToggleWake(!wakeEnabled)}
       >
         👂
+      </button>
+      <button type="button" className={`dock__btn${settingsOpen ? " dock__btn--on" : ""}`} aria-pressed={settingsOpen} aria-label="Ajustes" title="Ajustes de voz y de la isla" onClick={onToggleSettings}>
+        ⚙
       </button>
     </form>
   );

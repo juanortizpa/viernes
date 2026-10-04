@@ -58,4 +58,5 @@ relevo JARVIS no puede ser una isla siempre visible.
 ## Consecuencias
 + La isla es la app: real, sin navegador ni servidor HTTP. + El núcleo y la UI no cambiaron de protocolo.
 − Hace falta Rust para compilar la isla (una vez; luego `island.bat` arranca en ~1 s). − Sigue dependiendo de un Node instalado
-  (binario autocontenido: pendiente). − El atajo global de push-to-talk sigue pendiente: con la isla sin foco, Ctrl+Espacio no llega.
+  (binario autocontenido: pendiente, solo hace falta para distribuir a otros equipos). Atajo global, bandeja, instancia única y clic
+  que atraviesa: ADR-0022.

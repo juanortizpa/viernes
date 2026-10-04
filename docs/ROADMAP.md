@@ -12,7 +12,7 @@
 | 2 | Router y evaluador, escalado | ✅ (dry-run y plan→aprobación diferidos a V2; evaluador de tests sin runner en vivo) | Escalado automático con evaluador de tests |
 | 3 | Arnés de experimento | 🟦 tabla completa para 7 modelos (Groq + Google); faltan tareas más difíciles | Primer resultado de brazos A–D (¡temprano!) |
 | R | Respuesta inmediata (acuse, saludos, caché) | ✅ R1–R3 hechos y medidos (acuse 1 ms vs 1 s; caché 1 ms vs ~500 ms, 0 falsos positivos; perfil de estilo) | Saludos y acuses <50 ms, sin progreso falso |
-| 4 | Shell y UI completos | 🟦 la isla Tauri ya usa el sidecar real (`island.bat`, ADR-0021; probado en Linux); falta Windows (overlay, pantalla completa, multi-monitor, DPI real, atajo global) | Isla con estados reales, permisos, panel Economy |
+| 4 | Shell y UI completos | 🟦 la isla Tauri usa el sidecar real, deja pasar clics fuera de ella, tiene atajo global, bandeja y ajustes (ADR-0021/0022; probado en Linux); falta Windows (overlay real, pantalla completa, multi-monitor, DPI) | Isla con estados reales, permisos, panel Economy |
 | 5 | Memoria + optimización de contexto | ⬜ | Recuperación medida con ablación |
 | 6 | Router aprendido + experimento final | ⬜ | Frontera de Pareto costo vs éxito |
 | 7 | Voz | 🟦 push-to-talk + STT local (probado en Windows), TTS y wake word de dos etapas (estos dos solo con audio simulado) | Push-to-talk → respuesta hablada |
@@ -148,9 +148,12 @@ exista algo visible, no solo logs.
 - [x] `island.bat` → `scripts/island.mjs`: empaqueta el sidecar, compila la isla solo si cambió el código y la deja corriendo sin consola (`--dev` para `tauri dev`)
 - [x] Dock de la isla (orden escrita, push-to-talk, manos libres; estado del sidecar con Reintentar) y ventana que mide lo que la isla (`WindowFitter`)
 - [x] La respuesta del modelo se queda visible al terminar (antes «Listo» la borraba) y el detalle se limita a 4 líneas
-- [ ] Ajustes de voz dentro de la isla (registro de «jarvis», modo de habla, calibración): hoy solo en el panel del navegador
+- [x] Ajustes dentro de la isla (⚙): modo de habla, audio, manos libres con registro de tu voz, atajo vigente, ocultar (ADR-0022). La calibración sigue en el navegador (herramienta de desarrollo)
+- [x] Clic que atraviesa por regiones: la UI informa sus rectángulos y el shell alterna `set_ignore_cursor_events` según el cursor; nunca deja la ventana inalcanzable (ADR-0022). Probado en X11; **falta Windows**
+- [x] Bandeja (mostrar/ocultar, salir) e instancia única (ADR-0022)
 - [ ] Pruebas de pantalla completa, multi-monitor y DPI reales — Windows (lista en `docs/SPIKE_OVERLAY.md`)
-- [ ] Atajo global de push-to-talk (la ventana de la isla no tiene foco) — Tauri/Windows
+- [x] Atajo global de push-to-talk `Ctrl+Alt+Espacio` (ADR-0022; probado en X11, **falta Windows**)
+- [ ] `Esc` para denegar un permiso con la isla sin foco (un `Esc` global robaría la tecla a todas las apps; sin decidir)
 - [x] Cuervo "hablando" (pico animado, solo cuando el sintetizador informa que habla)
 - [ ] Revisión de diseño con el usuario
 
@@ -168,7 +171,8 @@ exista algo visible, no solo logs.
 - [x] Push-to-talk (botón mantenido o Ctrl+Espacio con la ventana enfocada) → WAV 16 kHz → sidecar → STT local → tarea de voz por el pipeline normal
 - [x] `packages/voice`: WAV, puerta de silencio anti-alucinación, `Transcriber`, adaptador whisper.cpp por argv (binario/modelo que pone el usuario)
 - [ ] **Probar whisper.cpp real** (precisión ES/EN, latencia por modelo). Hoy solo hay pruebas con un binario de mentira
-- [ ] Atajo global y micrófono en WebView2 (Windows)
+- [x] Atajo global (`Ctrl+Alt+Espacio`, ADR-0022)
+- [ ] Micrófono en WebView2 (Windows)
 - [x] TTS con voces del sistema (ADR-0017): acuse hablado, respuestas, interrupción con Esc/al hablar, modos Solo si hablo/Siempre/Nunca, cuervo con pico animado, métrica time-to-first-audio (**audio real sin probar**)
 - [ ] Voces: probar calidad en Windows; excluir voces en línea si se quiere privacidad total; TTS neuronal local si no basta
 - [x] Wake word personalizable en dos etapas (ADR-0018): filtro en el equipo con tu voz (MFCC+DTW, 0,64 % de un núcleo) → verificación con whisper tiny → orden → ventana de continuación de 10 s; indicador visible, opt-in, descarta lo que no es para el asistente. **Solo probado con audio sintético**
@@ -222,3 +226,4 @@ exista algo visible, no solo logs.
 | 2026-10-04 | Feedback: la voz funciona pero la transcripción exige hablar despacio. Causas encontradas en mi propio pipeline y corregidas (ADR-0019): audio perdido durante la verificación de «jarvis», frases cortadas a 600 ms de pausa (ahora 900), remuestreo sin filtro (ahora FIR pasa-bajos), audio sin nivelar ni margen, push-to-talk que decía «Escuchando» antes de abrir el micrófono, prompt repetitivo; `setup.bat` descarga `small`. Nueva herramienta de calibración con tu voz (`check-stt.bat` + «Prueba de transcripción» en la UI) y selector «Audio del navegador». 334 tests. **Mejora real sin medir con voz real.** |
 | 2026-10-04 | ADR-0020: corpus de 20 frases rioplatenses con 8 voces (TTS de Gemini), limpio y degradado. Medido: whisper-turbo 15/20 acciones correctas; Gemini 3.5 flash-lite (oído+entendido) 18–19/20; **carrera Groq+Gemini en producción 20/20 y 19/20, mediana 1,2 s**. Descubierto midiendo: el prompt de vocabulario hacía que whisper regurgitara la lista de apps ("abre paint" → "abre la calculadora…"); Gemini 3.1 varía hasta 19 s; los TTS leen las instrucciones de estilo. Añadido: `GroqTranscriber`, `GeminiTranscriber` (heard/meant con salvaguarda), `RaceTranscriber`, `FallbackTranscriber`, limpieza de habla y coincidencia fonética de apps, aviso de voz al LLM, `stt-eval`. Bug atrapado por test: se ejecutaba la transcripción rápida en vez de la buena. 369 tests. **Sin probar con la voz real del usuario.** |
 | 2026-10-04 | **Relevo del sidecar en Tauri (ADR-0021):** el shell lanza `node sidecar.mjs` con token, reenvía stdio por un `Channel` (generaciones: un proceso viejo nunca toca al nuevo), cierre limpio y log en `.jarvis/sidecar.log`; `tauriTransport()` adapta `LiveClient` sin cambiar el protocolo. `island.bat` arranca la isla real; dock con orden/voz/manos libres; ventana ajustada a la isla; iconos del cuervo. Probado en Linux (WebKitGTK/Xvfb, release): local, saludo, cascada real OpenRouter 429 → Groq, matar sidecar → Reintentar, recarga sin sidecars duplicados, sin huérfanos al matar el shell; `tauri dev` con el puente de Vite apagado. Bug encontrado al probar: la isla borraba la respuesta del modelo al terminar. 381 tests TS + 4 Rust. **Sin probar en Windows** (compilación MSVC, WebView2, micrófono, overlay). |
+| 2026-10-04 | **Isla como overlay (ADR-0022):** clic que atraviesa por regiones (la UI informa rectángulos, el shell sondea el cursor; sin regiones o sin cursor siempre clicable), atajo global `Ctrl+Alt+Espacio` para push-to-talk (muestra la isla si estaba oculta; avisa si otra app lo tiene), bandeja (mostrar/ocultar, salir), instancia única, ajustes de voz dentro de la isla (⚙). Bugs corregidos: el aviso de micrófono no se podía descartar y manos libres volvía a intentarse en cada arranque tras fallar. Probado en Linux/X11 (Xvfb, release): clics a la ventana raíz fuera de la isla, atajo sin foco, ocultar → atajo la muestra, segunda instancia sale (con D-Bus). 382 tests TS + 6 Rust. **Sin probar en Windows.** |

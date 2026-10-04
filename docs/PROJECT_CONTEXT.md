@@ -55,7 +55,7 @@ Reglas duras:
 
 | Tema | Decisión | Estado |
 |---|---|---|
-| Shell de escritorio | Tauri (spike de transparencia/click-through en Windows primero; fallback Electron). La isla ya usa el sidecar real (`island.bat`, ADR-0021) | corre en Linux; pendiente de validar en Windows |
+| Shell de escritorio | Tauri (spike de transparencia/click-through en Windows primero; fallback Electron). La isla usa el sidecar real (`island.bat`, ADR-0021), con clic que atraviesa por regiones, atajo global `Ctrl+Alt+Espacio`, bandeja e instancia única (ADR-0022) | corre en Linux; pendiente de validar en Windows |
 | Núcleo | TypeScript como sidecar; Rust solo para OS (ventana, almacenamiento seguro, ciclo de vida del sidecar) | hecho (ADR-0008, ADR-0021) |
 | IPC | NDJSON por stdio con token, sin puertos de red; en Tauri el shell relaya stdio por un `Channel` (ADR-0021); el navegador usa el puente solo-dev de Vite | hecho |
 | UI | React + TypeScript + Framer Motion | propuesto |

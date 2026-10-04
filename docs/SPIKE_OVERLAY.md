@@ -38,10 +38,10 @@ Los iconos (`src-tauri/icons`, el cuervo) y `@tauri-apps/cli` ya están en el re
 
 ## Notas de diseño
 
-- El comando `set_click_through` existe para alternar el modo. El plan es: la ventana ignora el ratón
-  por defecto y la UI la activa cuando el cursor entra al rectángulo de la isla.
+- Clic que atraviesa (ADR-0022): la UI informa los rectángulos clicables (isla, dock, ajustes) y el shell sondea el
+  cursor cada 40 ms para alternar `set_ignore_cursor_events`. Probado en X11; para la prueba 4 en Windows, haz clic en la zona
+  vacía junto a la isla (debe llegar a la app de abajo). `JARVIS_CLICK_THROUGH=0` lo desactiva para comparar.
 - La ventana mide 420 px de ancho y su alto sigue a la isla (`WindowFitter`), así la zona transparente es mínima.
-  Aun así esa zona sigue tapando clics hasta resolver la prueba 4.
 - Dentro de Tauri, el frontend detecta `__TAURI_INTERNALS__` y muestra la isla con su dock (orden, 🎙, 👂), conectada al
   sidecar que lanza el shell (sin panel de demo ni puente de Vite).
 
@@ -50,7 +50,7 @@ Los iconos (`src-tauri/icons`, el cuervo) y `@tauri-apps/cli` ya están en el re
 | # | Prueba | Resultado |
 |---|---|---|
 | 9 | Permiso de micrófono en WebView2: aparece una vez, se recuerda, y el indicador de Windows se apaga al soltar el botón | ☐ |
-| 10 | Atajo global de push-to-talk con la isla sin foco (hay que añadirlo en Tauri) | ☐ |
+| 10 | Atajo global `Ctrl+Alt+Espacio` con la isla sin foco: mantener → «Escuchando…», soltar → se envía | ☐ |
 | 11 | Panel AI Economy abre/cierra con clic sin robar clics a la app de abajo (hit-test) | ☐ |
 | 12 | Permiso: `Esc` deniega aunque el foco esté en otra app (hoy solo con la ventana enfocada) | ☐ |
 | 13 | Isla visible y sin recortes con un monitor a 100 % y otro a 150 % al arrastrarla entre ambos | ☐ |

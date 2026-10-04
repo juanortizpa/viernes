@@ -111,7 +111,7 @@ Instala Rust con https://rustup.rs (opción por defecto: MSVC; si lo pide, las "
 Cierra y vuelve a abrir la consola para que `cargo` esté en el PATH. Luego **doble clic en `island.bat`** (o `node scripts\island.mjs`).
 
 - La primera vez compila la isla en release (varios minutos). Después arranca en un segundo y solo recompila si cambiaste el código (o con `island.bat --rebuild`).
-- La isla queda corriendo aunque cierres la consola. Para cerrarla: Administrador de tareas › `jarvis-desktop.exe` (aún no hay bandeja ni menú).
+- La isla queda corriendo aunque cierres la consola. Para ocultarla o salir: el icono del cuervo en la bandeja del sistema (junto al reloj).
 - Los logs del sidecar van a `.jarvis\sidecar.log`. `island.bat --dev` arranca `tauri dev` con logs en la consola y recarga en caliente.
 
 | # | Haz | Esperado |
@@ -125,7 +125,11 @@ Cierra y vuelve a abrir la consola para que `cargo` esté en el PATH. Luego **do
 | T7 | Mantén 🎙 y di «abre paint» | Windows pide permiso de micrófono la primera vez; luego «Escuchando…» → «Escuché…» → se abre Paint |
 | T8 | 👂 (manos libres) y di «jarvis, qué hora es» | Responde (sin tu voz registrada verifica cada frase; el registro sigue en el panel de `start.bat`) |
 | T9 | Administrador de tareas › termina `node.exe` del sidecar | La barra dice «Sidecar no disponible… terminó» y ofrece **Reintentar**; al pulsarlo vuelve a funcionar |
-| T10 | Cierra `jarvis-desktop.exe` | No queda ningún `node.exe` del sidecar vivo |
+| T10 | Bandeja › «Salir de JARVIS» | La isla se cierra y no queda ningún `node.exe` del sidecar vivo |
+| T11 | Con la isla en reposo, haz clic en la zona vacía a los lados de la isla (sobre una app de abajo) | El clic llega a la app de abajo |
+| T12 | Con otra app enfocada, mantén **Ctrl+Alt+Espacio**, di «qué hora es» y suelta | «Escuchando…» mientras mantienes; al soltar responde |
+| T13 | ⚙ en la barra | Ajustes: modo de habla, audio, manos libres con «Registrar mi voz», atajo; «Ocultar isla» la oculta y Ctrl+Alt+Espacio la vuelve a mostrar |
+| T14 | Doble clic otra vez en `island.bat` con la isla abierta | No aparece una segunda isla |
 
 Después, la tabla de `docs/SPIKE_OVERLAY.md` (transparencia, siempre encima, clic que atraviesa, pantalla completa, DPI, dos monitores).
 Si no compila, copia el error completo. Si la isla dice que no encuentra el sidecar o Node, copia ese texto.
@@ -134,7 +138,7 @@ Si no compila, copia el error completo. Si la isla dice que no encuentra el side
 1. Resultado de A (¿pasan todos los tests?).
 2. La tabla B2 con ✅/❌ y, en las ❌, lo que viste y el texto de la terminal.
 3. La tabla C con los tiempos de V10 y si el reconocimiento en español fue bueno.
-4. La tabla T1–T10 de la sección D y la de `SPIKE_OVERLAY.md`.
+4. La tabla T1–T14 de la sección D y la de `SPIKE_OVERLAY.md`.
 5. Nunca pegues tus claves; si pegas la config, bórralas antes.
 
 ## E. Respuestas habladas (TTS) **[SIN PROBAR con audio real]**

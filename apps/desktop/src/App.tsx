@@ -7,6 +7,9 @@ import { LiveClient } from "./live/client";
 import { isTauri, tauriTransport } from "./live/tauri-transport";
 import { IslandDock } from "./island/IslandDock";
 import { fitWindowTo } from "./shell/window-fit";
+import { reportHitRegions } from "./shell/hit-regions";
+import { hideIsland, onGlobalPushToTalk, setHitRegions, shellInfo, type ShellInfo } from "./shell/shell";
+import { IslandSettings } from "./island/IslandSettings";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { MicUnavailable, startMic, type MicSession } from "./voice/mic";
 import { toBase64 } from "./voice/pcm-buffer";
@@ -25,6 +28,14 @@ import type { Mode } from "./state/island";
 /** Inside the Tauri window the page is just the island (and its dock) on a transparent background. */
 const inTauri = isTauri();
 const GALLERY: Mode[] = ["idle", "listening", "thinking", "executing", "permission", "success", "error", "warning"];
+
+function storeWakeEnabled(on: boolean): void {
+  try {
+    localStorage.setItem("jarvis.wakeEnabled", on ? "1" : "0");
+  } catch {
+    /* session-only */
+  }
+}
 
 export default function App() {
   const [state, dispatch] = useReducer(islandReducer, initialState);
@@ -174,7 +185,7 @@ export default function App() {
     const session = new WakeSession(live, {
       onState: (state, followUpMs) => dispatch({ kind: "wake", state, followUpMs }),
       onLevel: (level) => dispatch({ kind: "voice.level", level }),
-      onError: (m) => (setWakeNote(m), setWakeEnabled(false)),
+      onError: (m) => (setWakeNote(m), setWakeEnabled(false), storeWakeEnabled(false)), // don't retry a broken microphone on every launch
     });
     wakeRef.current = session;
     setWakeNote(undefined);
@@ -192,11 +203,8 @@ export default function App() {
   };
   const chooseWake = (on: boolean) => {
     setWakeEnabled(on);
-    try {
-      localStorage.setItem("jarvis.wakeEnabled", on ? "1" : "0");
-    } catch {
-      /* session-only */
-    }
+    storeWakeEnabled(on);
+    if (on) setWakeNote(undefined);
     void (on ? startWake() : stopWake());
   };
   // Resume hands-free listening after a reload if it was left on, once the sidecar (which has the speech engine) is ready.
@@ -213,11 +221,20 @@ export default function App() {
   );
   useEffect(() => () => void wakeRef.current?.stop(), []);
 
-  // Tauri: the window follows the island's real size (nothing clipped, no oversized transparent area blocking clicks).
+  // Tauri: the window follows the island's real size (nothing clipped), clicks outside the island and its dock go to the
+  // apps underneath, and the shell's global push-to-talk drives the same microphone code as the button.
   const tauriStage = useRef<HTMLDivElement>(null);
+  const [shell, setShell] = useState<ShellInfo>();
+  const [showSettings, setShowSettings] = useState(false);
+  const talkRef = useRef({ startTalk: async () => {}, stopTalk: async (_discard?: boolean) => {} });
   useEffect(() => {
     if (!inTauri || !tauriStage.current) return;
-    return fitWindowTo(tauriStage.current, 420, (w, h) => getCurrentWindow().setSize(new LogicalSize(w, h)));
+    const stage = tauriStage.current;
+    const offFit = fitWindowTo(stage, 420, (w, h) => getCurrentWindow().setSize(new LogicalSize(w, h)));
+    const offHits = reportHitRegions(stage, (rects, hold) => void setHitRegions(rects, hold).catch(() => undefined));
+    const offPtt = onGlobalPushToTalk((s) => void (s === "pressed" ? talkRef.current.startTalk() : talkRef.current.stopTalk()));
+    shellInfo().then(setShell, () => setShell({ pttShortcut: null, clickThrough: false }));
+    return () => (offFit(), offHits(), offPtt());
   }, []);
 
   const toggleEconomy = () => {
@@ -276,6 +293,8 @@ export default function App() {
     dispatch({ kind: "voice.transcribing" });
     live.submitVoice(toBase64(wav));
   };
+
+  talkRef.current = { startTalk, stopTalk };
 
   useEffect(() => {
     const isTalkKey = (e: KeyboardEvent) => e.ctrlKey && e.code === "Space";
@@ -342,8 +361,40 @@ export default function App() {
           wakeEnabled={wakeEnabled}
           onToggleWake={chooseWake}
           onRetry={() => void live.connect()}
+          settingsOpen={showSettings}
+          onToggleSettings={() => setShowSettings((o) => !o)}
+          pttShortcut={shell?.pttShortcut}
         />
-        {wakeNote && <p className="dock__note dock__note--float">{wakeNote}</p>}
+        {wakeNote && !showSettings && (
+          <p className="dock__note dock__note--float">
+            {wakeNote}{" "}
+            <button type="button" className="dock__dismiss" onClick={() => setWakeNote(undefined)} aria-label="Descartar aviso">
+              ✕
+            </button>
+          </p>
+        )}
+        {showSettings && (
+          <IslandSettings
+            speakMode={speakMode}
+            onSpeakMode={chooseSpeakMode}
+            speech={speech !== undefined}
+            audioDsp={audioDsp}
+            onAudioDsp={chooseAudioDsp}
+            pttShortcut={shell?.pttShortcut}
+            wake={
+              <WakeSettings
+                enabled={wakeEnabled}
+                unavailable={live.status !== "ready" ? "Disponible con el sidecar conectado." : !live.info?.voice ? "Falta configurar el reconocimiento de voz (ver setup.bat)." : wakeNote}
+                state={state.wake?.state ?? "off"}
+                readout={wakeReadout}
+                onToggle={chooseWake}
+                onEnrollmentChanged={() => wakeEnabled && void startWake()}
+              />
+            }
+            onHide={() => void hideIsland().catch(() => undefined)}
+            onClose={() => setShowSettings(false)}
+          />
+        )}
       </div>
     );
   }
