@@ -40,6 +40,8 @@ export interface WhisperCppOptions {
   /** ISO 639-1 code or "auto". */
   language?: string;
   threads?: number;
+  /** Initial prompt (vocabulary hint). */
+  prompt?: string;
   timeoutMs?: number;
   run?: RunProcess;
 }
@@ -77,6 +79,7 @@ export class WhisperCppTranscriber implements Transcriber {
       await writeFile(file, wav, { mode: 0o600 });
       const args = ["-m", this.opts.model, "-f", file, "-l", lang, "-nt", "-np"];
       if (this.opts.threads) args.push("-t", String(this.opts.threads));
+      if (this.opts.prompt) args.push("--prompt", this.opts.prompt.slice(0, 300));
       const r = await this.run(this.opts.binary, args, { signal, timeoutMs: this.opts.timeoutMs ?? 60_000 });
       if (r.code !== 0) throw new Error(`whisper exited with code ${r.code}: ${r.stderr.trim().slice(-300)}`);
       return { text: cleanWhisperOutput(r.stdout), ...(lang !== "auto" ? { language: lang } : {}), audioMs: durationMs(decodeWav(wav)), latencyMs: Date.now() - started };

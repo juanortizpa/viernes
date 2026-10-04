@@ -1,4 +1,4 @@
-// One-shot setup: node scripts/setup.mjs [--no-voice] [--model tiny|base|small] [--test]
+// One-shot setup: node scripts/setup.mjs [--no-voice] [--model tiny|base|small] [--lang es|en|auto] [--test]
 import { spawnSync } from "node:child_process";
 import { createWriteStream, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -128,7 +128,7 @@ if (!flag("no-voice")) {
         say(`  Descargando modelo ${model.file}…`);
         await download(`https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${model.file}`, modelPath, model.minBytes);
       } else say("  Modelo ya presente.");
-      voice = { binary: bin, model: modelPath };
+      voice = { binary: bin, model: modelPath, language: opt("lang", "es") };
     }
   } catch (e) {
     say(`  ⚠ Voz no instalada: ${e instanceof Error ? e.message : e}. El resto funciona; puedes reintentar con setup.bat.`);

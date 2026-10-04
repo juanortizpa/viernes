@@ -82,9 +82,10 @@ export const filesWrite: Tool<{ path: string; content: string }, void> = {
 /** The OS-specific launcher is injected (Windows shell lives in the sidecar's host layer). */
 export type AppLauncher = (app: string) => Promise<void>;
 
-export const makeAppsOpen = (launch: AppLauncher): Tool<{ app: string }, void> => ({
+/** `knownApps`: names the user can say (shown to the model so it passes one of them instead of guessing an English name). */
+export const makeAppsOpen = (launch: AppLauncher, knownApps: readonly string[] = []): Tool<{ app: string }, void> => ({
   name: "apps.open",
-  description: "Open an application by name",
+  description: `Open an application by name. Pass the name exactly as the user said it${knownApps.length ? `; known apps: ${knownApps.join(", ")}` : ""}`,
   risk: "reversible",
   reversible: true,
   input: z.object({ app: z.string().min(1) }),

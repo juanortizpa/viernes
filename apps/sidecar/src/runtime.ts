@@ -35,6 +35,25 @@ import type { ModelCapabilities } from "@jarvis/protocol";
 import type { ScannedApp } from "./app-scanner";
 import type { Config } from "./config";
 
+/** Launches only what the catalog knows, accepting either the raw command or a name a person would say. */
+export function makeCatalogLauncher(catalog: Pick<AppCatalog, "hasCommand" | "lookup">, launch: AppLauncher): AppLauncher {
+  return async (nameOrCommand) => {
+    const command = catalog.hasCommand(nameOrCommand) ? nameOrCommand : catalog.lookup(nameOrCommand);
+    if (!command) throw new Error(`"${nameOrCommand}" is not a known app`);
+    await launch(command);
+  };
+}
+
+/**
+ * Whisper conditions on an initial prompt: naming the apps the user can open makes "abre la calculadora" come out right
+ * instead of as a phonetically similar word. Kept short, since long prompts get regurgitated on noise.
+ */
+export function defaultVoicePrompt(aliases: readonly string[], language: string): string | undefined {
+  const names = aliases.filter((a) => /^[\p{L}\p{N} ]{2,25}$/u.test(a)).slice(0, 6);
+  if (names.length === 0 || language === "en") return undefined;
+  return `Abre ${names.join(", abre ")}. ¿Qué hora es?`;
+}
+
 export const OFFLINE_MODEL = "offline-echo";
 
 const offlineCaps: ModelCapabilities = {
@@ -119,10 +138,10 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
   catalog.restore();
 
   // Only commands the catalog knows can be launched, whoever asks (local intent or model).
-  const launcher: AppLauncher = async (command) => {
-    if (!catalog.hasCommand(command)) throw new Error(`"${command}" is not a known app`);
-    await deps.launcher(command);
-  };
+  // The model (or a transcript) may pass the name a person would say ("calculator", "bloc de notas") rather than the raw
+  // command ("calc"): resolve names through the catalog first. Anything the catalog does not know is still refused.
+  const launcher = makeCatalogLauncher(catalog, deps.launcher);
+  const knownAppNames = Object.keys(config.apps).slice(0, 25);
   const cache = new SemanticCache({
     store: deps.instantStore,
     enabled: config.instantCache.enabled,
@@ -138,7 +157,7 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
     .register(timeDate)
     .register(filesRead)
     .register(filesWrite)
-    .register(makeAppsOpen(launcher))
+    .register(makeAppsOpen(launcher, knownAppNames))
     .register(makeAliasesLearn(catalog))
     .register(makeAliasesForget(catalog))
     .register(makeAliasesList(catalog))
@@ -162,7 +181,7 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
   const transcriber =
     deps.transcriber ??
     (config.voice
-      ? new WhisperCppTranscriber({ binary: config.voice.binary, model: config.voice.model, language: config.voice.language, threads: config.voice.threads, timeoutMs: config.voice.timeoutMs })
+      ? new WhisperCppTranscriber({ binary: config.voice.binary, model: config.voice.model, language: config.voice.language, threads: config.voice.threads, timeoutMs: config.voice.timeoutMs, prompt: config.voice.prompt ?? defaultVoicePrompt(Object.keys(config.apps), config.voice.language) })
       : undefined);
 
   return {

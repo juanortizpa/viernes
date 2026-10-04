@@ -2,7 +2,7 @@
   "voice": {
     "binary": "C:\\tools\\whisper\\whisper-cli.exe",
     "model": "C:\\tools\\whisper\\ggml-base.bin",
-    "language": "auto",
+    "language": "es",
     "threads": 4
   }
 }

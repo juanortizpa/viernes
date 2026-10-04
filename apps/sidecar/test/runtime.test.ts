@@ -124,3 +124,31 @@ describe("instant cache in the runtime", () => {
     s2.close();
   });
 });
+
+import { AppCatalog } from "@jarvis/core";
+import { defaultVoicePrompt, makeCatalogLauncher } from "../src/runtime";
+
+describe("opening apps by the name a person (or a model) says", () => {
+  const catalog = AppCatalog.fromRecord({ calculadora: "calc", calculator: "calc", "bloc de notas": "notepad" });
+  it("accepts the raw command or any known name, and still refuses anything unknown", async () => {
+    const launched: string[] = [];
+    const launch = makeCatalogLauncher(catalog, async (c) => void launched.push(c));
+    await launch("calc");
+    await launch("Calculator"); // what an English-thinking model passes
+    await launch("bloc de notas");
+    expect(launched).toEqual(["calc", "calc", "notepad"]);
+    await expect(launch("rm -rf /")).rejects.toThrow(/not a known app/);
+    await expect(launch("calc.exe && evil")).rejects.toThrow(/not a known app/);
+  });
+
+  it("builds a short vocabulary prompt for speech recognition, only from plain app names", () => {
+    expect(defaultVoicePrompt(["vs code", "calculadora", "otra pestana"], "es")).toBe("Abre vs code, abre calculadora, abre otra pestana. ¿Qué hora es?");
+    expect(defaultVoicePrompt(["a;b", "x".repeat(40)], "es")).toBeUndefined();
+    expect(defaultVoicePrompt(["paint"], "en")).toBeUndefined();
+  });
+
+  it("tells the model which app names exist", async () => {
+    const { makeAppsOpen } = await import("@jarvis/tools");
+    expect(makeAppsOpen(async () => {}, ["calculadora", "paint"]).description).toMatch(/known apps: calculadora, paint/);
+  });
+});

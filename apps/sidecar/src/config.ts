@@ -36,8 +36,10 @@ export const Config = z.object({
     .object({
       binary: z.string().min(1),
       model: z.string().min(1),
-      language: z.string().regex(/^(auto|[a-z]{2,3})$/).default("auto"),
+      language: z.string().regex(/^(auto|[a-z]{2,3})$/).default("es"),
       threads: z.number().int().min(1).max(32).optional(),
+      /** Initial prompt that biases recognition toward your vocabulary. Default: built from your app names. */
+      prompt: z.string().max(300).optional(),
       timeoutMs: z.number().int().min(1_000).max(300_000).default(60_000),
     })
     .optional(),

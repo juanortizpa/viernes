@@ -42,7 +42,7 @@ describe("buildConfig", () => {
   });
   it("does not mutate the base and writes voice paths with forward slashes", () => {
     const c = buildConfig({ base, env: { GROQ_API_KEY: "k" }, voice: { binary: "C:\\x\\whisper-cli.exe", model: "C:\\x\\ggml-base.bin" } });
-    expect(c.voice).toEqual({ binary: "C:/x/whisper-cli.exe", model: "C:/x/ggml-base.bin", language: "auto", threads: 4 });
+    expect(c.voice).toEqual({ binary: "C:/x/whisper-cli.exe", model: "C:/x/ggml-base.bin", language: "es", threads: 4 });
     expect(base.openrouter).toBeDefined();
     expect(c.defaultModel).toBe("openai/gpt-oss-20b");
   });

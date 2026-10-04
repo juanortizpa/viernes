@@ -12,6 +12,8 @@
 
 **Si la voz dice "No pude transcribir el audio":** haz `git pull`, ejecuta `setup.bat` otra vez y luego **doble clic en `check-voice.bat`**: comprueba el binario, el modelo y ejecuta whisper de verdad, mostrando el error real (DLL faltante, `main.exe` obsoleto, modelo incompleto…). Copia su salida.
 
+**Idioma de la voz:** ahora es español por defecto (`"language": "es"`); con `auto`, whisper confunde el idioma en frases cortas. Si tu `jarvis.config.json` dice `auto`, vuelve a ejecutar `setup.bat` o cámbialo a mano (`setup.bat --lang en` para inglés, `--lang auto` para mezclar).
+
 Si `setup.bat` falla, copia el mensaje de error. Cada paso es idempotente: puedes volver a lanzarlo sin romper nada (no vuelve a descargar lo que ya tiene).
 **Aviso honesto:** estos scripts los probé en Linux (instalación, configuración y arranque con modelos reales) pero **no en Windows**; la descarga/descompresión de whisper.cpp
 y la apertura del navegador son lo que más probablemente falle. El plan B manual es lo que sigue, desde la sección A.
@@ -81,7 +83,7 @@ Para los modelos reales: escribe una pregunta normal (`explica qué es un closur
    (`ggml-tiny.bin` ≈ 75 MB, más rápido y peor; `ggml-base.bin` ≈ 142 MB; `ggml-small.bin` ≈ 466 MB, mejor y más lento.)
 3. Añade a `jarvis.config.json` el bloque (usa `/` o `\\`, nunca una sola `\`):
    ```json
-   "voice": { "binary": "C:/tools/whisper/whisper-cli.exe", "model": "C:/tools/whisper/ggml-base.bin", "language": "auto", "threads": 4 }
+   "voice": { "binary": "C:/tools/whisper/whisper-cli.exe", "model": "C:/tools/whisper/ggml-base.bin", "language": "es", "threads": 4 }
    ```
 4. Reinicia `pnpm dev`, recarga la página. El botón 🎙 debe estar **habilitado** (si está gris, el sidecar no ve la config: revisa la terminal).
 5. Pruebas (mantén pulsado 🎙 o **Ctrl+Espacio** con la página enfocada, habla, suelta):

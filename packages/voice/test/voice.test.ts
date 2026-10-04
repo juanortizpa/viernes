@@ -125,6 +125,14 @@ describe("WhisperCppTranscriber (real process spawn against a stand-in binary)",
     await expect(new WhisperCppTranscriber({ binary: "x", model: "m" }).transcribe(wav, { language: "../x" })).rejects.toThrow(/invalid language/);
   });
 
+  it("passes the vocabulary prompt as a single argv element (no shell parsing)", async () => {
+    const bin = script(`console.log(a[a.indexOf("--prompt") + 1] + "|" + a.includes("--prompt"));`);
+    const t = new WhisperCppTranscriber({ binary: bin, model: "m", language: "es", prompt: "Abre la calculadora; $(x) \"q\"." });
+    expect((await t.transcribe(wav)).text).toBe('Abre la calculadora; $(x) "q".|true');
+    const none = new WhisperCppTranscriber({ binary: script(`console.log(String(a.includes("--prompt")));`), model: "m" });
+    expect((await none.transcribe(wav)).text).toBe("false");
+  });
+
   it("can be aborted", async () => {
     const ac = new AbortController();
     const t = new WhisperCppTranscriber({ binary: script(`setTimeout(() => {}, 30000);`), model: "m" });
