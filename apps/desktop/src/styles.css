@@ -85,3 +85,11 @@ body { background: var(--bg); color: var(--fg); }
 
 .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 10px; }
 .gallery__item { display: grid; justify-items: center; gap: 4px; padding: 12px 4px; border-radius: 14px; background: rgba(255,255,255,.03); font-size: 12px; color: var(--muted); }
+
+.badge--live { color: #7ee2a8; border-color: #2c6b4a; }
+.command { display: flex; gap: 8px; margin: 16px 0 4px; }
+.command input { flex: 1; padding: 10px 12px; border-radius: 8px; border: 1px solid #333a4a; background: #11141c; color: inherit; font: inherit; }
+.command input:disabled { opacity: 0.5; }
+.command button { padding: 10px 16px; border-radius: 8px; border: 1px solid #333a4a; background: #1b2030; color: inherit; cursor: pointer; }
+.command button:disabled { opacity: 0.5; cursor: not-allowed; }
+.small { font-size: 12px; }

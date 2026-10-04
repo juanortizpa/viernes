@@ -26,9 +26,15 @@ pnpm dev
 
 Codespace expondrá automáticamente el puerto 5173 y creará una URL pública (ej: `https://<usuario>-<repo>-<random>.github.dev:5173/`). Haz clic en la notificación de "Forwarded Ports" o abre la pestaña "Ports" en el terminal.
 
-Elige un escenario (acción local, modelo barato, escalado con permiso). La isla y el cuervo solo
-muestran lo que llega como `OrchestratorEvent`. Por ahora son escenarios guionados (etiquetados "DEMO");
-en la Fase 1 la fuente pasará a ser el orquestador real.
+`pnpm dev` también arranca el sidecar real (solo en desarrollo): escribe una orden en la caja
+(«qué hora es?», «abre vscode», «hola») y la isla muestra eventos reales del orquestador. Sin proveedor de IA
+configurado, las respuestas del modelo son un eco offline claramente etiquetado. Para usar uno real,
+copia `jarvis.config.example.json` a `jarvis.config.json` (y exporta `ANTHROPIC_API_KEY` / `OPENROUTER_API_KEY`
+si aplica).
+
+Los escenarios guionados siguen disponibles (acción local, modelo barato, escalado con permiso). Van etiquetados "DEMO":
+no ejecutan nada real. La isla y el cuervo solo muestran lo que llega como `OrchestratorEvent`, venga del
+escenario o del sidecar.
 
 ## Verificación
 

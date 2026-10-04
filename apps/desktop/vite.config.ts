@@ -1,8 +1,9 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { jarvisBridge } from "./vite-plugin-jarvis";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), jarvisBridge()],
   clearScreen: false,
   server: {
     strictPort: true,

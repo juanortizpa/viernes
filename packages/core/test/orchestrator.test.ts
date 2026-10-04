@@ -157,6 +157,20 @@ describe("Orchestrator — policy and permissions", () => {
   });
 });
 
+describe("Orchestrator — cancellation", () => {
+  it("reports cancelled when aborted while waiting for permission", async () => {
+    const ac = new AbortController();
+    const { orch } = setup(true, {
+      askPermission: async () => {
+        ac.abort();
+        return false;
+      },
+    });
+    const trace = await orch.run("guarda nota", { signal: ac.signal });
+    expect(trace.finalOutcome).toBe("cancelled");
+  });
+});
+
 describe("TaskMachine", () => {
   it("rejects invalid transitions", () => {
     const m = new TaskMachine();

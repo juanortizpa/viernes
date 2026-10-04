@@ -80,7 +80,7 @@ export class Orchestrator {
         intent.route === "local"
           ? await this.runLocal(taskId, intent.tool, intent.args, out, machine, trace)
           : await this.runModel(input, out, machine, trace, opts.signal);
-      trace.finalOutcome = result.outcome;
+      trace.finalOutcome = opts.signal?.aborted ? "cancelled" : result.outcome;
       summary = result.summary;
     } catch (e) {
       const cancelled = opts.signal?.aborted === true;
