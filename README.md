@@ -38,6 +38,8 @@ escenario o del sidecar.
 
 ## Probar en Windows
 
+> **Guía paso a paso con resultados esperados: [docs/WINDOWS_TESTING.md](docs/WINDOWS_TESTING.md)** (instalación, modo navegador, voz con whisper.cpp, Tauri).
+
 Requisitos: Git, **Node 22.13 o superior** (el almacén de trazas usa `node:sqlite`), pnpm 10 (`corepack enable`).
 Para el shell Tauri además: Rust (MSVC) y WebView2 (ver [docs/SPIKE_OVERLAY.md](docs/SPIKE_OVERLAY.md)).
 
