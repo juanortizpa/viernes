@@ -2,11 +2,12 @@ import { randomUUID } from "node:crypto";
 import { shouldEscalate, type Attempt, type ExecutionTrace, type ModelCapabilities, type Provenance, type RoutingDecision, type Usage, type Verdict } from "@jarvis/protocol";
 import { TaintTracker, type PolicyEngine } from "@jarvis/policy";
 import type { ChatMessage, ProviderRegistry, ToolCall } from "@jarvis/providers";
-import type { AnyTool, ToolRegistry } from "@jarvis/tools";
+import type { AnyTool, Checkpoint, ToolRegistry } from "@jarvis/tools";
 import { EventBus, TaskEmitter } from "./bus";
 import type { FollowUp, IntentRouter } from "./intent";
 import { runEvaluators, toolPostconditionVerdict, type Evaluator } from "./evaluator";
 import { blendedCost, estimateCostUsd, filterCandidates, premiumModel, type ModelRouter, type RouteRequest } from "./model-router";
+import { detectSensitive } from "./sensitivity";
 import { classifyTask } from "./task-classifier";
 import { TaskMachine } from "./task-state";
 import type { TraceStore } from "./trace-store";
@@ -64,8 +65,16 @@ interface ToolRunCtx {
   machine: TaskMachine;
   trace: ExecutionTrace;
   taint: TaintTracker;
-  /** Set once a tool above `read` risk actually ran; escalating would then repeat side effects. */
-  attempt?: { sideEffects: boolean };
+  attempt?: AttemptState;
+}
+
+/** What one model attempt did to the world; decides whether escalating is safe. */
+interface AttemptState {
+  /** A tool above `read` risk ran. */
+  sideEffects: boolean;
+  /** One of those had no checkpoint, so it cannot be undone. */
+  irreversible: boolean;
+  checkpoints: { tool: string; checkpoint: Checkpoint }[];
 }
 
 /** What the model sees of a tool result. Untrusted output is fenced and labelled as data (ADR-0005). */
@@ -179,7 +188,12 @@ export class Orchestrator {
     }
 
     machine.to("running");
-    if (ctx.attempt && tool.risk !== "read") ctx.attempt.sideEffects = true;
+    if (ctx.attempt && tool.risk !== "read") {
+      ctx.attempt.sideEffects = true;
+      const checkpoint = tool.checkpoint ? await tool.checkpoint(parsed.data, { taskId }).catch(() => undefined) : undefined;
+      if (checkpoint) ctx.attempt.checkpoints.push({ tool: tool.name, checkpoint });
+      else ctx.attempt.irreversible = true;
+    }
     const result = await tool.run(parsed.data, { taskId });
     taint.observe(result.provenance);
     out.emit({ type: "tool.completed", tool: tool.name, ok: result.ok, summary: result.summary });
@@ -200,10 +214,15 @@ export class Orchestrator {
     trace: ExecutionTrace,
     signal?: AbortSignal,
   ): Promise<{ outcome: "success" | "failure"; summary?: string }> {
-    const caps = this.deps.providers.capabilities();
+    // A model only "supports tools" if its adapter can also send them.
+    const caps = this.deps.providers
+      .capabilities()
+      .map((c) => ({ ...c, supportsTools: c.supportsTools && this.deps.providers.get(c.provider)?.supportsToolCalls === true }));
     const cls = classifyTask(input);
     trace.taskType = cls.taskType;
-    const req: RouteRequest = { input, ...cls, inputTokens: trace.inputTokensEstimate };
+    const sens = detectSensitive(input);
+    if (sens.sensitive) out.emit({ type: "progress", stage: "Datos sensibles detectados: solo modelos locales", detail: sens.reasons.join(", ") });
+    const req: RouteRequest = { input, ...cls, inputTokens: trace.inputTokensEstimate, sensitive: sens.sensitive };
     let decision: RoutingDecision = this.deps.router.route(req, caps);
     out.emit({ type: "route.decided", decision });
 
@@ -213,9 +232,13 @@ export class Orchestrator {
     machine.to("running");
 
     for (;;) {
-      const state = { sideEffects: false };
+      const state: AttemptState = { sideEffects: false, irreversible: false, checkpoints: [] };
       const attempt = await this.runAttempt(taskId, input, decision, caps, { out, machine, trace, taint, attempt: state }, signal, maxEscalations > 0);
-      const verdict = await runEvaluators(evaluators, { input, taskType: cls.taskType, response: attempt.text, failure: attempt.failure });
+      let verdict = await runEvaluators(evaluators, { input, taskType: cls.taskType, response: attempt.text, failure: attempt.failure });
+      // A broken attempt is a failure whatever the evaluators say (some skip, some only read the text).
+      if (attempt.failure !== undefined && verdict?.outcome !== "failure") {
+        verdict = { evaluator: "attempt", outcome: "failure", confidence: 1, evidence: attempt.failure, ...(verdict?.usage ? { usage: verdict.usage } : {}) };
+      }
       if (verdict) {
         out.emit({ type: "eval.completed", verdict });
         if (verdict.usage) trace.totalCostUsd += verdict.usage.estimatedCostUsd;
@@ -227,11 +250,13 @@ export class Orchestrator {
 
       const next = this.nextModel(req, caps, decision.model!);
       const reason = attempt.failure ?? verdict.evidence;
-      if (state.sideEffects || trace.escalations >= maxEscalations || !next || signal?.aborted) {
+      if ((state.sideEffects && state.irreversible) || trace.escalations >= maxEscalations || !next || signal?.aborted) {
         // No safe or available escalation: keep what we have. Uncertain answers are still delivered; failures are not.
         if (attempt.error) throw attempt.error;
         return failed ? { outcome: "failure", summary: reason } : { outcome: "success" };
       }
+
+      if (!(await this.rollback(state, out))) return failed ? { outcome: "failure", summary: `${reason}; could not undo its changes` } : { outcome: "success" };
 
       trace.escalations++;
       out.emit({ type: "escalated", from: decision.model!, to: next.model, reason });
@@ -248,6 +273,20 @@ export class Orchestrator {
         rationale: `escalated from ${decision.model}: ${reason}`,
       };
     }
+  }
+
+  /** Undo a failed attempt's side effects, newest first. Stops at the first failure: escalating over half-undone state is worse than not escalating. */
+  private async rollback(state: AttemptState, out: TaskEmitter): Promise<boolean> {
+    for (const { tool, checkpoint } of [...state.checkpoints].reverse()) {
+      try {
+        await checkpoint.restore();
+        out.emit({ type: "checkpoint.restored", tool, ok: true, summary: checkpoint.description });
+      } catch (e) {
+        out.emit({ type: "checkpoint.restored", tool, ok: false, summary: e instanceof Error ? e.message : String(e) });
+        return false;
+      }
+    }
+    return true;
   }
 
   /** Next more expensive eligible model after `current` (ties keep configuration order). */

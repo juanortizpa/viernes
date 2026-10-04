@@ -57,6 +57,14 @@ export const OrchestratorEvent = z.discriminatedUnion("type", [
   z.object({ ...base, type: z.literal("eval.completed"), verdict: Verdict }),
   z.object({
     ...base,
+    type: z.literal("checkpoint.restored"),
+    /** Side effects of a failed attempt that were undone before escalating. */
+    tool: z.string(),
+    ok: z.boolean(),
+    summary: z.string(),
+  }),
+  z.object({
+    ...base,
     type: z.literal("escalated"),
     from: z.string(),
     to: z.string(),

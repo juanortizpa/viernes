@@ -11,7 +11,7 @@ describe("ToolRegistry", () => {
     const r = new ToolRegistry().register(filesWrite);
     expect(() => r.register(filesWrite)).toThrow();
     const [d] = r.list();
-    expect(d).toMatchObject({ name: "files.write", risk: "sensitive", reversible: false, verifiable: true });
+    expect(d).toMatchObject({ name: "files.write", risk: "sensitive", reversible: true, verifiable: true });
     expect(d?.inputSchema).toMatchObject({ type: "object", required: ["path", "content"] });
   });
 

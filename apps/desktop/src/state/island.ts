@@ -106,6 +106,9 @@ export function islandReducer(state: IslandState, action: IslandAction): IslandS
         ? { ...state, mode: "warning", headline: "Verificación fallida", detail: e.verdict.evidence }
         : { ...state, headline: "Verificado", detail: e.verdict.evidence };
 
+    case "checkpoint.restored":
+      return { ...state, mode: "warning", headline: e.ok ? "Deshaciendo cambios" : "No pude deshacer un cambio", detail: e.summary };
+
     case "escalated":
       return {
         ...state,

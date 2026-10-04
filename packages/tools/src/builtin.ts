@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { z } from "zod";
 import type { Tool } from "./types";
@@ -51,7 +51,7 @@ export const filesWrite: Tool<{ path: string; content: string }, void> = {
   name: "files.write",
   description: "Write a UTF-8 text file, overwriting it",
   risk: "sensitive",
-  reversible: false,
+  reversible: true,
   input: z.object({ path: z.string().min(1), content: z.string() }),
   async run({ path, content }) {
     try {
@@ -61,6 +61,18 @@ export const filesWrite: Tool<{ path: string; content: string }, void> = {
     } catch (e) {
       return { ok: false, summary: `cannot write ${path}: ${(e as Error).message}`, provenance: "system" };
     }
+  },
+  async checkpoint({ path, content }) {
+    const before = await readFile(path).catch(() => null);
+    return {
+      description: before ? `restore previous contents of ${path}` : `remove ${path} (did not exist)`,
+      async restore() {
+        const now = await readFile(path, "utf8").catch(() => null);
+        if (now !== content) throw new Error(`${path} changed after the write; not restoring over it`);
+        if (before) await writeFile(path, before);
+        else await rm(path, { force: true });
+      },
+    };
   },
   async verify({ path, content }) {
     return (await readFile(path, "utf8").catch(() => null)) === content;

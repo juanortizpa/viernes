@@ -1,11 +1,11 @@
-import { existsSync, mkdtempSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { ModelCapabilities, OrchestratorEvent } from "@jarvis/protocol";
 import { PolicyEngine } from "@jarvis/policy";
 import { FakeProvider, ProviderRegistry, type FakeReply } from "@jarvis/providers";
-import { ToolRegistry, filesWrite, timeNow } from "@jarvis/tools";
+import { ToolRegistry, filesWrite, makeAppsOpen, timeNow } from "@jarvis/tools";
 import {
   AlwaysCheapestRouter, CodeTestsEvaluator, EventBus, IntentRouter, MemoryTraceStore, Orchestrator,
   ResponseHeuristicEvaluator, runEvaluators, type Evaluator,
@@ -16,7 +16,7 @@ const cap = (model: string, cost = 0): ModelCapabilities => ({
   contextWindow: 100_000, estimatedInputCost: cost, estimatedOutputCost: cost, expectedLatency: 1, isLocal: false,
 });
 
-function setup(replies: Record<string, FakeReply | (() => FakeReply)>, opts: { evaluators?: Evaluator[]; max?: number; models?: ModelCapabilities[] } = {}) {
+function setup(replies: Record<string, FakeReply | (() => FakeReply)>, opts: { evaluators?: Evaluator[]; max?: number; models?: ModelCapabilities[]; launched?: string[] } = {}) {
   const events: OrchestratorEvent[] = [];
   const bus = new EventBus();
   bus.subscribe((e) => events.push(e));
@@ -33,14 +33,14 @@ function setup(replies: Record<string, FakeReply | (() => FakeReply)>, opts: { e
         return typeof r === "function" ? r() : r;
       }),
     ),
-    tools: new ToolRegistry().register(timeNow).register(filesWrite),
+    tools: new ToolRegistry().register(timeNow).register(filesWrite).register(makeAppsOpen(async (a) => void opts.launched?.push(a))),
     policy: new PolicyEngine(),
     askPermission: async () => true,
     traces: new MemoryTraceStore(),
     evaluators: opts.evaluators ?? [new ResponseHeuristicEvaluator()],
     maxEscalations: opts.max ?? 2,
   });
-  return { orch, events, calls };
+  return { orch, events, calls, bus };
 }
 
 describe("evaluators", () => {
@@ -122,16 +122,61 @@ describe("cascade", () => {
     expect(b.calls).toEqual(["small"]);
   });
 
-  it("does not escalate after a side-effecting tool ran (it would repeat the side effect)", async () => {
-    const path = join(mkdtempSync(join(tmpdir(), "jarvis-cascade-")), "x.txt");
+  it("does not escalate after a tool that cannot be undone (it would repeat the side effect)", async () => {
+    const launched: string[] = [];
     let step = 0;
-    const { orch, calls } = setup({
-      small: () => (step++ === 0 ? { toolCalls: [{ id: "1", name: "files.write", args: { path, content: "a" } }] } : ""),
-    });
+    const { orch, calls } = setup(
+      { small: () => (step++ === 0 ? { toolCalls: [{ id: "1", name: "apps.open", args: { app: "notepad" } }] } : "") },
+      { launched },
+    );
     const t = await orch.run("hola");
-    expect(existsSync(path)).toBe(true);
+    expect(launched).toEqual(["notepad"]);
     expect(calls).toEqual(["small", "small"]); // tool step, then the empty final answer; no jump to "medium"
     expect(t).toMatchObject({ escalations: 0, finalOutcome: "failure" });
+  });
+
+  describe("checkpoints", () => {
+    const writeThenEmpty = (path: string, content: string) => {
+      let step = 0;
+      return () => (step++ === 0 ? { toolCalls: [{ id: "1", name: "files.write", args: { path, content } }] } : "");
+    };
+
+    it("rolls back a file write and escalates when the attempt then fails", async () => {
+      const path = join(mkdtempSync(join(tmpdir(), "jarvis-cp-")), "x.txt");
+      writeFileSync(path, "original");
+      const { orch, calls, events } = setup({ small: writeThenEmpty(path, "bad draft") });
+      const t = await orch.run("hola");
+      expect(calls).toEqual(["small", "small", "medium"]);
+      expect(readFileSync(path, "utf8")).toBe("original");
+      expect(events.find((e) => e.type === "checkpoint.restored")).toMatchObject({ tool: "files.write", ok: true });
+      expect(t).toMatchObject({ escalations: 1, finalOutcome: "success" });
+    });
+
+    it("removes a file the failed attempt created", async () => {
+      const path = join(mkdtempSync(join(tmpdir(), "jarvis-cp-")), "new.txt");
+      const { orch } = setup({ small: writeThenEmpty(path, "x") });
+      await orch.run("hola");
+      expect(existsSync(path)).toBe(false);
+    });
+
+    it("does not escalate when the file changed after the write (restoring would clobber someone else's edit)", async () => {
+      const path = join(mkdtempSync(join(tmpdir(), "jarvis-cp-")), "x.txt");
+      let step = 0;
+      const { orch, calls, events, bus } = setup({
+        small: () => {
+          if (step++ > 0) return "";
+          return { toolCalls: [{ id: "1", name: "files.write", args: { path, content: "mine" } }] };
+        },
+      });
+      // The user edits the file between the write and the rollback (the empty answer triggers the rollback).
+      const offEdit = bus.subscribe((e) => e.type === "tool.completed" && writeFileSync(path, "user edit"));
+      const t = await orch.run("hola");
+      offEdit();
+      expect(readFileSync(path, "utf8")).toBe("user edit");
+      expect(calls).toEqual(["small", "small"]);
+      expect(events.find((e) => e.type === "checkpoint.restored")).toMatchObject({ ok: false });
+      expect(t).toMatchObject({ escalations: 0, finalOutcome: "failure" });
+    });
   });
 
   it("escalates on a provider error (e.g. free-tier rate limit) instead of failing the task", async () => {
@@ -142,6 +187,17 @@ describe("cascade", () => {
     expect(calls).toEqual(["small", "medium"]);
     expect(t.finalOutcome).toBe("success");
     expect(t.attempts[0]?.verdict?.evidence).toContain("provider error: 429 rate limited");
+  });
+
+  it("escalates on a provider error even when every evaluator abstains or ignores failures", async () => {
+    const abstain: Evaluator = { name: "abstain", evaluate: () => undefined };
+    const optimistic: Evaluator = { name: "optimistic", evaluate: () => ({ evaluator: "optimistic", outcome: "success", confidence: 1, evidence: "fine" }) };
+    for (const evaluators of [[abstain], [optimistic]]) {
+      const { orch, calls } = setup({ small: () => { throw new Error("429"); } }, { evaluators });
+      const t = await orch.run("hola");
+      expect(calls).toEqual(["small", "medium"]);
+      expect(t.finalOutcome).toBe("success");
+    }
   });
 
   it("rethrows the provider error when no model is left to escalate to", async () => {
