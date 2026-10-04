@@ -28,7 +28,14 @@ export class IntentRouter {
       return { route: "local", intent: "time.now", tool: "time.now", args: {}, confidence: 1 };
     }
 
-    const open = /^(?:abre|abrir|open|launch|inicia|iniciar)\s+(?:la app\s+|the app\s+)?(.+)$/.exec(text);
+    const day = /^(?:que dia (?:es|sera|fue)|what day (?:is|will be|was)|que fecha es|what(?:'s| is) the date)\s*(hoy|today|manana|tomorrow|ayer|yesterday)?(?:\s+(?:hoy|today|manana|tomorrow|ayer|yesterday))?$/.exec(text);
+    if (day) {
+      const word = day[1] ?? /(hoy|today|manana|tomorrow|ayer|yesterday)$/.exec(text)?.[1] ?? "hoy";
+      const offsetDays = /^(manana|tomorrow)$/.test(word) ? 1 : /^(ayer|yesterday)$/.test(word) ? -1 : 0;
+      return { route: "local", intent: "time.date", tool: "time.date", args: { offsetDays }, confidence: 1 };
+    }
+
+    const open =/^(?:abre|abrir|open|launch|inicia|iniciar)\s+(?:la app\s+|the app\s+)?(.+)$/.exec(text);
     const app = open?.[1] ? this.opts.apps[open[1]] : undefined;
     if (app) return { route: "local", intent: "apps.open", tool: "apps.open", args: { app }, confidence: 1 };
 

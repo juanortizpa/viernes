@@ -10,8 +10,23 @@ export const timeNow: Tool<Record<string, never>, string> = {
   reversible: true,
   input: z.object({}).strict(),
   async run() {
-    const now = new Date().toISOString();
-    return { ok: true, summary: now, output: now, provenance: "system" };
+    const d = new Date();
+    const local = d.toLocaleString("es", { dateStyle: "full", timeStyle: "medium" });
+    return { ok: true, summary: local, output: `${local} (${d.toISOString()})`, provenance: "system" };
+  },
+};
+
+export const timeDate: Tool<{ offsetDays: number }, string> = {
+  name: "time.date",
+  description: "Local calendar date (weekday included) for today plus an offset in days (1 = tomorrow, -1 = yesterday)",
+  risk: "read",
+  reversible: true,
+  input: z.object({ offsetDays: z.number().int().min(-3650).max(3650).default(0) }),
+  async run({ offsetDays }) {
+    const d = new Date();
+    d.setDate(d.getDate() + offsetDays);
+    const text = d.toLocaleDateString("es", { dateStyle: "full" });
+    return { ok: true, summary: text, output: text, provenance: "system" };
   },
 };
 
