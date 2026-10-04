@@ -1,4 +1,5 @@
 import { readdir } from "node:fs/promises";
+import { execFile } from "node:child_process";
 import { basename, extname, join } from "node:path";
 
 export interface ScannedApp {
@@ -45,4 +46,54 @@ export async function scanStartMenu(roots: string[]): Promise<ScannedApp[]> {
   };
   for (const root of roots) await walk(root, 0);
   return found;
+}
+
+/** Launch prefix understood by `explorer.exe` for Store (MSIX/UWP) and other shell-registered apps. */
+export const APPS_FOLDER = "shell:AppsFolder\\";
+
+type RunPowerShell = (script: string) => Promise<string>;
+
+const runPowerShell: RunPowerShell = (script) =>
+  new Promise((resolve, reject) => {
+    execFile(
+      "powershell.exe",
+      ["-NoProfile", "-NonInteractive", "-Command", `[Console]::OutputEncoding=[Text.Encoding]::UTF8; ${script}`],
+      { timeout: 20_000, windowsHide: true, maxBuffer: 8 * 1024 * 1024, encoding: "utf8" },
+      (err, stdout) => (err ? reject(err) : resolve(stdout)),
+    );
+  });
+
+/**
+ * Apps the Start Menu knows by AppUserModelID (Teams, Calculator, Store apps...). Launched through
+ * `explorer.exe shell:AppsFolder\<id>`, never through a shell, so the id is only ever an argv element.
+ */
+export async function scanShellApps(run: RunPowerShell = runPowerShell, platform: string = process.platform): Promise<ScannedApp[]> {
+  if (platform !== "win32") return [];
+  let raw: string;
+  try {
+    raw = await run("Get-StartApps | ConvertTo-Json -Compress");
+  } catch {
+    return [];
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  const list = Array.isArray(parsed) ? parsed : parsed ? [parsed] : [];
+  const apps: ScannedApp[] = [];
+  for (const item of list) {
+    if (apps.length >= MAX_APPS) break;
+    const { Name, AppID } = (item ?? {}) as { Name?: unknown; AppID?: unknown };
+    if (typeof Name !== "string" || typeof AppID !== "string" || !Name.trim() || !AppID) continue;
+    if (NOISE.test(Name) || /[\u0000-\u001f"]/.test(AppID)) continue;
+    apps.push({ alias: Name.trim(), command: APPS_FOLDER + AppID });
+  }
+  return apps;
+}
+
+/** Classic shortcuts first (they launch reliably), then shell apps fill what is missing. */
+export async function scanInstalledApps(roots: string[]): Promise<ScannedApp[]> {
+  return [...(await scanStartMenu(roots)), ...(await scanShellApps())];
 }
