@@ -13,4 +13,4 @@ Reglas rápidas:
 - Nunca progreso falso en la UI: todo deriva de `OrchestratorEvent`.
 - El LLM propone; el policy engine (determinista) decide.
 - Al terminar una tarea: actualizar `docs/ROADMAP.md` (checklist y registro de cambios).
-- Rama de desarrollo: `claude/zen-hamilton-rk8a2b`. No crear PR salvo que el usuario lo pida.
+- Rama base: `main` (contiene el trabajo de Fase 0 y Fase 1). Las sesiones de Claude trabajan en la rama `claude/...` que les asigne el entorno. No crear PR salvo que el usuario lo pida.
