@@ -56,6 +56,14 @@ impl HitRegions {
         }
         self.hold.store(hold, Ordering::Relaxed);
     }
+
+    /// A copy of the regions and the hold flag. The lock is released before returning: callers must NEVER hold it while
+    /// calling into the window. On Windows those calls wait for the main thread, and `set_hit_regions` (a sync command)
+    /// runs on the main thread waiting for this same lock, which froze the whole app ("No responde").
+    pub fn snapshot(&self) -> (Option<Vec<Rect>>, bool) {
+        let rects = self.regions.lock().ok().and_then(|r| r.clone());
+        (rects, self.hold.load(Ordering::Relaxed))
+    }
 }
 
 /// Cursor position in logical px relative to the window content, if the platform can tell.
@@ -77,11 +85,8 @@ pub fn spawn_poller(window: WebviewWindow, state: Arc<HitRegions>) {
             if !window.is_visible().unwrap_or(false) {
                 continue;
             }
-            let want = {
-                let regions = state.regions.lock().ok();
-                let rects = regions.as_ref().and_then(|r| r.as_deref());
-                interactive(rects, state.hold.load(Ordering::Relaxed), cursor_in(&window))
-            };
+            let (rects, hold) = state.snapshot(); // lock already released here
+            let want = interactive(rects.as_deref(), hold, cursor_in(&window));
             if want != current && window.set_ignore_cursor_events(!want).is_ok() {
                 current = want;
             }
@@ -104,6 +109,18 @@ mod tests {
         assert!(hits(&rects, 119.0, 30.0)); // within the edge slack
         assert!(!hits(&rects, 20.0, 20.0)); // transparent corner
         assert!(!hits(&rects, 200.0, 130.0)); // the shadow margin below the dock
+    }
+
+    #[test]
+    fn snapshot_does_not_keep_the_lock() {
+        let state = HitRegions::new(true);
+        assert_eq!(state.snapshot(), (None, false));
+        state.set(vec![ISLAND], true);
+        let (rects, hold) = state.snapshot();
+        // The main thread can publish new regions while a snapshot is being used (this is what used to deadlock).
+        state.set(vec![DOCK], false);
+        assert_eq!((rects, hold), (Some(vec![ISLAND]), true));
+        assert_eq!(state.snapshot(), (Some(vec![DOCK]), false));
     }
 
     #[test]

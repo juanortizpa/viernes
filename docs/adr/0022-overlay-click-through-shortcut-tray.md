@@ -28,6 +28,13 @@ panel del navegador.
 - **Corregido:** el aviso «No se pudo abrir el micrófono» ya se puede descartar y no reaparece en cada arranque (si manos libres
   falla, la preferencia guardada pasa a «apagado»).
 
+## Bug real encontrado en Windows (corregido)
+Primer uso en Windows: al pulsar la isla y volver a pulsar, la app quedaba «No responde». Causa: el sondeo mantenía el cerrojo de
+las regiones mientras consultaba la posición del cursor a la ventana (en Windows esas consultas esperan al hilo principal), y
+`set_hit_regions`, un comando síncrono que corre en el hilo principal, esperaba ese mismo cerrojo: interbloqueo. En Linux no se
+manifestó porque allí esas consultas no pasan por el hilo principal. Regla: **nunca se mantiene un cerrojo mientras se llama a la
+ventana**; el sondeo trabaja con una copia (`HitRegions::snapshot`).
+
 ## Verificado (Linux, X11 sobre Xvfb, build release)
 - Clic que atraviesa: sobre la zona transparente el puntero cae en la ventana raíz; sobre la isla y el dock, en la isla; escribir
   en el dock sigue funcionando con el modo alternando.
