@@ -1,3 +1,4 @@
+import { audioConstraints, type AudioDsp } from "./audio-settings";
 import { PcmBuffer } from "./pcm-buffer";
 
 export interface MicSession {
@@ -11,11 +12,11 @@ export class MicUnavailable extends Error {}
  * Opens the microphone ONLY while the user holds push-to-talk and releases it on stop, so the OS "microphone in use"
  * indicator is truthful. Calls `onLevel` with the real input level and `onFull` when the clip hits the maximum length.
  */
-export async function startMic(onLevel: (level: number) => void, onFull: () => void): Promise<MicSession> {
+export async function startMic(onLevel: (level: number) => void, onFull: () => void, dsp?: AudioDsp): Promise<MicSession> {
   if (!navigator.mediaDevices?.getUserMedia) throw new MicUnavailable("Este entorno no permite usar el micrófono");
   let stream: MediaStream;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+    stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints(dsp) });
   } catch (e) {
     throw new MicUnavailable(e instanceof DOMException && e.name === "NotAllowedError" ? "Permiso de micrófono denegado" : "No se pudo abrir el micrófono");
   }
@@ -63,7 +64,7 @@ export async function startContinuousMic(onChunk: (chunk16k: Float32Array) => vo
   if (!navigator.mediaDevices?.getUserMedia) throw new MicUnavailable("Este entorno no permite usar el micrófono");
   let stream: MediaStream;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints() });
   } catch (e) {
     throw new MicUnavailable(e instanceof DOMException && e.name === "NotAllowedError" ? "Permiso de micrófono denegado" : "No se pudo abrir el micrófono");
   }

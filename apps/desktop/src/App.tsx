@@ -8,6 +8,8 @@ import { MicUnavailable, startMic, type MicSession } from "./voice/mic";
 import { toBase64 } from "./voice/pcm-buffer";
 import { WakeSession } from "./voice/wake-session";
 import { WakeSettings } from "./voice/WakeSettings";
+import { BenchRecorder } from "./voice/BenchRecorder";
+import { loadAudioDsp, saveAudioDsp, type AudioDsp } from "./voice/audio-settings";
 import { SpeechController, type SynthLike } from "./speech/controller";
 import { SPEAK_MODES, parseSpeakMode, type SpeakMode } from "./speech/policy";
 import { TaskSpeaker } from "./speech/task-speaker";
@@ -85,6 +87,7 @@ export default function App() {
     }
   });
   const [wakeNote, setWakeNote] = useState<string>();
+  const [audioDsp, setAudioDsp] = useState<AudioDsp>(loadAudioDsp);
   const [wakeReadout, setWakeReadout] = useState<string>();
   useEffect(() => {
     if (!wakeEnabled) return setWakeReadout(undefined);
@@ -176,6 +179,11 @@ export default function App() {
     await wakeRef.current?.stop();
     wakeRef.current = undefined;
     dispatch({ kind: "wake", state: "off" });
+  };
+  const chooseAudioDsp = (v: AudioDsp) => {
+    setAudioDsp(v);
+    saveAudioDsp(v);
+    if (wakeEnabled) void startWake(); // the always-on microphone must be reopened with the new constraints
   };
   const chooseWake = (on: boolean) => {
     setWakeEnabled(on);
@@ -379,6 +387,17 @@ export default function App() {
           </span>
         </div>
 
+        <div className="speak">
+          <label>
+            Audio del navegador:{" "}
+            <select value={audioDsp} onChange={(e) => chooseAudioDsp(e.target.value === "off" ? "off" : "on")}>
+              <option value="on">Procesado (cancela ruido y eco)</option>
+              <option value="off">Crudo (sin procesar)</option>
+            </select>
+          </label>
+          <span className="muted small">Si cambias esto, vuelve a registrar tu voz de «jarvis». Usa «Prueba de transcripción» para saber cuál va mejor.</span>
+        </div>
+
         <WakeSettings
           enabled={wakeEnabled}
           unavailable={live.status !== "ready" ? "Disponible con el sidecar conectado." : !live.info?.voice ? "Falta configurar el reconocimiento de voz (ver setup.bat)." : wakeNote}
@@ -387,6 +406,8 @@ export default function App() {
           onToggle={chooseWake}
           onEnrollmentChanged={() => wakeEnabled && void startWake()}
         />
+
+        <BenchRecorder onBusy={(busy) => wakeRef.current?.setPaused(busy)} />
 
         <h2>AI Economy</h2>
         {live.status === "ready" ? (

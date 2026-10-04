@@ -83,7 +83,7 @@ let voice;
 if (!flag("no-voice")) {
   step("Voz: whisper.cpp + modelo");
   const dir = join(root, "tools", "whisper");
-  const model = WHISPER_MODELS[opt("model", "base")] ?? WHISPER_MODELS.base;
+  const model = WHISPER_MODELS[opt("model", "small")] ?? WHISPER_MODELS.small;
   mkdirSync(dir, { recursive: true });
   try {
     let bin = findFile(dir, ["whisper-cli.exe", "main.exe"]); // order = preference

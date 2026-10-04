@@ -5,7 +5,7 @@
 1. Instala **Node.js 22.13 o superior** (LTS de https://nodejs.org) y **Git**. Es lo único manual.
 2. Clona el repo: `git clone https://github.com/juanortizpa/viernes.git` y entra en la carpeta.
 3. **Doble clic en `setup.bat`.** Instala dependencias, te pide tus claves (Groq, OpenRouter, Gemini: Enter para saltar las que no tengas),
-   **descarga whisper.cpp y el modelo `base`** (≈ 150 MB) y escribe la configuración. Las claves quedan solo en `jarvis.env` (ignorado por git; no se sube).
+   **descarga whisper.cpp y el modelo `base`** (`small`, ≈ 470 MB, más el `tiny` de verificación) y escribe la configuración. Las claves quedan solo en `jarvis.env` (ignorado por git; no se sube).
    Opciones: `setup.bat --model tiny` (más rápido) o `--model small` (mejor), `--no-voice` (sin voz), `--test` (corre los tests).
 4. **Doble clic en `start.bat`.** Arranca y abre `http://localhost:5173`. Solo escucha en tu propio PC (127.0.0.1), nadie de tu red puede entrar.
 5. Sigue las tablas **B2** y **C** de abajo. Para repetir: cierra la ventana negra y vuelve a abrir `start.bat`.
@@ -166,3 +166,15 @@ En el panel principal, sección **Manos libres**:
 | H9 | Mira el uso de CPU en reposo con la función activa (Administrador de tareas, Edge) | Anota el % |
 
 Dime: tus puntajes, cuántas veces se activó sin querer, cuántas veces no te oyó, y cómo suena «Jarvis» al transcribirlo (si whisper tiny escribe otra cosa, dime cuál).
+
+## G. Transcripción mala: calibrar con tu voz
+
+Si al hablar normal transcribe mal:
+1. `git pull` y **vuelve a ejecutar `setup.bat`** (ahora instala el modelo `small`, mejor en español; tarda la descarga) y reinicia `start.bat`.
+2. En la app, abre **«Prueba de transcripción»** y graba las 12 frases **a tu velocidad normal, no despacio**:
+   - **Pasada 1** con «procesamiento ACTIVADO» y **Pasada 2** con «DESACTIVADO» (12 frases cada una; mantén pulsado 🎙 mientras hablas y espera a ver «Escuchando…» antes de empezar).
+3. Cierra la app (o déjala) y haz **doble clic en `check-stt.bat`**. Tarda unos minutos. Al final imprime la tabla y la mejor configuración; `check-stt.bat --apply` la escribe en tu config.
+   - Si dice que «Crudo» transcribe mejor, cambia **«Audio del navegador»** a *Crudo* y **vuelve a registrar tu voz** de «jarvis».
+4. **Pégame la tabla** (`.jarvis\bench\report.md`): modelos, error de palabras, latencia. Con eso decido si hace falta un modelo mayor o ajustar otra cosa.
+
+Mientras tanto, prueba también: habla a ~20–30 cm del micrófono, sin fondo de música/TV, y en hands-free di «jarvis» + pausa corta + la orden: ahora ya no se pierde el principio.

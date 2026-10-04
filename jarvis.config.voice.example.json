@@ -1,7 +1,9 @@
 {
   "voice": {
     "binary": "C:\\tools\\whisper\\whisper-cli.exe",
-    "model": "C:\\tools\\whisper\\ggml-base.bin",
+    "model": "C:\\tools\\whisper\\ggml-small.bin",
+    "wakeModel": "C:\\tools\\whisper\\ggml-tiny.bin",
+    "beamSize": 5,
     "language": "es",
     "threads": 4
   }

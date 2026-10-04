@@ -121,3 +121,9 @@ body { background: var(--bg); color: var(--fg); }
 .wake__enroll { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
 .wake__sens { display: block; margin-top: 8px; } .wake__sens input { vertical-align: middle; margin: 0 8px; }
+
+.bench { margin: 14px 0 0; padding: 8px 12px; border: 1px solid #333a4a; border-radius: 10px; }
+.bench summary { cursor: pointer; font-weight: 600; }
+.bench__modes { display: grid; gap: 4px; margin: 8px 0; }
+.bench__list { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 6px; }
+.bench__list li { display: flex; gap: 10px; align-items: center; }
