@@ -8,7 +8,7 @@
 | Fase | Objetivo | Estado | Entregable de validación |
 |---|---|---|---|
 | 0 | Reducir riesgos, contratos, demo visual mínima | 🟦 casi listo (falta spike en Windows) | Demo de isla + cuervo sobre eventos del protocolo |
-| 1 | Columna vertebral (orquestador, proveedores, herramientas, policy) | ⬜ | Tarea de texto de punta a punta, sin UI compleja |
+| 1 | Columna vertebral (orquestador, proveedores, herramientas, policy) | 🟦 en curso (falta sidecar/IPC, SQLite, bucle de herramientas con LLM) | Tarea de texto de punta a punta, sin UI compleja |
 | 2 | Router y evaluador, escalado | ⬜ | Escalado automático con evaluador de tests |
 | 3 | Arnés de experimento | ⬜ | Primer resultado de brazos A–D (¡temprano!) |
 | 4 | Shell y UI completos | ⬜ | Isla con estados reales, permisos, panel Economy |
@@ -65,14 +65,18 @@ exista algo visible, no solo logs.
 
 ---
 
-## Fase 1 — Columna vertebral (3–4 semanas) ⬜
-- [ ] Orquestador: máquina de estados de tarea + bus de eventos
-- [ ] Registro de proveedores + adaptadores Anthropic, OpenRouter, Ollama
-- [ ] Intent router local (reglas + clasificador pequeño)
-- [ ] Registro de herramientas (archivos, apps, portapapeles) con `ToolDescriptor`
-- [ ] Policy engine (4 niveles, confirmación, taint, log de auditoría)
+## Fase 1 — Columna vertebral (3–4 semanas) 🟦
+- [x] Orquestador: máquina de estados de tarea (`TaskMachine`) + bus de eventos validado contra el protocolo (`packages/core`)
+- [x] Registro de proveedores + adaptadores Anthropic, OpenRouter, Ollama + `FakeProvider` (`packages/providers`; probados con `fetch` simulado, **no contra APIs reales**)
+- [x] Intent router local por reglas (ES/EN; solo apps conocidas, nada de adivinar)
+- [ ] Intent router: clasificador pequeño (diferido; reglas cubren el MVP)
+- [x] Registro de herramientas con `ToolDescriptor` (`packages/tools`): `time.now`, `files.read`, `files.write`, `apps.open` (lanzador inyectado)
+- [ ] Herramientas de Windows reales (lanzador de apps, portapapeles) → requieren host Windows
+- [x] Policy engine: 4 niveles, confirmación, taint, deny/allow lists, log de auditoría (`packages/policy`)
+- [ ] Bucle de herramientas propuesto por el LLM (hoy solo intents locales ejecutan herramientas; el taint se activa cuando exista)
 - [ ] Sidecar + IPC con token; la demo pasa de escenarios a eventos reales
-- [ ] Telemetría persistida (SQLite)
+- [ ] Telemetría persistida (SQLite; hoy `MemoryTraceStore` detrás de la interfaz `TraceStore`)
+- [ ] Probar un adaptador contra una API real (Ollama local o clave de proveedor del usuario)
 
 ## Fase 2 — Router y evaluador (3 semanas) ⬜
 - [ ] Estrategias de router intercambiables (siempre-premium, siempre-barato, reglas)
@@ -127,3 +131,4 @@ exista algo visible, no solo logs.
 | 2026-10-03 | Revisión de arquitectura inicial. Cambios propuestos: SQLite en vez de Postgres en MVP; núcleo TS como sidecar; IPC local sin puertos; MCP como adaptador; voz al final. |
 | 2026-10-03 | Inicio de Fase 0; añadidos `PROJECT_CONTEXT.md`, `ROADMAP.md` y demo visual temprana al alcance. |
 | 2026-10-03 | Fase 0 casi cerrada: monorepo, `packages/protocol` (7 tests), demo de isla + cuervo (`pnpm dev`, 9 tests de reducer y player, verificada con capturas en Chromium), 7 ADRs, esqueleto Tauri. **Pendiente:** spike de overlay en Windows (`docs/SPIKE_OVERLAY.md`), no compilado ni probado. |
+| 2026-10-04 | Fase 1, primer corte vertical: `policy`, `tools`, `providers`, `core` (orquestador + bus + intent router + `StaticRouter` provisional). 44 tests y typecheck en verde. Rama local-intent y rama modelo emiten `OrchestratorEvent` válidos y guardan `ExecutionTrace`. Pendiente: sidecar/IPC, SQLite, bucle de herramientas con LLM. |
