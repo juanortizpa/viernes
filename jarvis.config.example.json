@@ -1,0 +1,20 @@
+{
+  "defaultModel": "llama3.2",
+  "ollama": {
+    "baseUrl": "http://localhost:11434",
+    "models": [
+      {
+        "model": "llama3.2",
+        "provider": "ollama",
+        "supportsVision": false,
+        "supportsTools": true,
+        "supportsStreaming": true,
+        "contextWindow": 128000,
+        "estimatedInputCost": 0,
+        "estimatedOutputCost": 0,
+        "expectedLatency": 800,
+        "isLocal": true
+      }
+    ]
+  }
+}
