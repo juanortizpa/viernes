@@ -12,6 +12,8 @@ export interface ToolCall {
   id: string;
   name: string;
   args: unknown;
+  /** Opaque, adapter-owned data that must go back with this call in the next request (e.g. Gemini thought signatures). */
+  providerData?: unknown;
 }
 
 export type ChatMessage =

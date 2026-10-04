@@ -1,6 +1,8 @@
 import { PolicyEngine } from "@jarvis/policy";
 import {
   AnthropicProvider,
+  GoogleProvider,
+  GroqProvider,
   FakeProvider,
   OllamaProvider,
   OpenRouterProvider,
@@ -61,15 +63,18 @@ export interface Runtime {
 /** Wires config + environment into the core. Cloud providers require their API key. */
 export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
   const providers = new ProviderRegistry();
-  const key = (name: string): string => {
-    const v = deps.env[name];
-    if (!v) throw new Error(`${name} is required because the config enables that provider`);
+  const key = (...names: string[]): string => {
+    const v = names.map((n) => deps.env[n]).find(Boolean);
+    if (!v) throw new Error(`${names.join(" or ")} is required because the config enables that provider`);
     return v;
   };
 
   if (config.ollama) providers.register(new OllamaProvider({ baseUrl: config.ollama.baseUrl, models: config.ollama.models, fetch: deps.fetch }));
   if (config.anthropic) providers.register(new AnthropicProvider({ apiKey: key("ANTHROPIC_API_KEY"), models: config.anthropic.models, fetch: deps.fetch }));
   if (config.openrouter) providers.register(new OpenRouterProvider({ apiKey: key("OPENROUTER_API_KEY"), models: config.openrouter.models, fetch: deps.fetch }));
+
+  if (config.groq) providers.register(new GroqProvider({ apiKey: key("GROQ_API_KEY"), models: config.groq.models, fetch: deps.fetch }));
+  if (config.google) providers.register(new GoogleProvider({ apiKey: key("GEMINI_API_KEY", "GOOGLE_API_KEY"), models: config.google.models, fetch: deps.fetch }));
 
   if (config.freeOnly) {
     const paid = providers.capabilities().filter((c) => c.estimatedInputCost > 0 || c.estimatedOutputCost > 0);

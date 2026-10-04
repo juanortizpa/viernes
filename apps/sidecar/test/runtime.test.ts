@@ -44,6 +44,27 @@ describe("buildRuntime", () => {
     expect(cfg.freeOnly).toBe(true);
   });
 
+  it("registers Groq and Google behind their own keys (Google accepts GEMINI_API_KEY or GOOGLE_API_KEY)", () => {
+    const free = { ...model, estimatedInputCost: 0, estimatedOutputCost: 0 };
+    const cfg = Config.parse({ freeOnly: true, groq: { models: [{ ...free, model: "g1", provider: "groq" }] }, google: { models: [{ ...free, model: "m1", provider: "google" }] } });
+    expect(() => buildRuntime(cfg, { env: { GEMINI_API_KEY: "k" }, launcher: noop })).toThrow(/GROQ_API_KEY/);
+    expect(() => buildRuntime(cfg, { env: { GROQ_API_KEY: "k" }, launcher: noop })).toThrow(/GEMINI_API_KEY or GOOGLE_API_KEY/);
+    expect(buildRuntime(cfg, { env: { GROQ_API_KEY: "k", GOOGLE_API_KEY: "k" }, launcher: noop }).models).toEqual(["g1", "m1"]);
+  });
+
+  it("the multi-provider free example is free, tiered, and its escalation ladder strictly climbs across providers", async () => {
+    const cfg = loadConfig(new URL("../../../jarvis.config.free-multi.example.json", import.meta.url).pathname);
+    const r = buildRuntime(cfg, { env: { GROQ_API_KEY: "k", OPENROUTER_API_KEY: "k" }, launcher: noop });
+    const { escalationLadder } = await import("@jarvis/core");
+    const ladder = escalationLadder({ input: "x", taskType: "other", complexity: 0.4 }, r.providers.capabilities());
+    expect(ladder.map((c) => c.provider)).toContain("groq");
+    expect(ladder.map((c) => c.provider)).toContain("openrouter");
+    const tiers = ladder.map((c) => c.tier!);
+    expect(tiers).toEqual([...tiers].sort((a, b) => a - b));
+    expect(new Set(tiers).size).toBe(tiers.length);
+    expect(cfg.freeOnly).toBe(true);
+  });
+
   it("rejects a defaultModel nobody offers", () => {
     expect(() => buildRuntime(Config.parse({ defaultModel: "ghost" }), { env: {}, launcher: noop })).toThrow(/ghost/);
   });

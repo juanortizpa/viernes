@@ -16,7 +16,8 @@
         "estimatedInputCost": 0,
         "estimatedOutputCost": 0,
         "expectedLatency": 1500,
-        "isLocal": false
+        "isLocal": false,
+        "tier": 1
       },
       {
         "model": "google/gemma-4-26b-a4b-it:free",
@@ -28,7 +29,8 @@
         "estimatedInputCost": 0,
         "estimatedOutputCost": 0,
         "expectedLatency": 2500,
-        "isLocal": false
+        "isLocal": false,
+        "tier": 4
       },
       {
         "model": "nvidia/nemotron-3-super-120b-a12b:free",
@@ -40,7 +42,8 @@
         "estimatedInputCost": 0,
         "estimatedOutputCost": 0,
         "expectedLatency": 4000,
-        "isLocal": false
+        "isLocal": false,
+        "tier": 7
       }
     ]
   }

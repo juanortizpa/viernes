@@ -16,6 +16,8 @@ export const ModelCapabilities = z.object({
   expectedLatency: z.number().nonnegative(),
   /** Runs on the user's machine; relevant for data-sensitivity constraints. */
   isLocal: z.boolean().default(false),
+  /** Manual strength rank (higher = stronger). Only breaks ties between models of equal price, e.g. an all-free multi-provider setup. */
+  tier: z.number().optional(),
   /** Optional cold-start prior of quality per task type, 0..1. Learned data overrides it. */
   qualityPrior: z.record(TaskType, z.number().min(0).max(1)).optional(),
 });

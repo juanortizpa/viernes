@@ -29,7 +29,7 @@ Codespace expondrá automáticamente el puerto 5173 y creará una URL pública (
 `pnpm dev` también arranca el sidecar real (solo en desarrollo): escribe una orden en la caja
 («qué hora es?», «abre vscode», «hola») y la isla muestra eventos reales del orquestador. Sin proveedor de IA
 configurado, las respuestas del modelo son un eco offline claramente etiquetado. Para usar uno real,
-copia `jarvis.config.example.json` a `jarvis.config.json` (y exporta `ANTHROPIC_API_KEY` / `OPENROUTER_API_KEY`
+copia `jarvis.config.example.json` a `jarvis.config.json` (y exporta `ANTHROPIC_API_KEY` / `OPENROUTER_API_KEY` / `GROQ_API_KEY` / `GEMINI_API_KEY`
 si aplica).
 
 Los escenarios guionados siguen disponibles (acción local, modelo barato, escalado con permiso). Van etiquetados "DEMO":

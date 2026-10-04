@@ -42,7 +42,8 @@ async function callOnce(opts: RunOptions, task: EvalTask, caps: ModelCapabilitie
 }
 
 /** A daily quota is not a transient error: retrying only burns the little that is left, so the run stops cleanly. */
-export const isDailyQuotaError = (message: string): boolean => /per-day|daily/i.test(message) && /rate limit|quota|429/i.test(message);
+export const isDailyQuotaError = (message: string): boolean =>
+  /per[- ]?day|daily|\b(?:RPD|TPD)\b/i.test(message) && /rate limit|quota|429|exhausted/i.test(message);
 
 /**
  * Fill the counterfactual table: every model on every task, once (ADR-0013). The response is stored so a

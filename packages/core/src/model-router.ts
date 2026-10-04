@@ -49,20 +49,23 @@ export function filterCandidates(
 /** Input + output price per 1M tokens: a crude but monotone "how premium is it" measure. */
 export const blendedCost = (c: ModelCapabilities): number => c.estimatedInputCost + c.estimatedOutputCost;
 
+/** Weaker first: by price, then by the manual `tier`. Equal on both means "keep configuration order" (callers use a stable sort / tie rule). */
+export const compareStrength = (a: ModelCapabilities, b: ModelCapabilities): number => blendedCost(a) - blendedCost(b) || (a.tier ?? 0) - (b.tier ?? 0);
+
 /** Eligible models from weakest to strongest (by price; ties keep configuration order). Cascade escalation walks this ladder. */
 export function escalationLadder(req: RouteRequest, candidates: ModelCapabilities[]): ModelCapabilities[] {
   return filterCandidates(req, candidates)
     .eligible.map((c, i) => ({ c, i }))
-    .sort((a, b) => blendedCost(a.c) - blendedCost(b.c) || a.i - b.i)
+    .sort((a, b) => compareStrength(a.c, b.c) || a.i - b.i)
     .map((x) => x.c);
 }
 
-/** Ties go to the LAST model, ties in `cheapestModel` to the FIRST: with equal (e.g. all-free) prices, configuration order means weakest -> strongest. */
+/** Ties (same price and tier) go to the LAST model, in `cheapestModel` to the FIRST: configuration order then means weakest -> strongest. */
 export const premiumModel = (cs: ModelCapabilities[]): ModelCapabilities | undefined =>
-  cs.reduce<ModelCapabilities | undefined>((best, c) => (!best || blendedCost(c) >= blendedCost(best) ? c : best), undefined);
+  cs.reduce<ModelCapabilities | undefined>((best, c) => (!best || compareStrength(c, best) >= 0 ? c : best), undefined);
 
 export const cheapestModel = (cs: ModelCapabilities[]): ModelCapabilities | undefined =>
-  cs.reduce<ModelCapabilities | undefined>((best, c) => (!best || blendedCost(c) < blendedCost(best) ? c : best), undefined);
+  cs.reduce<ModelCapabilities | undefined>((best, c) => (!best || compareStrength(c, best) < 0 ? c : best), undefined);
 
 /** Cost of `usage` if it had run on `caps`, from the user's price estimates. */
 export const estimateCostUsd = (caps: ModelCapabilities, usage: Pick<Usage, "inputTokens" | "outputTokens">): number =>

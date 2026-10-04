@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ModelCapabilities } from "@jarvis/protocol";
-import { AlwaysCheapestRouter, AlwaysPremiumRouter, RulesRouter, classifyTask, estimateCostUsd, filterCandidates } from "../src";
+import { AlwaysCheapestRouter, AlwaysPremiumRouter, RulesRouter, classifyTask, escalationLadder, estimateCostUsd, filterCandidates } from "../src";
 
 const cap = (model: string, o: Partial<ModelCapabilities> = {}): ModelCapabilities => ({
   model, provider: "p", supportsVision: false, supportsTools: true, supportsStreaming: true,
@@ -51,6 +51,18 @@ describe("router strategies", () => {
     expect(d.model).toBe("local");
     expect(d.candidates).toContainEqual({ model: "cheap", score: 0, reason: "data is sensitive and the model is not local" });
     expect(() => new AlwaysPremiumRouter().route(req({ needsVision: true, sensitive: true }), all)).toThrow(/no eligible model/);
+  });
+});
+
+describe("tier", () => {
+  it("orders equally priced models from different providers by tier, not by registration order", () => {
+    const free = { estimatedInputCost: 0, estimatedOutputCost: 0 };
+    const mixed = [cap("strong-a", { ...free, provider: "a", tier: 3 }), cap("weak-b", { ...free, provider: "b", tier: 1 }), cap("mid-a", { ...free, provider: "a", tier: 2 }), cap("untiered", free)];
+    expect(escalationLadder(req(), mixed).map((c) => c.model)).toEqual(["untiered", "weak-b", "mid-a", "strong-a"]);
+    expect(new AlwaysCheapestRouter().route(req(), mixed).model).toBe("untiered");
+    expect(new AlwaysPremiumRouter().route(req(), mixed).model).toBe("strong-a");
+    // Price still dominates: a paid model outranks any free tier.
+    expect(escalationLadder(req(), [...mixed, cap("paid", { estimatedInputCost: 0.1, estimatedOutputCost: 0.1, tier: 0 })]).at(-1)!.model).toBe("paid");
   });
 });
 

@@ -7,7 +7,7 @@ import { AlwaysCheapestRouter, RulesRouter } from "@jarvis/core";
 import { FakeProvider, ProviderRegistry } from "@jarvis/providers";
 import {
   CellTable, alwaysCheapest, alwaysPremium, analyze, buildReplayData, cascadePolicy, crossValidatedPolicy, heuristicJudge, oracleJudge, oraclePolicy,
-  pairedBootstrap, renderMarkdown, routerPolicy, runCounterfactual, seedSuite, type Cell,
+  isDailyQuotaError, pairedBootstrap, renderMarkdown, routerPolicy, runCounterfactual, seedSuite, type Cell,
 } from "../src";
 
 const cap = (model: string, price: number): ModelCapabilities => ({
@@ -108,6 +108,18 @@ describe("analysis", () => {
     expect(md).toContain("| oracle |");
     expect(md).toContain("Precios supuestos");
     expect(md).toContain("- big: entrada 2, salida 2");
+  });
+});
+
+describe("isDailyQuotaError", () => {
+  it("recognises daily quotas from OpenRouter, Groq and Google, but not per-minute limits", () => {
+    expect(isDailyQuotaError("HTTP 429: Rate limit exceeded: free-models-per-day")).toBe(true);
+    expect(isDailyQuotaError("HTTP 429: Rate limit reached for model on requests per day (RPD): Limit 1000")).toBe(true);
+    expect(isDailyQuotaError("HTTP 429: Rate limit reached on tokens per day (TPD)")).toBe(true);
+    expect(isDailyQuotaError("HTTP 429: Quota exceeded for metric generate_content_free_tier_requests, quotaId GenerateRequestsPerDayPerProjectPerModel-FreeTier")).toBe(true);
+    expect(isDailyQuotaError("HTTP 429: Rate limit reached for model on requests per minute (RPM): Limit 30")).toBe(false);
+    expect(isDailyQuotaError("HTTP 429: temporarily rate-limited upstream")).toBe(false);
+    expect(isDailyQuotaError("HTTP 500: internal")).toBe(false);
   });
 });
 

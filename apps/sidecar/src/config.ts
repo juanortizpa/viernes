@@ -35,6 +35,10 @@ export const Config = z.object({
   ollama: z.object({ baseUrl: z.string().url().optional(), models: Models }).optional(),
   anthropic: z.object({ models: Models }).optional(),
   openrouter: z.object({ models: Models }).optional(),
+  /** Needs GROQ_API_KEY. OpenAI-compatible; free tier has per-model RPM/RPD/TPM/TPD limits. */
+  groq: z.object({ models: Models }).optional(),
+  /** Google AI Studio (Gemini API). Needs GEMINI_API_KEY (or GOOGLE_API_KEY). */
+  google: z.object({ models: Models }).optional(),
 });
 export type Config = z.infer<typeof Config>;
 
