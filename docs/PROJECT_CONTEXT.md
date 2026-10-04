@@ -2,7 +2,7 @@
 
 > Documento vivo. Es la fuente de verdad para retomar el proyecto en cualquier sesión.
 > Seguimiento de fases: [ROADMAP.md](./ROADMAP.md). Decisiones: [adr/](./adr/).
-> Última actualización: 2026-10-03
+> Última actualización: 2026-10-04
 
 ## 1. Qué es
 
@@ -32,7 +32,7 @@ el usuario si hay fecha límite; ver "Preguntas abiertas" en ROADMAP).
 ```text
 UI (Isla + Cuervo) / Voz
         │  (eventos)
-   ORQUESTADOR ── Intent Router (sin LLM) · Model Router · Policy Engine
+   ORQUESTADOR ── Intent Router (sin LLM) · Capa inmediata (acuse/caché, ADR-0015) · Model Router · Policy Engine
         │
    Evaluador ── éxito → fin / fallo → escalar
         │
@@ -47,6 +47,8 @@ Reglas duras:
 - El LLM **propone**, el Policy Engine (código determinista, fuera del modelo) **decide**.
 - La UI solo renderiza progreso derivado de `OrchestratorEvent`. **Nunca progreso falso.**
 - Credenciales: nunca como memoria normal, nunca en texto plano al LLM (referencias, V2).
+- La capa inmediata (ADR-0015) es determinista, tiene lista de exclusión (tiempo, estado, herramientas, datos sensibles),
+  se etiqueta como `source: instant` y nunca se mezcla con las métricas de los modelos.
 - Todo se registra en el esquema de traza (dataset de investigación), con `propensity` en cada decisión de ruteo.
 
 ## 4. Decisiones tecnológicas vigentes
@@ -60,6 +62,7 @@ Reglas duras:
 | Almacenamiento MVP | SQLite + sqlite-vec detrás de una interfaz (Postgres en V2/sync) | propuesto |
 | Herramientas | Registro interno único; MCP como adaptador (consumir/exponer) | propuesto |
 | Proveedores MVP | Anthropic + OpenRouter + Ollama (3 adaptadores para probar la abstracción) | propuesto |
+| Respuesta inmediata | R1 plantillas ES/EN + acuse como evento (MVP); R2 caché semántico con embedding local <100 MB (V2); R3 modelo de estilo solo si hay datos (ADR-0015) | propuesto |
 | Voz | Último: push-to-talk → wake word (openWakeWord/Porcupine), whisper.cpp | diferido |
 
 ## 5. Niveles de permiso
@@ -73,10 +76,11 @@ disparar SENSITIVE/CRITICAL sin confirmación.
 - **MVP-0 (spine, texto primero):** barra de comandos + isla mínima (3 estados) + proveedores +
   intent router local + registro de herramientas + policy engine + router v1 + evaluador de código +
   escalado con checkpoints + telemetría completa.
+- **MVP-0.5 (respuesta inmediata R1):** saludos/cortesías por reglas y acuse rápido en tareas largas (ADR-0015).
 - **MVP-1:** memoria, router aprendido (bandit), panel AI Economy, animaciones del cuervo.
 - **MVP-2:** voz (push-to-talk primero), consciencia de contexto.
-- **V2:** bóveda de credenciales, visión, multiagente, proactividad, sync, grafo de conocimiento.
-- **Investigación:** tabla contrafactual, brazos A–D + oráculo + baseline tipo RouteLLM, curva de
+- **V2:** caché semántico (R2), bóveda de credenciales, visión, multiagente, proactividad, sync, grafo de conocimiento.
+- **Investigación:** modelo de estilo/preferencias (R3), tabla contrafactual, brazos A–D + oráculo + baseline tipo RouteLLM, curva de
   aprendizaje, test de deriva.
 
 ## 7. Riesgos vigilados (resumen)
@@ -87,7 +91,8 @@ disparar SENSITIVE/CRITICAL sin confirmación.
 4. Sesgo de datos de aprendizaje: exploración controlada con propensity registrada; no estacionariedad.
 5. Cascada vs. ruteo predictivo: decisión explícita (ADR pendiente).
 6. Overlay en Windows (WebView2): spike en Fase 0.
-7. Alcance: voz y pulido de UI no deben consumir el tiempo del experimento.
+7. Caché semántico: un falso positivo responde otra pregunta; se mide con el arnés antes de activarlo y ante duda va al modelo.
+8. Alcance: voz y pulido de UI no deben consumir el tiempo del experimento.
 
 ## 8. Cómo trabajar (reglas para Claude y para el equipo)
 
