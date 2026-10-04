@@ -91,6 +91,9 @@ export interface Runtime {
   offline: boolean;
   /** Present when `voice` is configured (or injected for tests). */
   transcriber?: Transcriber;
+  /** Lighter engine for wake-word verification (config.voice.wakeModel). */
+  wakeTranscriber?: Transcriber;
+  wakeWords: readonly string[];
   /** AI Economy aggregate over the stored traces; undefined if the store cannot list. */
   economy(limit: number): EconomySummary | undefined;
   createOrchestrator(io: { bus: EventBus; askPermission: PermissionResolver }): Orchestrator;
@@ -184,9 +187,16 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
       ? new WhisperCppTranscriber({ binary: config.voice.binary, model: config.voice.model, language: config.voice.language, threads: config.voice.threads, timeoutMs: config.voice.timeoutMs, prompt: config.voice.prompt ?? defaultVoicePrompt(Object.keys(config.apps), config.voice.language) })
       : undefined);
 
+  const wakeTranscriber =
+    config.voice?.wakeModel && !deps.transcriber
+      ? new WhisperCppTranscriber({ binary: config.voice.binary, model: config.voice.wakeModel, language: config.voice.language, threads: config.voice.threads, timeoutMs: config.voice.timeoutMs, prompt: "Jarvis." })
+      : undefined;
+
   return {
     providers,
     ...(transcriber ? { transcriber } : {}),
+    ...(wakeTranscriber ? { wakeTranscriber } : {}),
+    wakeWords: config.voice?.wakeWords ?? ["jarvis"],
     models,
     offline,
     economy: (limit) => (traces.list ? summarizeEconomy(traces.list(limit)) : undefined),

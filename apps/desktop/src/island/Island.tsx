@@ -20,6 +20,8 @@ interface Props {
 }
 
 const RUNNING = new Set(["thinking", "executing"]);
+/** Length of the follow-up window the controller opens (its default); only used to scale the countdown bar. */
+const FOLLOW_UP_TOTAL_MS = 10_000;
 
 export function Island({ state, onPermission, onCancel, economy, showEconomy = false, onToggleEconomy, onStopSpeaking }: Props) {
   const economyOpen = showEconomy && state.mode === "idle";
@@ -49,6 +51,7 @@ export function Island({ state, onPermission, onCancel, economy, showEconomy = f
         <div className="island__text">
           <motion.div layout="position" className="island__title">
             {economyOpen ? "AI Economy" : expanded ? state.headline : "JARVIS"}
+            {!expanded && state.wake && state.wake.state !== "off" && <span className="island__listen" role="img" aria-label="Escuchando «jarvis»" title="Micrófono abierto: escuchando «jarvis»">●</span>}
           </motion.div>
           <AnimatePresence initial={false}>
             {expanded && !economyOpen && state.detail && (
@@ -77,6 +80,13 @@ export function Island({ state, onPermission, onCancel, economy, showEconomy = f
         {economyOpen && (
           <motion.div key="economy" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <EconomyPanel summary={economy} compact />
+          </motion.div>
+        )}
+
+        {state.wake?.state === "followUp" && state.wake.followUpMs !== undefined && (
+          <motion.div key="followup" className="island__bar" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} title="Sigo escuchando sin que digas «jarvis»">
+            <motion.div className="island__bar-fill" animate={{ width: `${Math.max(0, Math.min(100, (state.wake.followUpMs / FOLLOW_UP_TOTAL_MS) * 100))}%` }} transition={{ duration: 0.5, ease: "linear" }} />
+            <span>{Math.ceil(state.wake.followUpMs / 1000)} s</span>
           </motion.div>
         )}
 

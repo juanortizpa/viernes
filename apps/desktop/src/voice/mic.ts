@@ -50,3 +50,49 @@ export async function startMic(onLevel: (level: number) => void, onFull: () => v
     },
   };
 }
+
+export interface ContinuousMic {
+  stop(): Promise<void>;
+}
+
+/**
+ * Always-on capture for the wake word. Chunks arrive already resampled to 16 kHz. The browser's echo cancellation and noise
+ * suppression are ON, which also helps keep the assistant's own voice out of the signal. Nothing is stored or sent from here.
+ */
+export async function startContinuousMic(onChunk: (chunk16k: Float32Array) => void, onLevel?: (level: number) => void): Promise<ContinuousMic> {
+  if (!navigator.mediaDevices?.getUserMedia) throw new MicUnavailable("Este entorno no permite usar el micrófono");
+  let stream: MediaStream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+  } catch (e) {
+    throw new MicUnavailable(e instanceof DOMException && e.name === "NotAllowedError" ? "Permiso de micrófono denegado" : "No se pudo abrir el micrófono");
+  }
+  const ctx = new AudioContext();
+  try {
+    await ctx.audioWorklet.addModule("/capture-worklet.js");
+  } catch {
+    stream.getTracks().forEach((t) => t.stop());
+    await ctx.close();
+    throw new MicUnavailable("No se pudo iniciar la captura de audio");
+  }
+  const { StreamResampler, rms } = await import("@jarvis/voice/audio");
+  const resampler = new StreamResampler(ctx.sampleRate);
+  const source = ctx.createMediaStreamSource(stream);
+  const node = new AudioWorkletNode(ctx, "jarvis-capture", { numberOfInputs: 1, numberOfOutputs: 0 });
+  node.port.onmessage = (e: MessageEvent<Float32Array>) => {
+    onLevel?.(Math.min(1, rms(e.data) * 6));
+    onChunk(resampler.push(e.data));
+  };
+  source.connect(node);
+  let stopped = false;
+  return {
+    async stop() {
+      if (stopped) return;
+      stopped = true;
+      node.port.onmessage = null;
+      source.disconnect();
+      stream.getTracks().forEach((t) => t.stop());
+      await ctx.close();
+    },
+  };
+}

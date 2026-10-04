@@ -6,6 +6,8 @@ import { Island } from "./island/Island";
 import { LiveClient } from "./live/client";
 import { MicUnavailable, startMic, type MicSession } from "./voice/mic";
 import { toBase64 } from "./voice/pcm-buffer";
+import { WakeSession } from "./voice/wake-session";
+import { WakeSettings } from "./voice/WakeSettings";
 import { SpeechController, type SynthLike } from "./speech/controller";
 import { SPEAK_MODES, parseSpeakMode, type SpeakMode } from "./speech/policy";
 import { TaskSpeaker } from "./speech/task-speaker";
@@ -55,9 +57,13 @@ export default function App() {
             {
               onStart: () => {
                 dispatch({ kind: "speech", speaking: true });
+                wakeRef.current?.onSpeaking(true);
                 if (taskStartedAt.current) (setTtfa(Math.round(performance.now() - taskStartedAt.current)), (taskStartedAt.current = 0));
               },
-              onIdle: () => dispatch({ kind: "speech", speaking: false }),
+              onIdle: () => {
+                dispatch({ kind: "speech", speaking: false });
+                wakeRef.current?.onSpeaking(false);
+              },
               onNoVoice: (lang) => setSpeechNote(`No hay una voz instalada para ${lang === "es" ? "español" : "inglés"}: añádela en Configuración de Windows › Hora e idioma › Voz.`),
             },
           )
@@ -69,6 +75,30 @@ export default function App() {
     [speech],
   );
   const speakingRef = useRef(false);
+  const wakeRef = useRef<WakeSession>();
+  const taskModality = useRef<"text" | "voice">("text");
+  const [wakeEnabled, setWakeEnabled] = useState(() => {
+    try {
+      return localStorage.getItem("jarvis.wakeEnabled") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [wakeNote, setWakeNote] = useState<string>();
+  const [wakeReadout, setWakeReadout] = useState<string>();
+  useEffect(() => {
+    if (!wakeEnabled) return setWakeReadout(undefined);
+    const id = setInterval(() => {
+      const d = wakeRef.current?.diagnostics();
+      if (!d) return;
+      setWakeReadout(
+        d.stage1 === "template"
+          ? `Filtro rápido: puntaje ${d.bestScore === undefined ? "—" : d.bestScore.toFixed(2)} (dispara con ≤ ${d.threshold?.toFixed(2)}) · verificadas ${d.verified} · ignoradas ${d.notForMe}`
+          : `Sin tu voz registrada: se verifica cada frase · verificadas ${d.verified}`,
+      );
+    }, 500);
+    return () => clearInterval(id);
+  }, [wakeEnabled]);
   speakingRef.current = state.speaking === true;
   const chooseSpeakMode = (m: SpeakMode) => {
     setSpeakMode(m);
@@ -95,7 +125,13 @@ export default function App() {
   useEffect(() => {
     const onEvent = (event: OrchestratorEvent) => {
       clearTimeout(collapseTimer.current);
-      if (event.type === "task.started") taskStartedAt.current = performance.now();
+      if (event.type === "task.started") {
+        taskStartedAt.current = performance.now();
+        taskModality.current = event.modality;
+        wakeRef.current?.setPaused(false);
+        wakeRef.current?.onTaskStarted();
+      }
+      if (event.type === "task.finished" || event.type === "task.error") wakeRef.current?.onTaskDone(taskModality.current === "voice");
       taskSpeaker?.onEvent(event);
       dispatch({ kind: "event", event });
       const terminal = event.type === "task.finished" || event.type === "task.error";
@@ -109,6 +145,7 @@ export default function App() {
       clearTimeout(collapseTimer.current);
       if (n.kind === "transcribed") dispatch({ kind: "voice.heard", text: n.text });
       else {
+        wakeRef.current?.setPaused(false);
         dispatch({ kind: "voice.rejected", message: n.message });
         scheduleReset(4500);
       }
@@ -122,6 +159,46 @@ export default function App() {
       live.close();
     };
   }, [player, live, taskSpeaker]);
+
+  const startWake = async () => {
+    if (!live.info?.voice) return;
+    await wakeRef.current?.stop();
+    const session = new WakeSession(live, {
+      onState: (state, followUpMs) => dispatch({ kind: "wake", state, followUpMs }),
+      onLevel: (level) => dispatch({ kind: "voice.level", level }),
+      onError: (m) => (setWakeNote(m), setWakeEnabled(false)),
+    });
+    wakeRef.current = session;
+    setWakeNote(undefined);
+    await session.start();
+  };
+  const stopWake = async () => {
+    await wakeRef.current?.stop();
+    wakeRef.current = undefined;
+    dispatch({ kind: "wake", state: "off" });
+  };
+  const chooseWake = (on: boolean) => {
+    setWakeEnabled(on);
+    try {
+      localStorage.setItem("jarvis.wakeEnabled", on ? "1" : "0");
+    } catch {
+      /* session-only */
+    }
+    void (on ? startWake() : stopWake());
+  };
+  // Resume hands-free listening after a reload if it was left on, once the sidecar (which has the speech engine) is ready.
+  const wakeBooted = useRef(false);
+  useEffect(
+    () =>
+      live.onStatus(() => {
+        if (live.status === "ready" && wakeEnabled && !wakeBooted.current && live.info?.voice) {
+          wakeBooted.current = true;
+          void startWake();
+        }
+      }),
+    [live, wakeEnabled],
+  );
+  useEffect(() => () => void wakeRef.current?.stop(), []);
 
   const toggleEconomy = () => {
     setShowEconomy((open) => {
@@ -144,6 +221,7 @@ export default function App() {
     if (live.status !== "ready" || !live.info?.voice) return warn("Voz no configurada en el sidecar");
     m.busy = true;
     m.wantStop = false;
+    wakeRef.current?.setPaused(true); // push-to-talk owns the microphone while held
     speech?.cancel(); // talking over it interrupts it (and keeps the mic from hearing the speaker)
     clearTimeout(collapseTimer.current);
     player.stop();
@@ -169,9 +247,9 @@ export default function App() {
     m.session = undefined;
     m.busy = false;
     const buffer = await session.stop();
-    if (discard) return dispatch({ kind: "reset" });
+    if (discard) return (wakeRef.current?.setPaused(false), dispatch({ kind: "reset" }));
     const wav = buffer.toWav();
-    if (!wav) return warn("Muy corto: mantén pulsado mientras hablas");
+    if (!wav) return (wakeRef.current?.setPaused(false), warn("Muy corto: mantén pulsado mientras hablas"));
     source.current = "live";
     setSourceLabel("live");
     dispatch({ kind: "voice.transcribing" });
@@ -299,6 +377,15 @@ export default function App() {
             {speechNote ? ` · ${speechNote}` : ""}
           </span>
         </div>
+
+        <WakeSettings
+          enabled={wakeEnabled}
+          unavailable={live.status !== "ready" ? "Disponible con el sidecar conectado." : !live.info?.voice ? "Falta configurar el reconocimiento de voz (ver setup.bat)." : wakeNote}
+          state={state.wake?.state ?? "off"}
+          readout={wakeReadout}
+          onToggle={chooseWake}
+          onEnrollmentChanged={() => wakeEnabled && void startWake()}
+        />
 
         <h2>AI Economy</h2>
         {live.status === "ready" ? (

@@ -112,3 +112,12 @@ body { background: var(--bg); color: var(--fg); }
 
 .speak { display: flex; align-items: center; gap: 12px; margin: 10px 0 0; flex-wrap: wrap; }
 .speak select { background: #11141c; color: inherit; border: 1px solid #333a4a; border-radius: 6px; padding: 4px 8px; font: inherit; }
+
+.island__listen { margin-left: 6px; color: #ff5d6c; font-size: 9px; vertical-align: middle; animation: listen-pulse 2s ease-in-out infinite; }
+@keyframes listen-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .island__listen { animation: none; } }
+.wake { margin: 14px 0 0; padding: 10px 12px; border: 1px solid #333a4a; border-radius: 10px; }
+.wake__toggle { display: flex; gap: 8px; align-items: center; font-weight: 600; }
+.wake__enroll { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+.wake__sens { display: block; margin-top: 8px; } .wake__sens input { vertical-align: middle; margin: 0 8px; }

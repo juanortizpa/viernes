@@ -111,3 +111,36 @@ export function hasSpeech(a: PcmAudio, opts: { threshold?: number; minFrames?: n
   for (let i = 0; i + frame <= a.samples.length; i += frame) if (rms(a.samples.subarray(i, i + frame)) >= threshold) loud++;
   return loud >= minFrames;
 }
+
+/** Streaming box-filter resampler for live microphone chunks: output n averages input samples [floor(n*r), floor((n+1)*r)). */
+export class StreamResampler {
+  private buf: number[] = [];
+  /** Global index of buf[0]. */
+  private base = 0;
+  /** Next output sample number. */
+  private n = 0;
+
+  constructor(private readonly fromRate: number, private readonly toRate = TARGET_SAMPLE_RATE) {}
+
+  push(chunk: Float32Array): Float32Array {
+    if (this.fromRate === this.toRate) return chunk;
+    const ratio = this.fromRate / this.toRate;
+    for (const x of chunk) this.buf.push(x);
+    const out: number[] = [];
+    for (;;) {
+      const start = Math.floor(this.n * ratio);
+      const end = Math.floor((this.n + 1) * ratio);
+      if (end - this.base > this.buf.length) break;
+      let sum = 0;
+      for (let i = start; i < end; i++) sum += this.buf[i - this.base]!;
+      out.push(end > start ? sum / (end - start) : 0);
+      this.n++;
+    }
+    const keepFrom = Math.floor(this.n * ratio) - this.base;
+    if (keepFrom > 0) {
+      this.buf = this.buf.slice(keepFrom);
+      this.base += keepFrom;
+    }
+    return Float32Array.from(out);
+  }
+}

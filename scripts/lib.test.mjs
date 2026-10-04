@@ -40,6 +40,11 @@ describe("buildConfig", () => {
     expect(none.groq ?? none.openrouter ?? none.google).toBeUndefined();
     expect(none.defaultModel).toBeUndefined();
   });
+  it("adds the lighter wake-word verification model when given", () => {
+    const c = buildConfig({ base, env: { GROQ_API_KEY: "k" }, voice: { binary: "C:\\x\\w.exe", model: "C:\\x\\base.bin", wakeModel: "C:\\x\\tiny.bin" } });
+    expect(c.voice.wakeModel).toBe("C:/x/tiny.bin");
+    expect(buildConfig({ base, env: {}, voice: { binary: "a", model: "b" } }).voice.wakeModel).toBeUndefined();
+  });
   it("does not mutate the base and writes voice paths with forward slashes", () => {
     const c = buildConfig({ base, env: { GROQ_API_KEY: "k" }, voice: { binary: "C:\\x\\whisper-cli.exe", model: "C:\\x\\ggml-base.bin" } });
     expect(c.voice).toEqual({ binary: "C:/x/whisper-cli.exe", model: "C:/x/ggml-base.bin", language: "es", threads: 4 });

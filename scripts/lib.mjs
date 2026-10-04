@@ -38,7 +38,7 @@ export function buildConfig({ base, env, voice }) {
   const models = Object.keys(PROVIDER_KEYS).flatMap((s) => (cfg[s]?.models ?? []).map((m) => m.model));
   if (models.length === 0) delete cfg.defaultModel;
   else if (!models.includes(cfg.defaultModel)) cfg.defaultModel = models[0];
-  if (voice) cfg.voice = { binary: voice.binary.replaceAll("\\", "/"), model: voice.model.replaceAll("\\", "/"), language: voice.language ?? "es", threads: voice.threads ?? 4 };
+  if (voice) cfg.voice = { binary: voice.binary.replaceAll("\\", "/"), model: voice.model.replaceAll("\\", "/"), language: voice.language ?? "es", threads: voice.threads ?? 4, ...(voice.wakeModel ? { wakeModel: voice.wakeModel.replaceAll("\\", "/") } : {}) };
   return cfg;
 }
 

@@ -38,6 +38,10 @@ export const Config = z.object({
       model: z.string().min(1),
       language: z.string().regex(/^(auto|[a-z]{2,3})$/).default("es"),
       threads: z.number().int().min(1).max(32).optional(),
+      /** Words that wake the assistant (a transcript must START with one). */
+      wakeWords: z.array(z.string().min(2).max(30)).min(1).max(5).default(["jarvis"]),
+      /** Smaller/faster model for wake-word verification (e.g. ggml-tiny.bin); defaults to `model`. */
+      wakeModel: z.string().min(1).optional(),
       /** Initial prompt that biases recognition toward your vocabulary. Default: built from your app names. */
       prompt: z.string().max(300).optional(),
       timeoutMs: z.number().int().min(1_000).max(300_000).default(60_000),

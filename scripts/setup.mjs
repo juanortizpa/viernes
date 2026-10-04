@@ -1,4 +1,4 @@
-// One-shot setup: node scripts/setup.mjs [--no-voice] [--model tiny|base|small] [--lang es|en|auto] [--test]
+// One-shot setup: node scripts/setup.mjs [--no-voice] [--model tiny|base|small] [--lang es|en|auto] [--no-wake-model] [--test]
 import { spawnSync } from "node:child_process";
 import { createWriteStream, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -128,7 +128,17 @@ if (!flag("no-voice")) {
         say(`  Descargando modelo ${model.file}…`);
         await download(`https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${model.file}`, modelPath, model.minBytes);
       } else say("  Modelo ya presente.");
-      voice = { binary: bin, model: modelPath, language: opt("lang", "es") };
+      // Wake-word verification runs on every utterance the on-device filter likes, so it uses the smallest model (fast).
+      let wakeModel;
+      if (!flag("no-wake-model") && model.file !== WHISPER_MODELS.tiny.file) {
+        const tiny = join(dir, WHISPER_MODELS.tiny.file);
+        if (!existsSync(tiny) || statSync(tiny).size < WHISPER_MODELS.tiny.minBytes) {
+          say(`  Descargando modelo ${WHISPER_MODELS.tiny.file} (verificación de «jarvis»)…`);
+          await download(`https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${WHISPER_MODELS.tiny.file}`, tiny, WHISPER_MODELS.tiny.minBytes);
+        } else say("  Modelo de verificación ya presente.");
+        wakeModel = tiny;
+      }
+      voice = { binary: bin, model: modelPath, language: opt("lang", "es"), wakeModel };
     }
   } catch (e) {
     say(`  ⚠ Voz no instalada: ${e instanceof Error ? e.message : e}. El resto funciona; puedes reintentar con setup.bat.`);

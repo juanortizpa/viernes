@@ -140,3 +140,29 @@ Panel principal › **Hablar:** (por defecto "Solo si hablo"). Con los altavoces
 | T10 | Si dice "No hay una voz instalada para español" | Instala la voz en Configuración › Hora e idioma › Voz y recarga |
 
 Anota **qué voz suena** y si te gusta; si es una voz en línea de Edge (el texto sale a Microsoft) dímelo, hay que decidir si se excluyen.
+
+## F. Manos libres con «jarvis» (wake word) **[SIN PROBAR con voz real]**
+
+Antes: `git pull`, **vuelve a ejecutar `setup.bat`** (descarga el modelo tiny de verificación y lo añade a la config) y reinicia `start.bat`.
+En el panel principal, sección **Manos libres**:
+
+1. **Registra tu voz:** mantén pulsado 🎙 y di «jarvis» (solo la palabra), 3 veces. Debe decir "Voz registrada".
+2. Marca **Escuchar «jarvis»**. Debe aparecer el punto rojo ● en la isla y el icono de micrófono del navegador.
+3. Mira la línea **«Filtro rápido: puntaje X (dispara con ≤ Y)»**:
+   - En silencio: "—".
+   - Di «jarvis»: **X debe bajar por debajo de Y**. Si no baja, sube la **sensibilidad** (deslizador) hasta que lo haga. Si se activa con cualquier frase, bájala.
+   - Anota tus X al decir «jarvis» y al decir otras frases (para calibrar).
+
+| # | Haz | Esperado |
+|---|---|---|
+| H1 | Di «jarvis» y espera | Isla: "Dime…" |
+| H2 | Luego di «qué hora es» | Se ejecuta; oyes/ves la hora |
+| H3 | **Sin decir «jarvis»**, di «abre la calculadora» antes de que acabe la cuenta atrás | Isla "Te escucho… N s" (cuenta atrás de 10 s); se ejecuta sin repetir «jarvis» |
+| H4 | Calla 10 s | La ventana se cierra y vuelve a reposo; una orden sin «jarvis» ya se ignora |
+| H5 | Di «jarvis, qué hora es» de corrido | Se ejecuta directamente |
+| H6 | Habla de otra cosa (TV, conversación) con la función activada | **No** debe ejecutarse nada. Mira el contador "ignoradas"/"verificadas" |
+| H7 | Mientras la respuesta suena | No te oye a sí mismo; la ventana de 10 s empieza al terminar de hablar |
+| H8 | Apaga el interruptor | El punto ● desaparece y el icono de micrófono se apaga |
+| H9 | Mira el uso de CPU en reposo con la función activa (Administrador de tareas, Edge) | Anota el % |
+
+Dime: tus puntajes, cuántas veces se activó sin querer, cuántas veces no te oyó, y cómo suena «Jarvis» al transcribirlo (si whisper tiny escribe otra cosa, dime cuál).

@@ -15,7 +15,7 @@
 | 4 | Shell y UI completos | 🟦 hecho en navegador/dev; falta Windows (overlay, pantalla completa, multi-monitor, DPI real) | Isla con estados reales, permisos, panel Economy |
 | 5 | Memoria + optimización de contexto | ⬜ | Recuperación medida con ablación |
 | 6 | Router aprendido + experimento final | ⬜ | Frontera de Pareto costo vs éxito |
-| 7 | Voz | 🟦 push-to-talk + STT local (probado por el usuario en Windows) y TTS (audio sin probar); falta wake word | Push-to-talk → respuesta hablada |
+| 7 | Voz | 🟦 push-to-talk + STT local (probado en Windows), TTS y wake word de dos etapas (estos dos solo con audio simulado) | Push-to-talk → respuesta hablada |
 
 ---
 
@@ -166,7 +166,9 @@ exista algo visible, no solo logs.
 - [ ] Atajo global y micrófono en WebView2 (Windows)
 - [x] TTS con voces del sistema (ADR-0017): acuse hablado, respuestas, interrupción con Esc/al hablar, modos Solo si hablo/Siempre/Nunca, cuervo con pico animado, métrica time-to-first-audio (**audio real sin probar**)
 - [ ] Voces: probar calidad en Windows; excluir voces en línea si se quiere privacidad total; TTS neuronal local si no basta
-- [ ] Wake word personalizable ("jarvis"): detección continua local, con indicador visible y opción de desactivar; después de validar push-to-talk
+- [x] Wake word personalizable en dos etapas (ADR-0018): filtro en el equipo con tu voz (MFCC+DTW, 0,64 % de un núcleo) → verificación con whisper tiny → orden → ventana de continuación de 10 s; indicador visible, opt-in, descarta lo que no es para el asistente. **Solo probado con audio sintético**
+- [ ] Calibrar el filtro con tu voz real en Windows (sensibilidad/puntaje), medir falsos positivos/negativos y CPU en reposo
+- [ ] Cancelación de eco real y barge-in por voz (hoy se ignora el micrófono mientras habla)
 - [ ] STT en streaming (V2)
 
 ---
@@ -208,3 +210,4 @@ exista algo visible, no solo logs.
 | 2026-10-04 | `setup.bat`/`start.bat` + `scripts/` (Node): instalación en un paso (pnpm, claves en `jarvis.env`, whisper.cpp + modelo, config según las claves presentes) y arranque solo en 127.0.0.1. Probado en Linux con modelos reales (la cascada escaló sola de OpenRouter, cuota diaria agotada, a Groq); **sin probar en Windows**. |
 | 2026-10-04 | Primer contacto con voz real en Windows: transcribe, pero "abre la calculadora" no abría nada. Causas (mías): (1) el router local solo entendía "abre calculadora" exacto, no artículos/cortesías/formas habladas ("puedes abrir la…, por favor", "abrime", "open the…"), así que la orden iba al LLM; (2) el LLM llamaba `apps.open` con un nombre en inglés (`calculator`) que no era el comando (`calc`) y se rechazaba. Arreglo: `extractOpenTarget`, el lanzador resuelve nombres vía catálogo (sigue rechazando todo lo desconocido), la herramienta le dice al modelo qué apps existen, whisper por defecto en `es` con un prompt de vocabulario de tus apps. Verificado con Groq real. 264 tests. |
 | 2026-10-04 | TTS (ADR-0017): `speech/` (texto hablable sin markdown/código/tablas, elección de voz rioplatense, controlador con cola y cancelación, `TaskSpeaker` desde eventos), modos de habla, cuervo hablando, métrica time-to-first-audio. 281 tests. Probado en Chromium con sintetizador simulado; **audio real pendiente en Windows**. Riesgo abierto para wake word: eco del propio asistente. |
+| 2026-10-04 | Wake word (ADR-0018): `TemplateSpotter` (MFCC+DTW sobre tu voz), `Endpointer`, `matchWakeWord`, `WakeController` con ventana de 10 s, `wake.verify` en el sidecar (descarta sin rastro lo que no es para él), escucha continua con registro de voz, sensibilidad, indicador ● y cuenta atrás real, pausa mientras habla, setup descarga whisper tiny. 318 tests. Validado end-to-end en Chromium con una línea de tiempo de audio sintético (palabra → orden → orden sin palabra → vuelta a reposo; 2 verificaciones, 0 por frases ajenas). **Sin voz real**: el umbral automático quedó justo ante audio distinto del de registro, por eso hay sensibilidad y un indicador de calibración. |

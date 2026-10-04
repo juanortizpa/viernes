@@ -101,3 +101,41 @@ describe("islandReducer voice states (real mic / STT, not orchestrator progress)
     expect(islandReducer(initialState, { kind: "voice.rejected", message: "No se detectó voz" })).toMatchObject({ mode: "warning", headline: "No se detectó voz" });
   });
 });
+
+describe("islandReducer hands-free states (driven by the real listening loop)", () => {
+  it("shows 'listening' only while the loop waits for the user, and releases the pose afterwards", () => {
+    let s = islandReducer(initialState, { kind: "wake", state: "idle" });
+    expect(s).toMatchObject({ mode: "idle", wake: { state: "idle" } }); // armed but quiet: just the indicator dot
+    s = islandReducer(s, { kind: "wake", state: "command" });
+    expect(s).toMatchObject({ mode: "listening", headline: "Dime…" });
+    s = islandReducer(s, { kind: "voice.level", level: 0.5 });
+    expect(s.level).toBe(0.5);
+    s = islandReducer(s, { kind: "wake", state: "busy" });
+    expect(s).toMatchObject({ mode: "idle", wake: { state: "busy" } });
+    s = islandReducer(s, { kind: "wake", state: "followUp", followUpMs: 10_000 });
+    expect(s).toMatchObject({ mode: "listening", headline: "Te escucho…", wake: { followUpMs: 10_000 } });
+    s = islandReducer(s, { kind: "wake", state: "followUp", followUpMs: 4_000 });
+    expect(s.wake?.followUpMs).toBe(4_000);
+    s = islandReducer(s, { kind: "wake", state: "off" });
+    expect(s).toMatchObject({ mode: "idle", wake: { state: "off" } });
+  });
+
+  it("does not disturb a running task, and wake/speaking survive task start and reset", () => {
+    let s = islandReducer(initialState, { kind: "wake", state: "idle" });
+    s = islandReducer(s, { kind: "speech", speaking: true });
+    s = run([{ type: "task.started", input: "x", modality: "voice" }], s);
+    expect(s).toMatchObject({ mode: "thinking", speaking: true, wake: { state: "idle" } });
+    s = islandReducer(s, { kind: "wake", state: "busy" });
+    expect(s.mode).toBe("thinking");
+    s = islandReducer(s, { kind: "reset" });
+    expect(s).toMatchObject({ mode: "idle", speaking: true, wake: { state: "busy" } });
+  });
+
+  it("collapsing the island after a task keeps showing that the follow-up window is still open", () => {
+    let s = islandReducer(initialState, { kind: "wake", state: "followUp", followUpMs: 6_000 });
+    s = islandReducer({ ...s, mode: "success", headline: "Listo" }, { kind: "reset" });
+    expect(s).toMatchObject({ mode: "listening", headline: "Te escucho…", wake: { state: "followUp" } });
+    s = islandReducer(s, { kind: "wake", state: "idle" });
+    expect(s).toMatchObject({ mode: "idle", headline: "JARVIS" });
+  });
+});

@@ -48,6 +48,7 @@ export class LiveClient {
   private socket?: SocketLike;
   private readonly eventListeners = new Set<(e: OrchestratorEvent) => void>();
   private readonly economyListeners = new Set<(s: EconomySummary | undefined) => void>();
+  private readonly wakeListeners = new Set<(r: { detected: boolean; commandRan: boolean; reason?: string }) => void>();
   private readonly voiceListeners = new Set<(n: VoiceNotice) => void>();
   private readonly statusListeners = new Set<() => void>();
 
@@ -61,6 +62,11 @@ export class LiveClient {
   onEconomy(l: (s: EconomySummary | undefined) => void): () => void {
     this.economyListeners.add(l);
     return () => this.economyListeners.delete(l);
+  }
+
+  onWakeResult(l: (r: { detected: boolean; commandRan: boolean; reason?: string }) => void): () => void {
+    this.wakeListeners.add(l);
+    return () => this.wakeListeners.delete(l);
   }
 
   onVoice(l: (n: VoiceNotice) => void): () => void {
@@ -105,6 +111,11 @@ export class LiveClient {
     this.send({ type: "economy.get", limit });
   }
 
+  /** Wake-word stage 2: an utterance the on-device spotter liked (PCM16 mono WAV, base64). */
+  verifyWake(wavBase64: string): void {
+    this.send({ type: "wake.verify", audio: wavBase64 });
+  }
+
   cancel(): void {
     this.send({ type: "task.cancel" });
   }
@@ -141,6 +152,7 @@ export class LiveClient {
         this.setStatus("ready");
       } else if (msg.type === "hello.error") this.fail(msg.message);
       else if (msg.type === "error") this.lastError = msg.message;
+      else if (msg.type === "wake.result") this.wakeListeners.forEach((l) => l({ detected: msg.detected, commandRan: msg.commandRan, reason: msg.reason }));
       else if (msg.type === "economy") this.economyListeners.forEach((l) => l(msg.summary));
       else if (msg.type === "voice.transcribed") this.voiceListeners.forEach((l) => l({ kind: "transcribed", text: msg.text, audioMs: msg.audioMs, latencyMs: msg.latencyMs }));
       else if (msg.type === "voice.rejected") this.voiceListeners.forEach((l) => l({ kind: "rejected", reason: msg.reason, message: msg.message }));

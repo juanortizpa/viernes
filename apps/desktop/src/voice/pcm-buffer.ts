@@ -25,6 +25,15 @@ export class PcmBuffer {
     this.level = rms(chunk);
   }
 
+  /** The clip as 16 kHz mono samples (for wake-word enrolment), or undefined when too short. */
+  toPcm16k(): { samples: Float32Array; sampleRate: number } | undefined {
+    if (this.ms < MIN_CLIP_MS) return undefined;
+    const all = new Float32Array(this.length);
+    let o = 0;
+    for (const c of this.chunks) (all.set(c, o), (o += c.length));
+    return resample({ samples: all, sampleRate: this.sampleRate }, TARGET_SAMPLE_RATE);
+  }
+
   /** 16 kHz mono PCM16 WAV, or undefined when the clip is too short to be speech. */
   toWav(): Uint8Array | undefined {
     if (this.ms < MIN_CLIP_MS) return undefined;

@@ -26,6 +26,8 @@ export interface IslandState {
   level?: number;
   /** The speech synthesiser is really playing audio. */
   speaking?: boolean;
+  /** Hands-free listening: what the always-on loop is really doing. Undefined/off = the microphone is closed. */
+  wake?: { state: "off" | "idle" | "verifying" | "command" | "busy" | "followUp"; /** ms left in the follow-up window */ followUpMs?: number };
 }
 
 export const initialState: IslandState = {
@@ -45,7 +47,8 @@ export type IslandAction =
   | { kind: "voice.transcribing" }
   | { kind: "voice.heard"; text: string }
   | { kind: "voice.rejected"; message: string }
-  | { kind: "speech"; speaking: boolean };
+  | { kind: "speech"; speaking: boolean }
+  | { kind: "wake"; state: "off" | "idle" | "verifying" | "command" | "busy" | "followUp"; followUpMs?: number };
 
 /**
  * Pure reducer: OrchestratorEvent -> island state. This is the ONLY way the UI learns what
@@ -53,12 +56,24 @@ export type IslandAction =
  */
 export function islandReducer(state: IslandState, action: IslandAction): IslandState {
   switch (action.kind) {
-    case "reset":
-      return { ...initialState, speaking: state.speaking };
+    case "reset": {
+      const base = { ...initialState, speaking: state.speaking, wake: state.wake };
+      // Collapsing after a task must not hide that the follow-up window / command prompt is still open.
+      if (state.wake?.state === "command" || state.wake?.state === "followUp") return { ...base, mode: "listening", headline: state.wake.state === "command" ? "Dime…" : "Te escucho…", level: 0 };
+      return base;
+    }
+    case "wake": {
+      const wake = { state: action.state, followUpMs: action.followUpMs };
+      // Waiting for the user to talk (after the wake word, or in the follow-up window) is "listening"; leaving it releases the pose.
+      const waiting = action.state === "command" || action.state === "followUp";
+      if (waiting && state.mode === "idle") return { ...state, wake, mode: "listening", headline: action.state === "command" ? "Dime…" : "Te escucho…", detail: undefined, level: 0 };
+      if (!waiting && state.mode === "listening" && !state.pending && state.headline !== "Escuchando…") return { ...state, wake, mode: "idle", headline: initialState.headline, detail: undefined, level: undefined };
+      return { ...state, wake };
+    }
     case "speech":
       return { ...state, speaking: action.speaking };
     case "voice.recording":
-      return { ...initialState, mode: "listening", headline: "Escuchando…", detail: "Suelta para enviar", level: 0, speaking: state.speaking };
+      return { ...initialState, mode: "listening", headline: "Escuchando…", detail: "Suelta para enviar", level: 0, speaking: state.speaking, wake: state.wake };
     case "voice.level":
       return state.mode === "listening" ? { ...state, level: action.level } : state;
     case "voice.transcribing":
@@ -66,13 +81,13 @@ export function islandReducer(state: IslandState, action: IslandAction): IslandS
     case "voice.heard":
       return { ...state, mode: "thinking", headline: "Escuché", detail: action.text, level: undefined };
     case "voice.rejected":
-      return { ...initialState, mode: "warning", headline: action.message };
+      return { ...initialState, mode: "warning", headline: action.message, speaking: state.speaking, wake: state.wake };
   }
   const e = action.event;
 
   switch (e.type) {
     case "task.started":
-      return { ...initialState, mode: "thinking", headline: "Pensando…", detail: e.input };
+      return { ...initialState, mode: "thinking", headline: "Pensando…", detail: e.input, speaking: state.speaking, wake: state.wake };
 
     case "intent.resolved":
       return e.route === "local"

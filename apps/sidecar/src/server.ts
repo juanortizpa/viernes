@@ -2,7 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { ClientMessage, IPC_VERSION, type ServerMessage } from "@jarvis/ipc";
 import type { EventBus, Orchestrator, PermissionResolver } from "@jarvis/core";
 import type { EconomySummary } from "@jarvis/protocol";
-import { VoiceRejected, prepareClip, type Transcriber } from "@jarvis/voice";
+import { VoiceRejected, matchWakeWord, prepareClip, type Transcriber } from "@jarvis/voice";
 
 export interface SidecarServerOptions {
   token: string;
@@ -13,6 +13,9 @@ export interface SidecarServerOptions {
   info: { models: string[]; offline: boolean };
   /** Local speech-to-text. Without it, `voice.submit` is answered with `voice.rejected(unavailable)`. */
   transcriber?: Transcriber;
+  /** Lighter engine for wake-word verification; falls back to `transcriber`. */
+  wakeTranscriber?: Transcriber;
+  wakeWords?: readonly string[];
   /** Aggregates the last `limit` stored traces; undefined when the trace store cannot be listed. */
   economy?: (limit: number) => EconomySummary | undefined;
   /** Unanswered permission prompts are denied after this long. */
@@ -70,6 +73,8 @@ export class SidecarServer {
         return this.opts.send({ type: "error", message: "already authenticated" });
       case "task.submit":
         return this.submit(msg.input, msg.modality);
+      case "wake.verify":
+        return this.wake(msg.audio);
       case "economy.get":
         return this.opts.send({ type: "economy", summary: this.opts.economy?.(msg.limit) });
       case "voice.submit":
@@ -104,6 +109,35 @@ export class SidecarServer {
       .then(() => undefined)
       .catch((e: unknown) => this.opts.send({ type: "error", message: e instanceof Error ? e.message : String(e) }))
       .finally(() => this.active.delete(entry));
+    this.active.add(entry);
+  }
+
+  /** Wake-word stage 2. Not-for-me utterances are dropped without trace; a command in the same breath is run directly. */
+  private wake(audio: string): void {
+    const engine = this.opts.wakeTranscriber ?? this.opts.transcriber;
+    const result = (detected: boolean, commandRan: boolean, reason?: "unavailable" | "failed" | "cancelled"): void =>
+      this.opts.send({ type: "wake.result", detected, commandRan, ...(reason ? { reason } : {}) });
+    if (!engine) return result(false, false, "unavailable");
+    const ac = new AbortController();
+    const entry = { ac, done: Promise.resolve() };
+    entry.done = (async () => {
+      try {
+        const clip = prepareClip(new Uint8Array(Buffer.from(audio, "base64")));
+        const t = await engine.transcribe(clip.wav, { signal: ac.signal });
+        if (ac.signal.aborted) return result(false, false, "cancelled");
+        const m = matchWakeWord(t.text, this.opts.wakeWords);
+        if (!m.matched) return result(false, false); // not for the assistant: the text is dropped here
+        if (!m.rest) return result(true, false);
+        this.opts.send({ type: "voice.transcribed", text: m.rest, audioMs: t.audioMs, latencyMs: t.latencyMs, ...(t.language ? { language: t.language } : {}) });
+        result(true, true);
+        this.submit(m.rest.slice(0, 10_000), "voice");
+      } catch (e) {
+        if (ac.signal.aborted) return result(false, false, "cancelled");
+        if (e instanceof VoiceRejected) return result(false, false); // silence/too short: nothing to report
+        this.opts.log?.(`wake verification failed: ${e instanceof Error ? e.message : String(e)}`);
+        result(false, false, "failed");
+      }
+    })().finally(() => this.active.delete(entry));
     this.active.add(entry);
   }
 

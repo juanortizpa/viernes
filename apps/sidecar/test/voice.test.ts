@@ -94,3 +94,71 @@ describe("economy over IPC", () => {
     expect(m.summary).toMatchObject({ tasks: 2, byKind: { local: 1, instant: 1, model: 0, cache: 0 }, costUsd: 0, savedPct: null });
   });
 });
+
+describe("wake-word verification (stage 2) over IPC", () => {
+  const wakeHarness = (say: string, tr?: Transcriber) => {
+    const stt = new FakeTranscriber(say);
+    const h = harness(tr ?? stt);
+    return { ...h, stt };
+  };
+  const results = (h: { out: ServerMessage[] }) => h.out.filter((m) => m.type === "wake.result") as Extract<ServerMessage, { type: "wake.result" }>[];
+
+  it("wake word alone: detected, nothing run", async () => {
+    const h = wakeHarness("Jarvis.");
+    h.send({ type: "wake.verify", audio: b64(tone(900)) });
+    await h.server.idle();
+    expect(results(h)).toEqual([{ type: "wake.result", detected: true, commandRan: false }]);
+    expect(h.events()).toHaveLength(0);
+  });
+
+  it("wake word + command in one breath: runs the command as a voice task, telling the UI what was heard first", async () => {
+    const h = wakeHarness("Jarvis, qué hora es");
+    h.send({ type: "wake.verify", audio: b64(tone(900)) });
+    await h.server.idle();
+    const types = h.out.map((m) => m.type);
+    expect(types.indexOf("voice.transcribed")).toBeLessThan(types.indexOf("wake.result"));
+    expect(h.out.find((m) => m.type === "voice.transcribed")).toMatchObject({ text: "qué hora es" });
+    expect(results(h)).toEqual([{ type: "wake.result", detected: true, commandRan: true }]);
+    expect(h.events().find((e) => e.type === "task.started")).toMatchObject({ modality: "voice", input: "qué hora es" });
+    expect(h.events().some((e) => e.type === "tool.completed")).toBe(true);
+  });
+
+  it("an utterance that is not for the assistant is dropped: no task, no echo of the text, nothing stored", async () => {
+    const h = wakeHarness("abre la calculadora, la otra tarde le dije a jarvis algo");
+    h.send({ type: "wake.verify", audio: b64(tone(900)) });
+    await h.server.idle();
+    expect(results(h)).toEqual([{ type: "wake.result", detected: false, commandRan: false }]);
+    expect(h.events()).toHaveLength(0);
+    expect(JSON.stringify(h.out)).not.toMatch(/calculadora|otra tarde/);
+  });
+
+  it("silence never reaches the engine, and failures are reported without internals", async () => {
+    const h = wakeHarness("Jarvis");
+    h.send({ type: "wake.verify", audio: b64(tone(1500, 0)) });
+    await h.server.idle();
+    expect(h.stt.calls).toHaveLength(0);
+    expect(results(h)).toEqual([{ type: "wake.result", detected: false, commandRan: false }]);
+
+    const boom = harness({ transcribe: async () => { throw new Error("C:\\secret exploded"); } });
+    boom.send({ type: "wake.verify", audio: b64(tone(900)) });
+    await boom.server.idle();
+    expect(boom.out.at(-1)).toEqual({ type: "wake.result", detected: false, commandRan: false, reason: "failed" });
+
+    const none = harness();
+    none.send({ type: "wake.verify", audio: b64(tone(900)) });
+    expect(none.out.at(-1)).toMatchObject({ type: "wake.result", reason: "unavailable" });
+  });
+
+  it("uses the lighter wake engine for verification when one is configured", async () => {
+    const wake = new FakeTranscriber("Jarvis");
+    const main = new FakeTranscriber("nope");
+    const out: ServerMessage[] = [];
+    const runtime = buildRuntime(Config.parse({}), { env: {}, launcher: async () => {}, transcriber: main });
+    const server = new SidecarServer({ token: "t", send: (m) => out.push(m), bus: new EventBus(), createOrchestrator: runtime.createOrchestrator, info: { models: [], offline: true }, transcriber: main, wakeTranscriber: wake });
+    server.handleLine(JSON.stringify({ type: "hello", token: "t", protocol: 1 }));
+    server.handleLine(JSON.stringify({ type: "wake.verify", audio: b64(tone(900)) }));
+    await server.idle();
+    expect(wake.calls).toHaveLength(1);
+    expect(main.calls).toHaveLength(0);
+  });
+});

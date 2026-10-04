@@ -16,6 +16,12 @@ export const ClientMessage = z.discriminatedUnion("type", [
    * then runs the text as a voice task. Silence and unusable clips come back as `voice.rejected` and never reach the engine.
    */
   z.object({ type: z.literal("voice.submit"), audio: z.string().min(100).max(1_600_000), language: z.string().regex(/^(auto|[a-z]{2,3})$/).optional() }),
+  /**
+   * Wake-word stage 2: an utterance the on-device spotter liked. The sidecar transcribes it, checks that it starts with the wake
+   * word and answers `wake.result`. If something follows the wake word ("jarvis abre la calculadora") that part is run as a voice
+   * task right away. Utterances that are not for the assistant are discarded: their text is never stored, logged or sent back.
+   */
+  z.object({ type: z.literal("wake.verify"), audio: z.string().min(100).max(1_600_000) }),
   /** Aggregate of the most recent stored traces, for the AI Economy panel. */
   z.object({ type: z.literal("economy.get"), limit: z.number().int().min(1).max(5000).default(500) }),
   /** Cancels every active task of this connection. */
@@ -37,6 +43,13 @@ export const ServerMessage = z.discriminatedUnion("type", [
   }),
   /** Reply to `economy.get`; `summary` is absent when the trace store cannot be listed. */
   z.object({ type: z.literal("economy"), summary: EconomySummary.optional() }),
+  z.object({
+    type: z.literal("wake.result"),
+    detected: z.boolean(),
+    /** The utterance also held a command and it was already submitted (a `voice.transcribed` came first). */
+    commandRan: z.boolean(),
+    reason: z.enum(["unavailable", "failed", "cancelled"]).optional(),
+  }),
   z.object({ type: z.literal("voice.transcribed"), text: z.string(), audioMs: z.number(), latencyMs: z.number(), language: z.string().optional() }),
   z.object({
     type: z.literal("voice.rejected"),
