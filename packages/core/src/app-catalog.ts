@@ -56,6 +56,11 @@ export class AppCatalog {
     for (const a of this.store.list()) if (this.hasCommand(a.command)) this.add(a.alias, a.command, "learned");
   }
 
+  /** How many distinct apps can be opened (several names may launch the same one). */
+  appCount(): number {
+    return new Set([...this.entries.values()].map((e) => e.command)).size;
+  }
+
   lookup(alias: string): string | undefined {
     return this.entries.get(normalizeText(alias))?.command;
   }

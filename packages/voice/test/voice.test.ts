@@ -92,7 +92,8 @@ describe("cleanWhisperOutput", () => {
   });
 });
 
-describe("WhisperCppTranscriber (real process spawn against a stand-in binary)", () => {
+// The stand-in is a node script run directly by argv (no shell), which only POSIX can exec; on Windows whisper is a real .exe.
+describe.skipIf(process.platform === "win32")("WhisperCppTranscriber (real process spawn against a stand-in binary)", () => {
   const dir = mkdtempSync(join(tmpdir(), "jarvis-fakewhisper-"));
   /** Behaves like whisper-cli's contract: reads -f, prints text to stdout, honours -l. */
   const script = (body: string): string => {
@@ -187,7 +188,7 @@ describe("signal quality before recognition", () => {
     expect(dec.samples[10]).toBe(0);
   });
 
-  it("passes the beam size to whisper only when set", async () => {
+  it.skipIf(process.platform === "win32")("passes the beam size to whisper only when set", async () => {
     const dir = mkdtempSync(join(tmpdir(), "jarvis-bs-"));
     const p = join(dir, "w.mjs");
     writeFileSync(p, '#!/usr/bin/env node\nconst a = process.argv.slice(2);\nconsole.log(a.includes("-bs") ? "bs=" + a[a.indexOf("-bs") + 1] : "nobs");\n');

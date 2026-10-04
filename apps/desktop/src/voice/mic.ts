@@ -12,7 +12,7 @@ export class MicUnavailable extends Error {}
  * Opens the microphone ONLY while the user holds push-to-talk and releases it on stop, so the OS "microphone in use"
  * indicator is truthful. Calls `onLevel` with the real input level and `onFull` when the clip hits the maximum length.
  */
-export async function startMic(onLevel: (level: number) => void, onFull: () => void, dsp?: AudioDsp): Promise<MicSession> {
+export async function startMic(onLevel: (level: number) => void, onFull: () => void, dsp?: AudioDsp, onChunk16k?: (chunk: Float32Array) => void): Promise<MicSession> {
   if (!navigator.mediaDevices?.getUserMedia) throw new MicUnavailable("Este entorno no permite usar el micrófono");
   let stream: MediaStream;
   try {
@@ -29,10 +29,13 @@ export async function startMic(onLevel: (level: number) => void, onFull: () => v
     throw new MicUnavailable("No se pudo iniciar la captura de audio");
   }
   const buffer = new PcmBuffer(ctx.sampleRate);
+  // Streaming (ADR-0029): the same audio, resampled to 16 kHz as it arrives, so the sidecar can transcribe while the user talks.
+  const resampler = onChunk16k ? new (await import("@jarvis/voice/audio")).StreamResampler(ctx.sampleRate) : undefined;
   const source = ctx.createMediaStreamSource(stream);
   const node = new AudioWorkletNode(ctx, "jarvis-capture", { numberOfInputs: 1, numberOfOutputs: 0 });
   node.port.onmessage = (e: MessageEvent<Float32Array>) => {
     buffer.push(e.data);
+    if (resampler && !buffer.full) onChunk16k!(resampler.push(e.data));
     onLevel(Math.min(1, buffer.level * 6));
     if (buffer.full) onFull();
   };

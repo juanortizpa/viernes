@@ -16,10 +16,19 @@ export function summarizeEconomy(traces: readonly ExecutionTrace[]): EconomySumm
   let baseline = 0;
   let saved = 0;
 
+  let tasks = 0;
   for (const t of traces) {
+    // A speculation the user's words did not confirm was never a task, but the tokens it spent are real (ADR-0029).
+    if (t.speculation === "discarded") {
+      cost += t.totalCostUsd;
+      for (const a of t.attempts) (inTok += a.usage.inputTokens), (outTok += a.usage.outputTokens);
+      continue;
+    }
+    tasks++;
     const kind = t.instant === "cache" ? "cache" : t.instant === "reply" ? "instant" : t.usedLocalIntent ? "local" : "model";
     byKind[kind]++;
-    (kind === "model" ? modelLat : noLlmLat).push(t.totalLatencyMs);
+    // A confirmed speculation started while the user was still talking: its wall time is not a response time.
+    if (t.speculation !== "committed") (kind === "model" ? modelLat : noLlmLat).push(t.totalLatencyMs);
     if (t.finalOutcome === "success") ok++;
     if (t.escalations > 0) escalated++;
     cost += t.totalCostUsd;
@@ -38,9 +47,9 @@ export function summarizeEconomy(traces: readonly ExecutionTrace[]): EconomySumm
   }
 
   return {
-    tasks: traces.length,
+    tasks,
     byKind,
-    successRate: traces.length ? ok / traces.length : 0,
+    successRate: tasks ? ok / tasks : 0,
     escalatedTasks: escalated,
     inputTokens: inTok,
     outputTokens: outTok,

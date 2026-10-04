@@ -7,7 +7,8 @@
     "start": "tsx src/main.ts",
     "typecheck": "tsc -p tsconfig.json",
     "build": "node scripts/build.mjs",
-    "start:bundle": "node dist/sidecar.mjs"
+    "start:bundle": "node dist/sidecar.mjs",
+    "latency": "tsx src/latency-bench.ts"
   },
   "dependencies": {
     "@jarvis/core": "workspace:*",
@@ -19,7 +20,8 @@
     "@jarvis/tools": "workspace:*",
     "zod": "^3.23.8",
     "@jarvis/voice": "workspace:*",
-    "@jarvis/agents": "workspace:*"
+    "@jarvis/agents": "workspace:*",
+    "@jarvis/mcp": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

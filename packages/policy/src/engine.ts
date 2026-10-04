@@ -7,6 +7,11 @@ export interface PolicyRequest {
   risk: PermissionLevel;
   /** True once any untrusted_external content entered the task's context (ADR-0005). */
   tainted: boolean;
+  /**
+   * The call sends data to a model-chosen address (ADR-0028). `known`: that exact address appeared in an earlier tool result of
+   * this task or in the user's own message, so it was not invented to carry data out.
+   */
+  egress?: { destination: string; known: boolean };
 }
 
 export interface PolicyConfig {
@@ -53,8 +58,12 @@ export class PolicyEngine {
     });
   }
 
-  private compute({ tool, risk, tainted }: PolicyRequest): PolicyDecision {
+  private compute({ tool, risk, tainted, egress }: PolicyRequest): PolicyDecision {
     if (this.config.denyTools?.has(tool)) return { action: "deny", reason: `tool "${tool}" is denied by configuration` };
+    // Exfiltration guard: after reading untrusted content, data may only go to addresses that content (or the user) already showed.
+    if (tainted && egress && !egress.known && risk !== "critical") {
+      return { action: "confirm", reason: `la tarea leyó contenido externo y quiere enviar datos a una dirección nueva: ${egress.destination.slice(0, 120)}` };
+    }
     if (risk === "critical") return { action: "confirm", reason: "critical actions always need explicit confirmation" };
     if (compareRisk(risk, "sensitive") >= 0) {
       if (tainted) {

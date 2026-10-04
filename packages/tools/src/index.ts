@@ -5,3 +5,4 @@ export * from "./aliases";
 export * from "./instant";
 export * from "./style";
 export * from "./memory";
+export * from "./web";

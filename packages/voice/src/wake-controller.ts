@@ -21,7 +21,7 @@ export type WakeAction =
   /** Stage 2: send this utterance to be transcribed and checked for the wake word. */
   | { type: "verify"; wav: Uint8Array }
   /** A command utterance (after the wake word, or inside the follow-up window). */
-  | { type: "command"; wav: Uint8Array; source: "wake" | "followUp" }
+  | { type: "command"; wav: Uint8Array; source: "wake" | "followUp"; /** Silence that closed the turn: the user stopped talking this long ago. */ endSilenceMs: number }
   | { type: "discard"; reason: "not-for-me" | "timeout" | "too-long" };
 
 export interface WakeControllerOptions {
@@ -56,6 +56,11 @@ export class WakeController {
   private counters = { verified: 0, notForMe: 0 };
   /** A command spoken while the wake word was still being verified (the user does not wait for us). */
   private pending: Uint8Array | undefined;
+  /**
+   * Semantic end of turn (ADR-0029): the sidecar heard every word and the sentence sounds finished, so the turn may close after a
+   * short silence instead of the patient default. Valid only while the user stays silent: any new voiced frame cancels it.
+   */
+  private early: { endMs: number; voicedAt: number } | undefined;
 
   constructor(private readonly opts: WakeControllerOptions = {}) {
     this.spotter = opts.enrollment ? new TemplateSpotter(opts.enrollment, { sensitivity: opts.sensitivity }) : undefined;
@@ -84,9 +89,17 @@ export class WakeController {
     return this.goto("off");
   }
 
+  /** The transcript so far covers everything said and reads as a finished sentence: close the command turn after `ms` of silence. */
+  hintTurnComplete(ms = 450): void {
+    if (this.state !== "command" && this.state !== "followUp") return;
+    if (!this.ep.inSpeech) return;
+    this.early = { endMs: ms, voicedAt: this.ep.voicedMs };
+  }
+
   private goto(state: WakeState, extra: { followUpMs?: number } = {}): WakeAction[] {
     this.state = state;
     this.pending = undefined;
+    this.early = undefined;
     this.ep.reset();
     this.spotter?.reset();
     this.firedAtMs = -Infinity;
@@ -98,9 +111,15 @@ export class WakeController {
     const actions = this.tick();
     if (this.speaking || this.state === "off" || this.state === "busy") return actions;
     // Keep listening WHILE the wake word is being verified: people do not wait for the assistant before giving the command.
-    this.ep.setEndSilence(this.state === "idle" ? this.opts.endpointer?.endSilenceMs ?? 600 : this.commandEnd);
+    if (this.early && this.ep.voicedMs > this.early.voicedAt) this.early = undefined; // the user went on talking
+    const endSilence = this.state === "idle" ? (this.opts.endpointer?.endSilenceMs ?? 600) : (this.early?.endMs ?? this.commandEnd);
+    this.ep.setEndSilence(endSilence);
     const before = this.ep.elapsedMs;
     this.ep.push(chunk);
+    if (this.early && this.ep.voicedMs > this.early.voicedAt && this.ep.state !== "ended") {
+      this.early = undefined; // speech resumed inside this chunk: be patient again
+      this.ep.setEndSilence(this.commandEnd);
+    }
     if (this.state === "idle" && this.spotter) {
       for (const r of this.spotter.push(chunk)) if (r.fired) this.firedAtMs = before + (chunk.length / TARGET_SAMPLE_RATE) * 1000;
     }
@@ -108,6 +127,8 @@ export class WakeController {
     if (this.ep.state !== "ended") return actions;
     const samples = this.ep.take();
     const startedAt = this.ep.utteranceStartMs ?? 0;
+    const closedAfterMs = this.ep.trailingSilenceMs;
+    this.early = undefined;
     const liked = this.stage1 === "vad" || this.firedAtMs >= startedAt - 200;
     this.ep.reset();
     this.spotter?.reset();
@@ -133,7 +154,7 @@ export class WakeController {
       const source = this.state === "command" ? "wake" : "followUp";
       this.deadline = this.now() + this.o.busyTimeoutMs;
       this.state = "busy";
-      return [...actions, { type: "state", state: "busy" }, { type: "command", wav, source }];
+      return [...actions, { type: "state", state: "busy" }, { type: "command", wav, source, endSilenceMs: closedAfterMs }];
     }
     return actions;
   }
@@ -151,7 +172,7 @@ export class WakeController {
     if (pending) {
       // The command was already spoken while we verified: send it now.
       this.deadline = this.now() + this.o.busyTimeoutMs;
-      return [...this.goto("busy"), { type: "command", wav: pending, source: "wake" }];
+      return [...this.goto("busy"), { type: "command", wav: pending, source: "wake", endSilenceMs: this.commandEnd }];
     }
     this.deadline = this.now() + this.o.commandWaitMs;
     if (this.ep.inSpeech) {

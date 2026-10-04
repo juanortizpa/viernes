@@ -72,3 +72,56 @@ describe("TaskSpeaker", () => {
     expect(said.at(-1)).toBe("<cancel>");
   });
 });
+
+describe("TaskSpeaker: speaking while the model writes (ADR-0029)", () => {
+  const llm = { type: "intent.resolved", route: "llm", confidence: 1 };
+  it("says the first sentence as soon as it is complete, not when the answer ends", () => {
+    const { said, feed } = setup();
+    feed(started("qué es un closure"), llm, { type: "response.delta", text: "Un closure es una función" });
+    expect(said).toEqual(["<cancel>"]);
+    feed({ type: "response.delta", text: " que recuerda su entorno. Se usa mucho en" });
+    expect(said.at(-1)).toBe("es:Un closure es una función que recuerda su entorno.");
+    feed({ type: "response.delta", text: " JavaScript." }, { type: "task.finished", outcome: "success" });
+    expect(said.at(-1)).toBe("es:Se usa mucho en JavaScript.");
+    expect(said).toHaveLength(3);
+  });
+
+  it("never splits a number or a code block, never reads code, and keeps to the spoken budget", () => {
+    const { said, feed } = setup();
+    feed(started("dólar"), llm, { type: "response.delta", text: "El blue está a $1.560 hoy. " });
+    expect(said.at(-1)).toBe("es:El blue está a $1.560 hoy.");
+    feed({ type: "response.delta", text: "Mirá:\n```js\nconst a = 1. b = 2.\n" });
+    expect(said).toHaveLength(2); // nothing from inside the open fence
+    feed({ type: "response.delta", text: "```\nUno. Dos. Tres. Cuatro." }, { type: "task.finished", outcome: "success" });
+    expect(said.join("|")).not.toMatch(/const a/);
+    expect(said.filter((s) => /Uno|Dos|Tres|Cuatro/.test(s)).join(" ")).not.toMatch(/Tres|Cuatro/); // 3 sentences at most
+    expect(said.at(-1)).toBe("es:Te dejé el detalle en pantalla.");
+  });
+
+  it("if part of a failed attempt was already said, the corrected answer says so", () => {
+    const { said, feed } = setup();
+    feed(started("x"), llm, { type: "response.delta", text: "No sé. " }, { type: "escalated", from: "a", to: "b", reason: "x" }, { type: "response.delta", text: "Es así. " }, { type: "task.finished", outcome: "success" });
+    expect(said.slice(1)).toEqual(["es:No sé.", "es:Mejor dicho: Es así."]);
+  });
+
+  it("narrates real progress of long tasks, rarely and only after a while", () => {
+    let t = 0;
+    const said: string[] = [];
+    const ts = new TaskSpeaker({ speak: (x) => said.push(x), cancel: () => {} }, () => "voice", () => t);
+    const f = (b: Body) => ts.onEvent(ev(b));
+    f(started("en el proyecto web, arreglá el login"));
+    f({ type: "intent.resolved", route: "local", intent: "code.agent", confidence: 1 });
+    t = 2_000;
+    f({ type: "progress", stage: "Gemini: Leyendo login.js" });
+    expect(said).toEqual([]); // too early
+    t = 11_000;
+    f({ type: "progress", stage: "Gemini: Editando login.js" });
+    expect(said).toEqual(["Editando login.js."]);
+    t = 15_000;
+    f({ type: "progress", stage: "Comprobando con «pnpm test»" });
+    expect(said).toHaveLength(1); // not again so soon
+    t = 26_000;
+    f({ type: "progress", stage: "Comprobando con «pnpm test»" });
+    expect(said.at(-1)).toBe("Comprobando con pnpm test.");
+  });
+});

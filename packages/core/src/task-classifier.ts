@@ -30,6 +30,12 @@ const RULES: [TaskType, RegExp][] = [
 
 const NEEDS_TOOLS = /\b(archivo|archivos|fichero|carpeta|directorio|file|files|folder|directory)\b|(?:^|\s)(?:[a-z]:\\|~\/|\.{1,2}\/|\/)[\w.-]+/;
 
+/**
+ * Facts that change after any model's training (ADR-0028): answering them from memory is how a model states last year's price with
+ * confidence (measured: a free model gave a dollar rate ~20 % off, without a source). They need a model that can call web tools.
+ */
+const NEEDS_FRESH = /(hoy|ahora mismo|actual|actualmente|ultimo|ultima|ultimos|ultimas|reciente|recientes|esta semana|este mes|este ano|clima|pronostico|temperatura|precio|precios|cotizacion|noticias|novedades|quien gano|resultado del partido|busca(?:r|me)? en (?:internet|google|la web)|en internet|today|latest|news|weather|price)/;
+
 /** Deterministic, LLM-free task typing (ES/EN). Cheap enough to run before routing. */
 export function classifyTask(input: string): TaskClass {
   const text = normalizeText(input);
@@ -38,5 +44,5 @@ export function classifyTask(input: string): TaskClass {
   if (hit) taskType = hit[0];
   else if (text.length <= 100 && /^(que|quien|cual|cuando|donde|cuanto|what|who|which|when|where|how much)\b/.test(text)) taskType = "qa_simple";
   const complexity = Math.min(1, BASE[taskType] + Math.min(0.2, input.length / 5000));
-  return { taskType, complexity: Math.round(complexity * 100) / 100, needsTools: taskType === "agentic_project" || NEEDS_TOOLS.test(text) };
+  return { taskType, complexity: Math.round(complexity * 100) / 100, needsTools: taskType === "agentic_project" || NEEDS_TOOLS.test(text) || NEEDS_FRESH.test(text) };
 }

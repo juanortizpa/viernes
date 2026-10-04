@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { EventBus, type OrchestratorEvent } from "@jarvis/core";
+import { EventBus } from "@jarvis/core";
+import type { OrchestratorEvent } from "@jarvis/protocol";
 import type { AgentRunOptions, CodingAgent } from "@jarvis/agents";
 import { Config } from "../src/config";
-import { availableAgents, codingIntentRule, makeCodeAgentTool, resolveProject } from "../src/coding";
+import { availableAgents, codingControlRule, codingIntentRule, makeCodeAgentTool, makeCodeChangesTool, makeCodeUndoTool, resolveProject } from "../src/coding";
 import { buildRuntime } from "../src/runtime";
 
 const noop = async () => {};
@@ -120,5 +122,66 @@ describe("code.agent in the runtime", () => {
     const r = buildRuntime(cfg, { env: {}, launcher: noop, workspace: p, codingAgents: () => [fakeAgent("gemini", async () => ({ ok: true, summary: "Hecho." }), calls)] });
     await r.createOrchestrator({ bus: new EventBus(), askPermission: async () => false }).run("en el proyecto demo, borra todo");
     expect(calls).toEqual([]);
+  });
+});
+
+describe("undo and changes of agent work (ADR-0026)", () => {
+  const sh = (cwd: string, ...args: string[]): void => {
+    const r = spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], { cwd, encoding: "utf8" });
+    if (r.status !== 0) throw new Error(r.stderr);
+  };
+  function gitProject(): string {
+    const p = dir();
+    sh(p, "init", "-q");
+    writeFileSync(join(p, "app.js"), "v1\n");
+    sh(p, "add", ".");
+    sh(p, "commit", "-qm", "init");
+    return p;
+  }
+
+  it("understands the spoken commands and only claims generic phrasings when they name the agent or a project", () => {
+    expect(codingControlRule("que cambio el agente en el proyecto web")).toMatchObject({ tool: "code.changes", args: { project: "web" } });
+    expect(codingControlRule("muestrame los cambios del proyecto jarvis")).toMatchObject({ tool: "code.changes", args: { project: "jarvis" } });
+    expect(codingControlRule("que cambiaste")).toMatchObject({ tool: "code.changes", args: {} });
+    expect(codingControlRule("que cambio")).toBeUndefined(); // "¿qué cambió?" alone could be about anything
+    expect(codingControlRule("que cambios hubo en la economia")).toBeUndefined();
+    expect(codingControlRule("deshace los cambios")).toMatchObject({ tool: "code.undo", args: {} });
+    expect(codingControlRule("deshaz lo que hizo el agente en el proyecto web")).toMatchObject({ tool: "code.undo", args: { project: "web" } });
+    expect(codingControlRule("revierte los cambios del proyecto web igual")).toMatchObject({ tool: "code.undo", args: { project: "web", force: true } });
+    expect(codingControlRule("deshaz el nudo de la corbata")).toBeUndefined();
+  });
+
+  it("agent edits → '¿qué cambió el agente?' → 'deshacé los cambios' (asks first) → files restored", async () => {
+    const p = gitProject();
+    const events: OrchestratorEvent[] = [];
+    const bus = new EventBus();
+    bus.subscribe((e) => events.push(e));
+    const cfg = Config.parse({ coding: { projects: { web: { path: p } } } });
+    const agent = fakeAgent("gemini", async (o) => {
+      writeFileSync(join(o.cwd, "app.js"), "broken by agent\n");
+      writeFileSync(join(o.cwd, "extra.js"), "new\n");
+      return { ok: true, summary: "Hecho." };
+    });
+    const r = buildRuntime(cfg, { env: {}, launcher: noop, workspace: p, codingAgents: () => [agent] });
+    const asked: string[] = [];
+    const orch = r.createOrchestrator({ bus, askPermission: async (req) => (asked.push(req.tool), true) });
+    await orch.run("en el proyecto web, refactoriza app.js");
+    const done = (): string | undefined => (events.filter((e) => e.type === "task.finished").at(-1) as { summary?: string } | undefined)?.summary;
+    expect(done()).toMatch(/se puede deshacer/);
+
+    await orch.run("¿qué cambió el agente?"); // no project named: the one it last worked in
+    expect(done()).toMatch(/2 archivo\(s\): editado app\.js, nuevo extra\.js/);
+
+    await orch.run("Deshacé los cambios");
+    expect(asked).toEqual(["code.agent", "code.undo"]);
+    expect(done()).toMatch(/volvió a como estaba/);
+    expect(readFileSync(join(p, "app.js"), "utf8")).toBe("v1\n");
+    expect(existsSync(join(p, "extra.js"))).toBe(false);
+  });
+
+  it("the model can read changes but can never undo on its own", () => {
+    const cfg = Config.parse({}).coding;
+    expect(makeCodeUndoTool(cfg, dir()).modelCallable).toBe(false);
+    expect(makeCodeChangesTool(cfg, dir()).risk).toBe("read");
   });
 });

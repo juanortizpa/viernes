@@ -40,7 +40,7 @@ describe("LiveClient", () => {
     expect(client.status).toBe("connecting");
     socket.receive({ type: "hello.ok", protocol: 1, models: ["m"], offline: true });
     expect(client.status).toBe("ready");
-    expect(client.info).toEqual({ models: ["m"], offline: true, voice: false, voiceEngines: [] });
+    expect(client.info).toEqual({ models: ["m"], offline: true, voice: false, voiceEngines: [], streaming: false });
   });
 
   it("forwards only valid events and ignores garbage", async () => {
@@ -124,5 +124,32 @@ describe("LiveClient", () => {
   it("knows whether voice is available", async () => {
     const h = await ready();
     expect(h.client.info?.voice).toBe(false);
+  });
+});
+
+describe("LiveClient: streaming voice messages (ADR-0029)", () => {
+  it("routes live captions to onVoice (never to the event stream) and passes the latency fields", async () => {
+    const sent: string[] = [];
+    let sock: { onopen: (() => void) | null; onmessage: ((e: { data: unknown }) => void) | null; onerror: null; onclose: null; send: (d: string) => void; close: () => void } | undefined;
+    const client = new LiveClient({ fetchToken: async () => "t", openSocket: () => (sock = { onopen: null, onmessage: null, onerror: null, onclose: null, send: (d) => sent.push(d), close: () => {} }) as never });
+    await client.connect();
+    sock!.onopen?.();
+    sock!.onmessage?.({ data: JSON.stringify({ type: "hello.ok", protocol: 1, models: [], offline: true, voice: true, streaming: true }) });
+    expect(client.info?.streaming).toBe(true);
+    const notices: unknown[] = [];
+    const events: unknown[] = [];
+    client.onVoice((n) => notices.push(n));
+    client.onEvent((e) => events.push(e));
+    sock!.onmessage?.({ data: JSON.stringify({ type: "voice.partial", id: "a", text: "explicame los", turnEnd: false }) });
+    sock!.onmessage?.({ data: JSON.stringify({ type: "voice.transcribed", text: "explicame los closures", audioMs: 1500, latencyMs: 300, afterEndMs: 0, speculated: true }) });
+    expect(notices).toEqual([
+      { kind: "partial", text: "explicame los", turnEnd: false },
+      { kind: "transcribed", text: "explicame los closures", audioMs: 1500, latencyMs: 300, afterEndMs: 0, speculated: true },
+    ]);
+    expect(events).toEqual([]);
+    const s = client.openVoiceStream();
+    s.push(new Float32Array(3200));
+    s.end();
+    expect(sent.slice(-3).map((l) => JSON.parse(l).type)).toEqual(["voice.stream.start", "voice.stream.chunk", "voice.stream.end"]);
   });
 });

@@ -6,6 +6,11 @@ export interface FollowUp {
   args: Record<string, unknown>;
 }
 
+/** One step of a routine: what the user wrote for it, and the local command it resolved to. */
+export interface RoutineStep extends FollowUp {
+  label: string;
+}
+
 export type Intent =
   | {
       route: "local";
@@ -15,6 +20,11 @@ export type Intent =
       confidence: number;
       /** Runs through the same policy path after the main tool succeeds; its failure does not fail the task. */
       then?: FollowUp;
+      /**
+       * A routine: these steps run in order instead of `tool`, each through the same policy path (so each sensitive step asks).
+       * A failed step is reported and the rest still run; the task succeeds only if every step did.
+       */
+      sequence?: { name: string; steps: RoutineStep[] };
     }
   | { route: "llm"; confidence: number };
 
@@ -40,6 +50,13 @@ export function extractOpenTarget(text: string): { raw: string; clean: string } 
   const clean = raw.replace(FILLER_WORDS, "").trim();
   return clean ? { raw, clean } : undefined;
 }
+
+/**
+ * MEASURED on the user's own voice (Groq whisper, 35 clips): Rioplatense "abrí / abre / abrime" comes back as "ahora", "abril" or
+ * "a abrir" with HIGH confidence (0.75-0.85). These words only count as "open" when what follows is an app the catalog knows,
+ * and such a guess is never learned as an alias.
+ */
+const MISHEARD_OPEN = new RegExp(`^${LEAD}(?:ahora(?:\\s+(?:en|hay|el|la))?|abril|a abrir|abrir el|abri el)\\s+(.+)$`);
 
 const DAY_WORD = "(hoy|today|manana|tomorrow|ayer|yesterday)";
 const DAY_QUERY = new RegExp(
@@ -92,6 +109,16 @@ export class IntentRouter {
           then: { tool: "aliases.learn", args: { alias: target.clean, command: guess.command } },
         };
       }
+    }
+
+    const misheard = MISHEARD_OPEN.exec(text);
+    if (misheard?.[1]) {
+      const raw = misheard[1].replace(TRAILING, "").trim();
+      const clean = raw.replace(FILLER_WORDS, "").trim();
+      const exact = this.catalog.lookup(raw) ?? this.catalog.lookup(clean);
+      if (exact) return { route: "local", intent: "apps.open", tool: "apps.open", args: { app: exact }, confidence: 0.9 };
+      const guess = clean ? this.catalog.suggest(clean) : undefined;
+      if (guess) return { route: "local", intent: "apps.open", tool: "apps.open", args: { app: guess.command }, confidence: 0.6 };
     }
 
     for (const rule of this.opts.rules ?? []) {

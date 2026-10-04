@@ -29,6 +29,11 @@ export interface GenerateRequest {
   /** Only honoured by providers with `supportsToolCalls`. */
   tools?: ToolSpec[];
   signal?: AbortSignal;
+  /**
+   * "fast": the user is waiting on a reply (voice). Adapters that can trade hidden reasoning for latency do so (measured on Groq:
+   * gpt-oss with low reasoning starts answering 100-190 ms sooner). Ignored where it does not apply.
+   */
+  speed?: "fast";
 }
 
 export type ProviderChunk =
@@ -52,6 +57,8 @@ export class ProviderError extends Error {
     message: string,
     readonly provider: string,
     readonly status?: number,
+    /** From a Retry-After header, when the server sent one. */
+    readonly retryAfterMs?: number,
   ) {
     super(message);
   }

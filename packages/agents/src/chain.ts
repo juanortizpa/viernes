@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { checkpointAfter, checkpointBefore, type AgentCheckpoint } from "./checkpoint";
 import type { AgentResult, CodingAgent } from "./types";
 
 export interface Project {
@@ -69,6 +70,8 @@ export interface CodingTaskResult {
   /** `git diff --stat` style summary when the project is a git repo. */
   changes?: string;
   verify?: VerifyResult;
+  /** A restore point was saved before the agents ran: "deshacé los cambios" can undo this run (ADR-0026). */
+  undoable?: boolean;
 }
 
 /** The instructions every agent gets. Short, Spanish, and with the boundaries JARVIS needs. */
@@ -94,6 +97,8 @@ export interface RunCodingTaskOptions {
   timeoutMs?: number;
   idleTimeoutMs?: number;
   verify?: (command: string, cwd: string, signal?: AbortSignal) => Promise<VerifyResult>;
+  /** Save a git restore point before and after the run (default true; a non-git folder simply has none). */
+  checkpoints?: boolean;
 }
 
 /**
@@ -102,6 +107,26 @@ export interface RunCodingTaskOptions {
  * happened. A stuck agent that already did the work still counts: verification runs even after a timeout.
  */
 export async function runCodingTask(o: RunCodingTaskOptions): Promise<CodingTaskResult> {
+  let cp: AgentCheckpoint | undefined;
+  if (o.checkpoints !== false) {
+    try {
+      cp = checkpointBefore(o.project.path, o.task);
+      if (cp) o.onProgress?.("Punto de restauración guardado");
+    } catch (e) {
+      o.onProgress?.("Sin punto de restauración", e instanceof Error ? e.message : String(e)); // never blocks the work
+    }
+  }
+  const r = await runChain(o);
+  if (!cp) return r;
+  try {
+    checkpointAfter(cp);
+    return { ...r, undoable: true };
+  } catch {
+    return r;
+  }
+}
+
+async function runChain(o: RunCodingTaskOptions): Promise<CodingTaskResult> {
   const verify = o.verify ?? ((cmd: string, cwd: string, signal?: AbortSignal) => runVerify(cmd, cwd, undefined, signal));
   const attempts: Attempt[] = [];
   let previous: { agent: string; reason: string; summary: string } | undefined;

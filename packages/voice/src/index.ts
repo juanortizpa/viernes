@@ -10,3 +10,4 @@ export * from "./dtw";
 export * from "./groq-stt";
 export * from "./gemini-stt";
 export * from "./race-stt";
+export * from "./incremental";

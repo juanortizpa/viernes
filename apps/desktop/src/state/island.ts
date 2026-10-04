@@ -50,6 +50,8 @@ export type IslandAction =
   | { kind: "voice.recording" }
   | { kind: "voice.level"; level: number }
   | { kind: "voice.transcribing" }
+  /** Live caption: what the sidecar has understood so far while the user is still talking (ADR-0029). Not an action. */
+  | { kind: "voice.partial"; text: string }
   | { kind: "voice.heard"; text: string; /** e.g. "groq:whisper-large-v3-turbo" */ engine?: string; /** literal words when `text` was interpreted */ heard?: string }
   | { kind: "voice.rejected"; message: string }
   | { kind: "speech"; speaking: boolean }
@@ -84,6 +86,9 @@ export function islandReducer(state: IslandState, action: IslandAction): IslandS
       return { ...initialState, mode: "listening", headline: "Escuchando…", detail: "Suelta para enviar", level: 0, speaking: state.speaking, wake: state.wake };
     case "voice.level":
       return state.mode === "listening" ? { ...state, level: action.level } : state;
+    case "voice.partial":
+      // Only while the user is talking or the last words are being transcribed: a late caption never overwrites an answer.
+      return state.mode === "listening" || (state.mode === "thinking" && state.headline === "Transcribiendo…") ? { ...state, detail: `«${action.text}»` } : state;
     case "voice.transcribing":
       return { ...state, mode: "thinking", headline: "Transcribiendo…", detail: undefined, level: undefined };
     case "voice.heard":

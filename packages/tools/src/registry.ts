@@ -28,7 +28,7 @@ export class ToolRegistry {
       risk: tool.risk,
       reversible: tool.reversible,
       verifiable: tool.verify !== undefined,
-      inputSchema: zodToJsonSchema(tool.input) as Record<string, unknown>,
+      inputSchema: tool.inputSchema ?? (zodToJsonSchema(tool.input) as Record<string, unknown>),
     };
   }
 

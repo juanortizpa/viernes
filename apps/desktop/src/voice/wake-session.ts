@@ -2,6 +2,7 @@ import { WakeController, enrollmentFromJson, type Enrollment, type WakeAction, t
 import type { LiveClient } from "../live/client";
 import { startContinuousMic, type ContinuousMic } from "./mic";
 import { toBase64 } from "./pcm-buffer";
+import type { VoiceStream } from "./voice-stream";
 
 export const WAKE_ENROLLMENT_KEY = "jarvis.wakeEnrollment";
 export const WAKE_SENSITIVITY_KEY = "jarvis.wakeSensitivity";
@@ -29,6 +30,8 @@ export interface WakeSessionEvents {
   onState: (state: WakeState, followUpMs?: number) => void;
   onLevel?: (level: number) => void;
   onError: (message: string) => void;
+  /** A command utterance ended and was handed to the sidecar; the user stopped talking `endSilenceMs` ago. */
+  onCommandSent?: (endSilenceMs: number) => void;
 }
 
 /**
@@ -42,6 +45,10 @@ export class WakeSession {
   private paused = false;
   private readonly controller: WakeController;
   private offResult: (() => void) | undefined;
+  private offPartial: (() => void) | undefined;
+  private state: WakeState = "off";
+  /** Streaming of the command phase (ADR-0029): the sidecar hears the order while it is being said. */
+  private stream: VoiceStream | undefined;
 
   constructor(private readonly live: LiveClient, private readonly events: WakeSessionEvents, enrollment: Enrollment | undefined = loadEnrollment(), sensitivity: number = loadSensitivity()) {
     this.controller = new WakeController({ enrollment, sensitivity });
@@ -62,10 +69,17 @@ export class WakeSession {
   async start(): Promise<void> {
     if (this.mic) return;
     this.offResult = this.live.onWakeResult((r) => this.run(this.controller.onVerified({ detected: r.detected, commandRan: r.commandRan })));
+    // Semantic end of turn: when the sidecar says the order is complete, do not wait the full patient silence.
+    this.offPartial = this.live.onVoice((n) => n.kind === "partial" && n.turnEnd && this.stream && this.controller.hintTurnComplete());
     try {
       this.mic = await startContinuousMic(
         (chunk) => {
-          if (!this.paused) this.run(this.controller.onAudio(chunk));
+          if (this.paused) return;
+          if ((this.state === "command" || this.state === "followUp") && this.live.status === "ready" && this.live.info?.streaming) {
+            this.stream ??= this.live.openVoiceStream();
+            this.stream.push(chunk);
+          }
+          this.run(this.controller.onAudio(chunk));
         },
         this.events.onLevel,
       );
@@ -79,11 +93,19 @@ export class WakeSession {
     this.timer = setInterval(() => this.run(this.controller.tick()), 250);
   }
 
+  private dropStream(): void {
+    this.stream?.cancel();
+    this.stream = undefined;
+  }
+
   async stop(): Promise<void> {
+    this.dropStream();
     clearInterval(this.timer);
     this.timer = undefined;
     this.offResult?.();
     this.offResult = undefined;
+    this.offPartial?.();
+    this.offPartial = undefined;
     this.run(this.controller.stop());
     const mic = this.mic;
     this.mic = undefined;
@@ -109,6 +131,9 @@ export class WakeSession {
     for (const a of actions) {
       switch (a.type) {
         case "state":
+          this.state = a.state;
+          // Left the command phase without a command (timeout, stop): nothing is to be answered.
+          if (a.state !== "command" && a.state !== "followUp" && a.state !== "busy") this.dropStream();
           this.events.onState(a.state, a.followUpMs);
           break;
         case "verify":
@@ -116,7 +141,12 @@ export class WakeSession {
           else this.run(this.controller.onVerified({ detected: false, commandRan: false }));
           break;
         case "command":
-          if (this.live.status === "ready") this.live.submitVoice(toBase64(a.wav));
+          if (this.live.status !== "ready") break;
+          this.events.onCommandSent?.(a.endSilenceMs);
+          if (this.stream) {
+            this.stream.end(); // the sidecar already has these words, and may already be answering them
+            this.stream = undefined;
+          } else this.live.submitVoice(toBase64(a.wav));
           break;
         case "discard":
           break;

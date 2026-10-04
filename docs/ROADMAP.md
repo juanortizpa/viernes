@@ -16,6 +16,8 @@
 | 5 | Memoria + optimización de contexto | 🟦 conversación + recuerdos explícitos hechos y medidos (ADR-0023): recuperación 94 % en prueba retenida, ablación real 0 → 28/28 con +25 tokens; falta lo semántico (embedding neuronal) | Recuperación medida con ablación |
 | 6 | Router aprendido + experimento final | ⬜ | Frontera de Pareto costo vs éxito |
 | P | Agente de programación (ADR-0024) | 🟦 Gemini CLI → Claude Code con comprobación del proyecto; Gemini probado en real (91 s, sin escalar); falta Windows y Claude real | "en el proyecto X, arregla…" edita, comprueba y lo cuenta por voz |
+| L | Capa de latencia (ADR-0029) | ✅ streaming + especulación, voz por frases, muletillas, salud de modelos, herramientas por petición; falta micrófono real | Oír a JARVIS en <1 s: push-to-talk p50 403 ms, manos libres p50 823 ms (banco con grabaciones reales) |
+| B | Barrida de funcionalidades (ADR-0025–0028) | ✅ MCP, deshacer del agente, rutinas, «¿qué podés hacer?», web con guarda de egreso; suite verde en Windows | «¿a cuánto está el dólar hoy?» con fuente; «deshacé los cambios» restaura byte a byte |
 | 7 | Voz | 🟦 push-to-talk + STT local (probado en Windows), TTS y wake word de dos etapas (estos dos solo con audio simulado) | Push-to-talk → respuesta hablada |
 
 ---
@@ -194,6 +196,35 @@ exista algo visible, no solo logs.
 - [ ] Cancelación de eco real y barge-in por voz (hoy se ignora el micrófono mientras habla)
 - [ ] STT en streaming (V2)
 
+## Fase L — Capa de latencia ✅ (ADR-0029)
+**Meta:** oír a JARVIS en menos de 1 s desde que el usuario deja de hablar; que piense desde las primeras palabras.
+- [x] Línea base medida con las grabaciones del usuario (STT 0,8–3 s; modelo con 429 permanente primero; voz al final de la respuesta)
+- [x] Escucha en streaming (`voice.stream.*`), parciales con Groq, subtítulos en vivo, reuso del parcial (0 ms de STT tras soltar)
+- [x] Política de aceptación del texto rápido calibrada (31/35 a 431 ms vs 30/35 a 1.206 ms) + regla del «abrí»→«ahora» medido
+- [x] Especulación con eventos retenidos y herramientas en espera hasta confirmar; descarte sin rastro
+- [x] Cierre de turno semántico en manos libres (450 ms en vez de 900 cuando la frase está completa)
+- [x] Voz por frases mientras el modelo escribe; «Mejor dicho:» tras escalar; narración de progreso en tareas largas
+- [x] `ModelHealth`: enfriamiento ante 429/5xx y EWMA del primer token; gpt-oss con razonamiento bajo en voz
+- [x] Herramientas por petición y esquemas compactos (−42 % de tokens de entrada)
+- [x] Muletillas honestas según la latencia predicha y al arrancar herramientas lentas
+- [x] Banco de latencia reutilizable: `pnpm --filter @jarvis/sidecar latency`
+- [ ] Probar con micrófono real en Windows (streaming de la isla, cierre semántico, arranque del TTS)
+- [ ] Re-calibrar umbrales con más grabaciones (hoy 35 de una persona)
+- [ ] TTS neuronal local en streaming si las voces del sistema tardan en arrancar
+
+## Fase B — Barrida de funcionalidades ✅ (ADR-0025–0028)
+**Meta:** lo que hace útil a Claude Code y similares, adaptado a un asistente personal por voz, sin romper las reglas duras.
+- [x] Suite verde **en Windows** (antes 15 fallos y typecheck roto): stand-ins de CLI como `.cmd` (ejercita el camino real de cmd.exe), rutas con `fileURLToPath`, tests de whisper solo-POSIX marcados, import roto en `coding.test.ts`
+- [x] **Cliente MCP** (`@jarvis/mcp`, ADR-0025): stdio, sin capacidades de cliente, riesgo por config (`sensitive` por defecto), salida no confiable, entorno sin claves, `$VAR` desde `jarvis.env`, arranque en segundo plano. Probado contra el SDK oficial 1.30.1 y con Groq real
+- [x] **Puntos de restauración del agente** (ADR-0026): foto git exacta antes/después de `code.agent`; «¿qué cambió el agente?», «deshacé los cambios» (pide permiso, nunca pisa ediciones posteriores)
+- [x] **Rutinas** deterministas y **«¿qué podés hacer?»** (ADR-0027)
+- [x] **Web** (ADR-0028): `web.search` (DuckDuckGo) + `web.fetch` (solo direcciones públicas, redirecciones incluidas), guarda de egreso en el policy engine, fecha en el prompt, preguntas «de hoy» exigen modelo con herramientas. En vivo: dólar blue con fuente en 11 s
+- [x] `maxToolSteps` configurable (por defecto 8; antes 5 fijo)
+- [ ] Transporte MCP por HTTP, recursos/prompts MCP; exponer JARVIS como servidor MCP (V2)
+- [ ] Rutinas con parámetros; editor de rutinas y servidores MCP en la isla
+- [ ] Continuar la sesión del agente («seguí con eso») con `--resume` de cada CLI (flags sin verificar en las versiones reales)
+- [ ] Probar servidores MCP de terceros reales (GitHub, navegador) en Windows
+
 ## Fase P — Agente de programación (ADR-0024) 🟦
 - [x] `packages/agents`: adaptadores Gemini CLI y Claude Code (stream-json, tarea por stdin, límite total e inactividad, corte del árbol de procesos), etapas en español, cadena el-más-barato-primero con comprobación del proyecto y contexto del intento anterior
 - [x] Herramienta `code.agent` (sensible, salida no confiable, cancelable, progreso real), proyectos por alias (`coding.projects`), orden directa "en el proyecto X, …", resumen hablado
@@ -253,4 +284,6 @@ exista algo visible, no solo logs.
 | 2026-10-04 | Respuestas del usuario: producto personal, 100 % gratis (APIs gratuitas + Claude Pro y Gemini por suscripción), solo español, asistente general con foco en programar. Como la isla real en Tauri ya existe (ADR-0021/0022), el orden propuesto pasa a ser: (1) agente de programación delegando en Claude Code / Gemini CLI locales, (2) memoria, (3) cerrar la validación de la isla en Windows. Fases 3/6 (experimento) en segundo plano. |
 | 2026-10-04 | **Memoria (ADR-0023).** Caso real: «¿quién ganó el mundial?» → «¿masculino o femenino?» → «masculino» → «¿qué quieres hacer con la palabra masculino?». Reproducido con Groq antes del cambio y corregido después. M1: memoria de conversación (RAM, 20 min, seguimientos con contexto en ruteo y sin caché, sin secretos ni contenido no confiable). M2: recuerdos explícitos («recuerda que…») en SQLite, preferencias siempre y datos por relevancia, el modelo lee pero no escribe (`modelCallable`), control completo por voz/texto y panel. M3: `memory-eval` (recupera 88 %/94 % dev/prueba; 100 % y 5 % de falsa inyección en consultas normales) y ablación real con 2 modelos (0 → 28/28 por +25 tokens; meter todo cuesta +400–590; 0 fugas). Fallos encontrados midiendo y corregidos: «≤ 4 palabras = seguimiento» pegaba la pregunta anterior y recuperaba un recuerdo ajeno; «estoy» como palabra temática hizo que el modelo inventara una respuesta; mi propia evaluación fallaba con espacios no separables y aprobaba por suerte. Límite declarado: huecos semánticos/entre idiomas. **Sin probar en Windows.** |
 | 2026-10-04 | **Agente de programación (ADR-0024):** `packages/agents` (Gemini CLI → Claude Code, el más barato primero; escala si falla, se queda sin cuota o falla la comprobación del proyecto), herramienta `code.agent` sensible y no confiable con progreso real y cancelación, orden directa "en el proyecto X, …", proyectos en `coding.projects`, resumen hablado, `setup` detecta los CLIs. Hallazgos reales: Gemini CLI sin interfaz rechaza carpetas no confiables (se pasa `GEMINI_CLI_TRUST_WORKSPACE`) y se cuelga reintentando 503 (corte por inactividad + comprobación igual). Prueba real: bug arreglado en 91 s sin escalar. De paso: el TTS cortaba oraciones en "app.js" (corregido); la salida no confiable de una orden directa ya no entra a la memoria de conversación. |
+| 2026-10-04 | **Capa de latencia (ADR-0029).** Pedido: oír a JARVIS en <1 s y que piense desde las primeras palabras. Medido con 35 grabaciones del usuario y APIs reales: push-to-talk p50 532 → 403 ms, manos libres ~1.430 → 823 ms (primer audio posible). Streaming + parciales + reuso, aceptación calibrada, especulación con herramientas en espera, cierre de turno semántico, voz por frases, salud de modelos, razonamiento bajo, herramientas por petición (−42 % tokens), muletillas según latencia predicha. Descartado por medición: precalentar conexiones (~55 ms). Bugs encontrados por tests: un parcial que ya cubría todo no se anunciaba como completo; tras descartar una especulación el bucle volvía a llamar al modelo; la isla habría tratado un subtítulo como error. **Sin micrófono real.** |
+| 2026-10-04 | **Barrida de funcionalidades (ADR-0025–0028).** Base: en Windows había 15 tests rotos y el typecheck del sidecar fallaba (tests que asumían POSIX); ahora 0. Nuevo: cliente MCP (probado contra el SDK oficial y con Groq real), puntos de restauración del agente con deshacer/ver cambios, rutinas, «¿qué podés hacer?», web con guarda de egreso, `maxToolSteps`. Hallazgos reales: (1) `C:\Users\JUAN` es un repo git y la carpeta temporal está dentro: la primera versión del checkpoint fotografiaba todo el perfil — ahora solo la carpeta del proyecto y solo si está versionada (se borraron las refs que dejó la prueba en ese repo); (2) con `autocrlf=true` la restauración no era exacta — ahora sin filtros de git; (3) el grounding de Gemini no está en el plan gratis y, sin web, un modelo dio el dólar ~20 % mal; (4) dos páginas de 12k caracteres superaban el límite por minuto de Groq. |
 | 2026-10-04 | **`main` no compilaba:** la regla `tools` del `.gitignore` (pensada para la carpeta raíz de descargas) ignoraba en silencio todo archivo nuevo dentro de `packages/tools/`, así que `packages/tools/src/memory.ts` nunca se subió. Regla cambiada a `/tools` y el módulo reescrito a partir de sus llamadas y tests (ADR-0023 memoria): 461 tests en verde. |

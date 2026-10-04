@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { fileURLToPath } from "node:url";
 import { EventBus } from "@jarvis/core";
 import { SqliteTraceStore } from "@jarvis/storage";
 import { Config, loadConfig } from "../src/config";
@@ -38,7 +39,7 @@ describe("buildRuntime", () => {
   });
 
   it("the shipped free example config loads, is free and orders models weakest to strongest", () => {
-    const cfg = loadConfig(new URL("../../../jarvis.config.free.example.json", import.meta.url).pathname);
+    const cfg = loadConfig(fileURLToPath(new URL("../../../jarvis.config.free.example.json", import.meta.url)));
     const r = buildRuntime(cfg, { env: { OPENROUTER_API_KEY: "k" }, launcher: noop });
     expect(r.models).toHaveLength(3);
     expect(cfg.freeOnly).toBe(true);
@@ -53,7 +54,7 @@ describe("buildRuntime", () => {
   });
 
   it("the multi-provider free example is free, tiered, and its escalation ladder strictly climbs across providers", async () => {
-    const cfg = loadConfig(new URL("../../../jarvis.config.free-multi.example.json", import.meta.url).pathname);
+    const cfg = loadConfig(fileURLToPath(new URL("../../../jarvis.config.free-multi.example.json", import.meta.url)));
     const r = buildRuntime(cfg, { env: { GROQ_API_KEY: "k", OPENROUTER_API_KEY: "k", GEMINI_API_KEY: "k" }, launcher: noop });
     const { escalationLadder } = await import("@jarvis/core");
     const ladder = escalationLadder({ input: "x", taskType: "other", complexity: 0.4 }, r.providers.capabilities());

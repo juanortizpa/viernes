@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { z } from "zod";
 import { ModelCapabilities } from "@jarvis/protocol";
+import { McpServerConfig } from "@jarvis/mcp";
 
 const Models = z.array(ModelCapabilities).default([]);
 
@@ -82,6 +83,17 @@ export const Config = z.object({
       /** Initial prompt that biases recognition toward your vocabulary. Default: built from your app names; "" turns it off. */
       prompt: z.string().max(300).optional(),
       timeoutMs: z.number().int().min(1_000).max(300_000).default(60_000),
+      /**
+       * Latency layer (ADR-0029). `streaming`: transcribe while the user talks (partials with the fast cloud engine).
+       * `speculate`: start answering a partial that looks complete; it only becomes real if the final words match.
+       * `fastAcceptConfidence`: whisper confidence above which the fast transcript is used without waiting for Gemini.
+       */
+      streaming: z.boolean().default(true),
+      speculate: z.boolean().default(true),
+      fastAcceptConfidence: z.number().min(0).max(1).default(0.7),
+      partialsPerMinute: z.number().int().min(0).max(30).default(12),
+      /** Short spoken fillers ("A ver…", "Lo busco.") when the answer is predicted to take a while (ADR-0029). */
+      fillers: z.boolean().default(true),
     })
     .optional(),
   /**
@@ -101,6 +113,23 @@ export const Config = z.object({
       idleTimeoutMs: z.number().int().min(10_000).default(180_000),
     })
     .default({}),
+  /**
+   * MCP servers (ADR-0025): each one's tools become JARVIS tools, behind the policy engine. Default risk `sensitive` (asks every
+   * time); results are untrusted. Servers get a minimal environment plus `env` ("$NAME" reads jarvis.env), never JARVIS's API keys.
+   */
+  mcp: z.object({ servers: z.record(McpServerConfig).default({}) }).default({}),
+  /**
+   * Routines (ADR-0027): a name → commands you would say yourself, run in order without a model. Example:
+   * { "modo trabajo": ["abre vs code", "abre teams", "en el proyecto web, corré los tests"] }. Say the name, or "activá la rutina …".
+   */
+  routines: z.record(z.array(z.string().min(2).max(500)).min(1).max(15)).default({}),
+  /**
+   * Web for the model (ADR-0028): `web.search` (DuckDuckGo, no account) and `web.fetch` (public pages only, never the local network).
+   * Results are untrusted; once a task read them, sending data to a new address asks first.
+   */
+  web: z.object({ search: z.boolean().default(true), fetch: z.boolean().default(true) }).default({}),
+  /** Upper bound on model<->tool round trips per task (each one is a model call). */
+  maxToolSteps: z.number().int().min(1).max(20).default(8),
   /** Refuse to start if any configured model has a non-zero price. */
   freeOnly: z.boolean().default(false),
   /** Discover installed apps (Windows Start Menu) so "abre X" works without hand-written aliases. */

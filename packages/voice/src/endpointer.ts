@@ -46,7 +46,7 @@ export class Endpointer {
     this.pending = [];
     this.preRoll = [];
     this.utterance = [];
-    this.speechMs = this.silenceMs = this.totalMs = this.elapsedMs = 0;
+    this.speechMs = this.silenceMs = this.totalMs = this.elapsedMs = this.voicedMs = 0;
     this.speaking = false;
     this.utteranceStartMs = undefined;
     this.state = "silence";
@@ -55,6 +55,13 @@ export class Endpointer {
   /** Change how much silence ends an utterance (e.g. be more patient while a command is being dictated). */
   setEndSilence(ms: number): void {
     this.o.endSilenceMs = ms;
+  }
+
+  /** Voiced frames seen in the current utterance (grows only while the user is actually talking). */
+  voicedMs = 0;
+  /** Silence since the last voiced frame of the current utterance. */
+  get trailingSilenceMs(): number {
+    return this.silenceMs;
   }
 
   /** True once speech has begun in the current utterance. */
@@ -96,6 +103,7 @@ export class Endpointer {
     }
     this.utterance.push(f);
     this.totalMs += FRAME_MS;
+    if (voiced) this.voicedMs += FRAME_MS;
     this.silenceMs = voiced ? 0 : this.silenceMs + FRAME_MS;
     if (this.silenceMs >= this.o.endSilenceMs || this.totalMs >= this.o.maxMs) this.state = "ended";
   }

@@ -1,5 +1,6 @@
 import { ServerMessage, encodeLine, IPC_VERSION, type MemoryItemView } from "@jarvis/ipc";
 import type { EconomySummary, OrchestratorEvent } from "@jarvis/protocol";
+import { VoiceStream } from "../voice/voice-stream";
 
 /** What the sidecar remembers (ADR-0023). */
 export interface MemorySnapshot {
@@ -17,11 +18,15 @@ export interface LiveInfo {
   voice: boolean;
   /** Engines in order; one starting with "groq:" sends audio to Groq. */
   voiceEngines: string[];
+  /** The sidecar transcribes while the user talks (ADR-0029). */
+  streaming: boolean;
 }
 
 /** What the sidecar tells the UI about a push-to-talk clip. */
 export type VoiceNotice =
-  | { kind: "transcribed"; text: string; audioMs: number; latencyMs: number; engine?: string; heard?: string }
+  | { kind: "transcribed"; text: string; audioMs: number; latencyMs: number; engine?: string; heard?: string; afterEndMs?: number; speculated?: boolean }
+  /** What has been understood so far, while the user is still talking. A caption, never an action. */
+  | { kind: "partial"; text: string; /** It heard everything and sounds finished: the turn may close early. */ turnEnd: boolean }
   | { kind: "rejected"; reason: string; message: string };
 
 export interface SocketLike {
@@ -124,6 +129,14 @@ export class LiveClient {
     this.send({ type: "voice.submit", audio: wavBase64 });
   }
 
+  /**
+   * Streams the microphone while the user talks (ADR-0029). Push 16 kHz chunks; `end()` when they stop. The answer comes as usual
+   * (`onVoice` transcribed/rejected, then the task's events); partial captions arrive as `onVoice({ kind: "partial" })`.
+   */
+  openVoiceStream(): VoiceStream {
+    return new VoiceStream((m) => this.send(m));
+  }
+
   /** Ask for the AI Economy aggregate; the answer arrives through `onEconomy`. */
   requestEconomy(limit = 500): void {
     this.send({ type: "economy.get", limit });
@@ -191,16 +204,20 @@ export class LiveClient {
       }
       const msg = parsed.data;
       if (msg.type === "hello.ok") {
-        this.info = { models: msg.models, offline: msg.offline, voice: msg.voice, voiceEngines: msg.voiceEngines };
+        this.info = { models: msg.models, offline: msg.offline, voice: msg.voice, voiceEngines: msg.voiceEngines, streaming: msg.streaming };
         this.setStatus("ready");
       } else if (msg.type === "hello.error") this.fail(msg.message);
       else if (msg.type === "error") this.lastError = msg.message;
       else if (msg.type === "wake.result") this.wakeListeners.forEach((l) => l({ detected: msg.detected, commandRan: msg.commandRan, reason: msg.reason }));
       else if (msg.type === "memory") this.memoryListeners.forEach((l) => l({ enabled: msg.enabled, conversationTurns: msg.conversationTurns, items: msg.items }));
       else if (msg.type === "economy") this.economyListeners.forEach((l) => l(msg.summary));
-      else if (msg.type === "voice.transcribed") this.voiceListeners.forEach((l) => l({ kind: "transcribed", text: msg.text, audioMs: msg.audioMs, latencyMs: msg.latencyMs, ...(msg.engine ? { engine: msg.engine } : {}), ...(msg.heard ? { heard: msg.heard } : {}) }));
+      else if (msg.type === "voice.transcribed")
+        this.voiceListeners.forEach((l) =>
+          l({ kind: "transcribed", text: msg.text, audioMs: msg.audioMs, latencyMs: msg.latencyMs, ...(msg.engine ? { engine: msg.engine } : {}), ...(msg.heard ? { heard: msg.heard } : {}), ...(msg.afterEndMs !== undefined ? { afterEndMs: msg.afterEndMs } : {}), ...(msg.speculated ? { speculated: true } : {}) }),
+        );
+      else if (msg.type === "voice.partial") this.voiceListeners.forEach((l) => l({ kind: "partial", text: msg.text, turnEnd: msg.turnEnd }));
       else if (msg.type === "voice.rejected") this.voiceListeners.forEach((l) => l({ kind: "rejected", reason: msg.reason, message: msg.message }));
-      else this.eventListeners.forEach((l) => l(msg.event));
+      else if (msg.type === "event") this.eventListeners.forEach((l) => l(msg.event));
     }
   }
 

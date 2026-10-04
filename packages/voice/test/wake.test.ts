@@ -382,3 +382,35 @@ describe("WakeController", () => {
     expect(r.ctl.state).toBe("idle");
   });
 });
+
+describe("WakeController: semantic end of turn (ADR-0029)", () => {
+  /** In the follow-up window, say a command and stay silent; `hintAt` = ms of silence after which the sidecar says "finished". */
+  function closeAfter(hintAt: number | undefined, resume = false): { closedAt: number | undefined; endSilenceMs: number | undefined } {
+    const r = rig();
+    r.log.push(...r.ctl.start(), ...r.ctl.onTaskStarted(), ...r.ctl.onTaskDone({ fromVoice: true }));
+    r.wait(500);
+    r.feed(say(COMMAND, { seed: 70 }));
+    let closedAt: number | undefined;
+    for (let ms = 0; ms < 1500 && closedAt === undefined; ms += 50) {
+      if (hintAt !== undefined && ms === hintAt) r.ctl.hintTurnComplete();
+      if (resume && ms === 300) r.feed(say(COMMAND, { seed: 71 }));
+      r.wait(50);
+      if (r.take("command").length) closedAt = ms + 50;
+    }
+    return { closedAt, endSilenceMs: r.take("command")[0]?.endSilenceMs };
+  }
+
+  it("closes the turn after ~450 ms of silence when the sidecar says the sentence is complete, instead of 900", () => {
+    const patient = closeAfter(undefined);
+    const early = closeAfter(250);
+    expect(patient.closedAt).toBeGreaterThanOrEqual(900);
+    expect(early.closedAt).toBeLessThanOrEqual(550);
+    expect(early.endSilenceMs).toBeGreaterThanOrEqual(440);
+    expect(early.endSilenceMs).toBeLessThan(600);
+  });
+
+  it("a hint is void as soon as the user talks again: the patient silence applies", () => {
+    const r = closeAfter(100, true);
+    expect(r.endSilenceMs).toBeGreaterThanOrEqual(880); // the turn closed only after the full patient silence
+  });
+});

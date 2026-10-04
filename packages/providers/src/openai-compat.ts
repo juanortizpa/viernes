@@ -64,6 +64,8 @@ export class OpenAICompatibleProvider implements Provider {
         stream: true,
         stream_options: { include_usage: true },
         max_tokens: req.maxTokens,
+        // gpt-oss reasons before answering; for a waiting listener a short think is enough (Groq/OpenAI-compatible parameter).
+        ...(req.speed === "fast" && /gpt-oss/i.test(req.model) ? { reasoning_effort: "low" } : {}),
         ...(req.tools?.length
           ? { tools: req.tools.map((t) => ({ type: "function", function: { name: encodeToolName(t.name), description: t.description, parameters: t.inputSchema } })) }
           : {}),

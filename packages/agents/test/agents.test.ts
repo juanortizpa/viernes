@@ -1,6 +1,6 @@
 import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ClaudeCodeAgent, GeminiCliAgent, buildPrompt, describeTool, planSpawn, runCodingTask, runVerify, type CodingAgent } from "../src";
 
@@ -40,13 +40,20 @@ if ("${kind}" === "gemini") {
 `,
   );
   chmodSync(p, 0o755);
-  return p;
+  return asExecutable(p);
+}
+/** Windows cannot run a script directly: wrap it in a .cmd shim, as npm does for the real CLIs (this exercises the cmd.exe path). */
+function asExecutable(script: string): string {
+  if (process.platform !== "win32") return script;
+  const shim = script.replace(/\.mjs$/, ".cmd");
+  writeFileSync(shim, `@node "${script}" %*\r\n`);
+  return shim;
 }
 function project(): { path: string; log: string } {
   const p = mkdtempSync(join(dir, "proj-"));
   writeFileSync(join(p, "sum.js"), "function sum(a, b) {\n  return a - b;\n}\nmodule.exports = { sum };\n");
   writeFileSync(join(p, "test.js"), 'const { sum } = require("./sum");\nif (sum(2, 3) !== 5) { console.error("FAIL", sum(2, 3)); process.exit(1); }\n');
-  const log = join(p, "..", `${p.split("/").pop()}.log`);
+  const log = join(p, "..", `${basename(p)}.log`);
   process.env.FAKE_LOG = log;
   return { path: p, log };
 }

@@ -26,7 +26,7 @@ export interface Speakable {
   skippedStructured: boolean;
 }
 
-const SKIP_NOTE: Record<Lang, string> = { es: "Te dejé el detalle en pantalla.", en: "I left the details on screen." };
+export const SKIP_NOTE: Record<Lang, string> = { es: "Te dejé el detalle en pantalla.", en: "I left the details on screen." };
 
 /** Markdown -> plain speech: no code, no tables, no URLs, no symbols; first few sentences only. */
 export function speakable(markdown: string, lang: Lang = detectLang(markdown)): Speakable {

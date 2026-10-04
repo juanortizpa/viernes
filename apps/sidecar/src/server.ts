@@ -3,7 +3,8 @@ import { ClientMessage, IPC_VERSION, type ServerMessage } from "@jarvis/ipc";
 import type { EventBus, Orchestrator, PermissionResolver } from "@jarvis/core";
 import type { EconomySummary } from "@jarvis/protocol";
 import type { MemoryItemView } from "@jarvis/ipc";
-import { VoiceRejected, matchWakeWord, prepareClip, type Transcriber } from "@jarvis/voice";
+import { IncrementalTranscriber, VoiceRejected, matchWakeWord, prepareClip, type Transcriber, type Transcript } from "@jarvis/voice";
+import { sameRequest, Speculator } from "./speculation";
 
 export interface SidecarServerOptions {
   token: string;
@@ -17,6 +18,12 @@ export interface SidecarServerOptions {
   /** Lighter engine for wake-word verification; falls back to `transcriber`. */
   wakeTranscriber?: Transcriber;
   wakeWords?: readonly string[];
+  /**
+   * Streaming voice (ADR-0029). `partial`: the fast engine for live partials; `accept`: whether a fast transcript is trustworthy as
+   * is; `worthSpeculating`: text worth starting an answer on before the user finishes. Without it, `voice.stream.*` still works
+   * (one transcription at the end).
+   */
+  streaming?: { partial?: Transcriber; accept: (t: Transcript) => boolean; worthSpeculating?: (text: string) => boolean; allowPartial?: () => boolean; speculate?: boolean };
   /** Aggregates the last `limit` stored traces; undefined when the trace store cannot be listed. */
   economy?: (limit: number) => EconomySummary | undefined;
   /** The user's own view of long-term memory (ADR-0023). Without it, `memory.*` messages are answered as empty/off. */
@@ -52,6 +59,9 @@ export class SidecarServer {
   private readonly active = new Set<{ ac: AbortController; done: Promise<void> }>();
   private readonly pending = new Map<string, { resolve: (granted: boolean) => void; timer: ReturnType<typeof setTimeout> }>();
   private readonly unsubscribe: () => void;
+  private stream: { id: string; listener: IncrementalTranscriber; spec: Speculator | undefined; ac: AbortController } | undefined;
+  /** Streaming outcomes, for diagnostics and the latency bench. */
+  readonly streamStats = { streams: 0, partialReused: 0, speculated: 0 };
 
   constructor(private readonly opts: SidecarServerOptions) {
     this.unsubscribe = opts.bus.subscribe((event) => this.opts.send({ type: "event", event }));
@@ -73,7 +83,7 @@ export class SidecarServer {
         return this.fatal("handshake rejected");
       }
       this.authed = true;
-      return this.opts.send({ type: "hello.ok", protocol: IPC_VERSION, models: this.opts.info.models, offline: this.opts.info.offline, voice: this.opts.transcriber !== undefined, voiceEngines: this.opts.info.voiceEngines ?? [] });
+      return this.opts.send({ type: "hello.ok", protocol: IPC_VERSION, models: this.opts.info.models, offline: this.opts.info.offline, voice: this.opts.transcriber !== undefined, voiceEngines: this.opts.info.voiceEngines ?? [], streaming: this.opts.transcriber !== undefined });
     }
     if (!parsed.success) return this.opts.send({ type: "error", message: "invalid message" });
 
@@ -100,6 +110,15 @@ export class SidecarServer {
         return this.opts.send({ type: "economy", summary: this.opts.economy?.(msg.limit) });
       case "voice.submit":
         return this.voice(msg.audio, msg.language);
+      case "voice.stream.start":
+        return this.streamStart(msg.id, msg.language);
+      case "voice.stream.chunk":
+        return this.streamChunk(msg.id, msg.pcm);
+      case "voice.stream.end":
+        return this.streamEnd(msg.id);
+      case "voice.stream.cancel":
+        if (this.stream?.id === msg.id) this.dropStream();
+        return;
       case "task.cancel":
         return this.cancelAll();
       case "permission.answer": {
@@ -209,7 +228,101 @@ export class SidecarServer {
     this.opts.send({ type: "memory", ...s });
   }
 
+  private streamStart(id: string, language: string | undefined): void {
+    this.dropStream();
+    const final = this.opts.transcriber;
+    if (!final) return this.opts.send({ type: "voice.rejected", reason: "unavailable", message: "El reconocimiento de voz no está configurado" });
+    const s = this.opts.streaming;
+    this.streamStats.streams++;
+    const spec =
+      s?.partial && s.speculate !== false
+        ? new Speculator({
+            realBus: this.opts.bus,
+            ...(this.opts.wakeWords ? { wakeWords: this.opts.wakeWords } : {}),
+            ...(s.worthSpeculating ? { worthIt: s.worthSpeculating } : {}),
+            start: (text, o) => this.track((ac) => this.orchestrator.run(text, { modality: "voice", signal: ac.signal, bus: o.bus, speculation: o.speculation }), o.signal),
+          })
+        : undefined;
+    const listener = new IncrementalTranscriber({
+      final,
+      ...(s?.partial ? { partial: s.partial } : {}),
+      accept: s?.accept ?? (() => false),
+      ...(s?.allowPartial ? { allowPartial: s.allowPartial } : {}),
+      ...(language ? { language } : {}),
+      onPartial: (p) => {
+        if (this.stream?.id !== id) return;
+        const trusted = s?.accept({ text: p.text, audioMs: p.coveredMs, latencyMs: 0, ...(p.confidence !== undefined ? { confidence: p.confidence } : {}) }) ?? false;
+        // Whisper closes a sentence it considers finished with punctuation; trusted + heard everything + finished = the turn can end.
+        const turnEnd = p.complete && trusted && /[.!?…]["»”)]?\s*$/.test(p.text.trim());
+        this.opts.send({ type: "voice.partial", id, text: p.text, turnEnd });
+        if (trusted) spec?.onPartial(p.text, p.complete);
+      },
+    });
+    this.stream = { id, listener, spec, ac: new AbortController() };
+  }
+
+  private streamChunk(id: string, pcm: string): void {
+    if (this.stream?.id !== id) return;
+    const bytes = Buffer.from(pcm, "base64");
+    const n = Math.floor(bytes.length / 2);
+    const out = new Float32Array(n);
+    for (let i = 0; i < n; i++) out[i] = bytes.readInt16LE(i * 2) / 32768;
+    this.stream.listener.push(out);
+  }
+
+  /** The user stopped talking: final words (often already known), then either confirm the guess in progress or run normally. */
+  private streamEnd(id: string): void {
+    const st = this.stream;
+    if (st?.id !== id) return;
+    this.stream = undefined;
+    const endedAt = performance.now();
+    const reject = (reason: Extract<ServerMessage, { type: "voice.rejected" }>["reason"], message: string): void => this.opts.send({ type: "voice.rejected", reason, message });
+    void this.track(async (ac) => {
+      try {
+        const { transcript: t, source } = await st.listener.end(ac.signal);
+        if (ac.signal.aborted) return (st.spec?.discard(), reject("cancelled", "Cancelado"));
+        if (!t.text) return (st.spec?.discard(), reject("empty", "No entendí nada"));
+        if (source === "partial") this.streamStats.partialReused++;
+        const speculated = st.spec?.guessing !== undefined && sameRequest(st.spec.guessing, t.text, this.opts.wakeWords);
+        this.opts.send({ type: "voice.transcribed", text: t.text, audioMs: t.audioMs, latencyMs: t.latencyMs, afterEndMs: Math.round(performance.now() - endedAt), speculated, ...(t.language ? { language: t.language } : {}), ...(t.engine ? { engine: t.engine } : {}), ...(t.heard ? { heard: t.heard } : {}) });
+        const c = st.spec?.confirm(t.text);
+        if (c?.confirmed) {
+          this.streamStats.speculated++;
+          await c.done;
+        } else this.submit(t.text.slice(0, 10_000), "voice");
+      } catch (e) {
+        st.spec?.discard();
+        if (ac.signal.aborted) return reject("cancelled", "Cancelado");
+        if (e instanceof VoiceRejected) return reject(e.reason, e.message);
+        this.opts.log?.(`streamed transcription failed: ${e instanceof Error ? e.message : String(e)}`);
+        reject("failed", "No pude transcribir el audio");
+      }
+    });
+  }
+
+  private dropStream(): void {
+    const st = this.stream;
+    if (!st) return;
+    this.stream = undefined;
+    st.listener.cancel();
+    st.spec?.discard();
+  }
+
+  /** Runs work that `cancelAll`/`idle` must know about. `external` aborts it too (a discarded speculation). */
+  private track(work: (ac: AbortController) => Promise<unknown>, external?: AbortSignal): Promise<void> {
+    const ac = new AbortController();
+    external?.addEventListener("abort", () => ac.abort(), { once: true });
+    const entry = { ac, done: Promise.resolve() };
+    entry.done = work(ac)
+      .then(() => undefined)
+      .catch((e: unknown) => this.opts.send({ type: "error", message: e instanceof Error ? e.message : String(e) }))
+      .finally(() => this.active.delete(entry));
+    this.active.add(entry);
+    return entry.done;
+  }
+
   private cancelAll(): void {
+    this.dropStream();
     for (const t of this.active) t.ac.abort();
     for (const id of [...this.pending.keys()]) this.settle(id, false);
   }

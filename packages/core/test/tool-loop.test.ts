@@ -65,7 +65,8 @@ describe("LLM tool loop", () => {
     const trace = await orch.run("¿qué hora es en tu reloj?");
     expect(trace.finalOutcome).toBe("success");
     expect(requests).toHaveLength(2);
-    expect(requests[0]!.tools?.map((t) => t.name)).toEqual(["time.now", "files.read", "files.write"]);
+    // Only the tools this request may need are offered (ADR-0029): nothing here is about files.
+    expect(requests[0]!.tools?.map((t) => t.name)).toEqual(["time.now"]);
     const kinds = events.map((e) => e.type);
     expect(kinds.filter((t) => t !== "response.delta")).toEqual([
       "task.started", "intent.resolved", "route.decided",

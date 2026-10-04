@@ -14,6 +14,7 @@ import { IslandSettings } from "./island/IslandSettings";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { MicUnavailable, startMic, type MicSession } from "./voice/mic";
 import { toBase64 } from "./voice/pcm-buffer";
+import type { VoiceStream } from "./voice/voice-stream";
 import { WakeSession } from "./voice/wake-session";
 import { WakeSettings } from "./voice/WakeSettings";
 import { BenchRecorder } from "./voice/BenchRecorder";
@@ -52,7 +53,7 @@ export default function App() {
   const source = useRef<"demo" | "live">("demo");
   const [sourceLabel, setSourceLabel] = useState<"demo" | "live">("demo");
   const [input, setInput] = useState("");
-  const mic = useRef<{ session?: MicSession; wantStop: boolean; busy: boolean }>({ wantStop: false, busy: false });
+  const mic = useRef<{ session?: MicSession; stream?: VoiceStream; wantStop: boolean; busy: boolean }>({ wantStop: false, busy: false });
 
   // Text-to-speech through the voices the OS/browser already has (nothing to download). Absent in some shells.
   const [speakMode, setSpeakMode] = useState<SpeakMode>(() => {
@@ -67,6 +68,9 @@ export default function App() {
   const [speechNote, setSpeechNote] = useState<string>();
   const [ttfa, setTtfa] = useState<number>();
   const taskStartedAt = useRef<number>(0);
+  /** When the user stopped talking (key released / end of utterance): the start of the latency the user feels (ADR-0029). */
+  const speechEndedAt = useRef<number>(0);
+  const [voiceLatency, setVoiceLatency] = useState<{ afterEndMs: number; speculated: boolean; firstAudioMs?: number }>();
   const speechSupported = typeof window !== "undefined" && "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined";
   const speech = useMemo(
     () =>
@@ -79,6 +83,11 @@ export default function App() {
                 dispatch({ kind: "speech", speaking: true });
                 wakeRef.current?.onSpeaking(true);
                 if (taskStartedAt.current) (setTtfa(Math.round(performance.now() - taskStartedAt.current)), (taskStartedAt.current = 0));
+                if (speechEndedAt.current) {
+                  const firstAudioMs = Math.round(performance.now() - speechEndedAt.current);
+                  speechEndedAt.current = 0;
+                  setVoiceLatency((v) => ({ afterEndMs: v?.afterEndMs ?? 0, speculated: v?.speculated ?? false, firstAudioMs }));
+                }
               },
               onIdle: () => {
                 dispatch({ kind: "speech", speaking: false });
@@ -166,8 +175,11 @@ export default function App() {
     const offStatus = live.onStatus(() => live.status === "ready" && live.requestMemory());
     const offVoice = live.onVoice((n) => {
       clearTimeout(collapseTimer.current);
-      if (n.kind === "transcribed") dispatch({ kind: "voice.heard", text: n.text, ...(n.engine ? { engine: n.engine } : {}), ...(n.heard ? { heard: n.heard } : {}) });
-      else {
+      if (n.kind === "partial") return dispatch({ kind: "voice.partial", text: n.text });
+      if (n.kind === "transcribed") {
+        dispatch({ kind: "voice.heard", text: n.text, ...(n.engine ? { engine: n.engine } : {}), ...(n.heard ? { heard: n.heard } : {}) });
+        if (n.afterEndMs !== undefined) setVoiceLatency({ afterEndMs: n.afterEndMs, speculated: n.speculated === true });
+      } else {
         wakeRef.current?.setPaused(false);
         dispatch({ kind: "voice.rejected", message: n.message });
         scheduleReset(4500);
@@ -192,6 +204,7 @@ export default function App() {
       onState: (state, followUpMs) => dispatch({ kind: "wake", state, followUpMs }),
       onLevel: (level) => dispatch({ kind: "voice.level", level }),
       onError: (m) => (setWakeNote(m), setWakeEnabled(false), storeWakeEnabled(false)), // don't retry a broken microphone on every launch
+      onCommandSent: (endSilenceMs) => void (speechEndedAt.current = performance.now() - endSilenceMs),
     });
     wakeRef.current = session;
     setWakeNote(undefined);
@@ -271,10 +284,15 @@ export default function App() {
     source.current = "live"; // a real microphone and a real sidecar: never label this as a demo
     setSourceLabel("live");
     dispatch({ kind: "voice.preparing" });
+    // Streaming (ADR-0029): the sidecar hears the words as they are said and starts thinking before the key is released.
+    const stream = live.info?.streaming ? live.openVoiceStream() : undefined;
+    m.stream = stream;
     try {
-      m.session = await startMic((level) => dispatch({ kind: "voice.level", level }), () => void stopTalk());
+      m.session = await startMic((level) => dispatch({ kind: "voice.level", level }), () => void stopTalk(), undefined, stream ? (c) => stream.push(c) : undefined);
     } catch (e) {
       m.busy = false;
+      stream?.cancel();
+      m.stream = undefined;
       return warn(e instanceof MicUnavailable ? e.message : "No se pudo abrir el micrófono");
     }
     if (m.wantStop) void stopTalk(); // released while the mic was still opening
@@ -288,16 +306,20 @@ export default function App() {
       return;
     }
     const session = m.session;
+    const stream = m.stream;
     m.session = undefined;
+    m.stream = undefined;
     m.busy = false;
     const buffer = await session.stop();
-    if (discard) return (wakeRef.current?.setPaused(false), dispatch({ kind: "reset" }));
+    if (discard) return (stream?.cancel(), wakeRef.current?.setPaused(false), dispatch({ kind: "reset" }));
     const wav = buffer.toWav();
-    if (!wav) return (wakeRef.current?.setPaused(false), warn("Muy corto: mantén pulsado mientras hablas"));
+    if (!wav) return (stream?.cancel(), wakeRef.current?.setPaused(false), warn("Muy corto: mantén pulsado mientras hablas"));
     source.current = "live";
     setSourceLabel("live");
     dispatch({ kind: "voice.transcribing" });
-    live.submitVoice(toBase64(wav));
+    speechEndedAt.current = performance.now();
+    if (stream) stream.end();
+    else live.submitVoice(toBase64(wav));
   };
 
   talkRef.current = { startTalk, stopTalk };
@@ -475,7 +497,13 @@ export default function App() {
             </select>
           </label>
           <span className="muted small">
-            {speech ? (ttfa !== undefined ? `primer audio: ${ttfa} ms tras enviar` : "") : "este entorno no tiene síntesis de voz"}
+            {speech
+              ? voiceLatency?.firstAudioMs !== undefined
+                ? `primer audio: ${voiceLatency.firstAudioMs} ms tras dejar de hablar (texto a los ${voiceLatency.afterEndMs} ms${voiceLatency.speculated ? ", ya venía pensando" : ""})`
+                : ttfa !== undefined
+                  ? `primer audio: ${ttfa} ms tras enviar`
+                  : ""
+              : "este entorno no tiene síntesis de voz"}
             {speechNote ? ` · ${speechNote}` : ""}
           </span>
         </div>

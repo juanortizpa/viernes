@@ -9,7 +9,7 @@ export interface RaceTranscriberOptions {
    * True when the fast text is already unambiguous enough to act on (e.g. it resolves to a deterministic local command), so
    * waiting for the accurate engine would only add latency.
    */
-  acceptFast: (text: string) => boolean;
+  acceptFast: (text: string, transcript: Transcript) => boolean;
   /** Give up waiting for the accurate engine after this long and use the fast text. */
   accurateTimeoutMs?: number;
 }
@@ -38,7 +38,7 @@ export class RaceTranscriber implements Transcriber {
       if (opts.signal?.aborted) throw e;
       fastError = e;
     }
-    if (fast && fast.text && this.o.acceptFast(fast.text)) {
+    if (fast && fast.text && this.o.acceptFast(fast.text, fast)) {
       ac.abort(); // the accurate answer is no longer needed
       return fast;
     }

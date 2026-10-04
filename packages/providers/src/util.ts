@@ -6,7 +6,10 @@ export const estimateCostUsd = (c: ModelCapabilities, inputTokens: number, outpu
 
 /** Yields non-empty lines of a streamed HTTP body (works for SSE and NDJSON). */
 export async function* readLines(res: Response, provider: string): AsyncGenerator<string> {
-  if (!res.ok) throw new ProviderError(`HTTP ${res.status}: ${await res.text().catch(() => "")}`, provider, res.status);
+  if (!res.ok) {
+    const ra = Number(res.headers.get("retry-after"));
+    throw new ProviderError(`HTTP ${res.status}: ${await res.text().catch(() => "")}`, provider, res.status, Number.isFinite(ra) && ra > 0 ? ra * 1000 : undefined);
+  }
   if (!res.body) throw new ProviderError("empty response body", provider);
   const reader = res.body.getReader();
   const decoder = new TextDecoder();

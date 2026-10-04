@@ -34,9 +34,19 @@ export interface Tool<I = unknown, O = unknown> {
    */
   modelCallable?: boolean;
   input: z.ZodType<I, z.ZodTypeDef, unknown>;
+  /**
+   * JSON Schema shown to the model instead of the one derived from `input`. For tools whose schema arrives as JSON Schema (MCP
+   * servers): `input` then only checks the shape loosely and the server validates the rest.
+   */
+  inputSchema?: Record<string, unknown>;
   run(input: I, ctx: ToolContext): Promise<ToolResult<O>>;
   /** Snapshot taken just before `run` so the orchestrator can roll back and escalate. A tool above `read` risk without one is treated as irreversible. */
   checkpoint?(input: I, ctx: ToolContext): Promise<Checkpoint>;
+  /**
+   * Where this call sends data, when a model-chosen address is involved (e.g. a URL to fetch). Once a task is tainted, the policy
+   * engine asks before sending to an address that did not appear in an earlier result or in the user's message (ADR-0028).
+   */
+  egressTo?(input: I): string | undefined;
   /** Postcondition check; its presence makes the tool `verifiable`. */
   verify?(input: I, result: ToolResult<O>, ctx: ToolContext): Promise<boolean>;
 }

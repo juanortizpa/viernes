@@ -38,7 +38,7 @@ UI (Isla + Cuervo) / Voz
         │
    Evaluador ── éxito → fin / fallo → escalar
         │
-   Registro de herramientas (MCP como adaptador en el borde)
+   Registro de herramientas (MCP como adaptador en el borde, ADR-0025 · web con guarda de egreso, ADR-0028)
         │
    Memoria (SQLite: conversación en RAM + recuerdos explícitos, ADR-0023; sqlite-vec solo con un embedding semántico real; Postgres/pgvector en V2)
 ```
@@ -51,6 +51,11 @@ Reglas duras:
 - Credenciales: nunca como memoria normal, nunca en texto plano al LLM (referencias, V2).
 - La capa inmediata (ADR-0015) es determinista, tiene lista de exclusión (tiempo, estado, herramientas, datos sensibles),
   se etiqueta como `source: instant` y nunca se mezcla con las métricas de los modelos.
+- Una tarea que leyó contenido no confiable solo envía datos (p. ej. `web.fetch`) a direcciones que ya vio o que escribió el usuario;
+  cualquier otra pide confirmación (ADR-0028). Los servidores MCP nunca reciben las claves de JARVIS (ADR-0025).
+- Una ejecución especulativa (antes de que el usuario termine de hablar) no cambia nada del mundo ni de la memoria hasta que las
+  palabras finales la confirman; si no, se descarta sin rastro (ADR-0029). Las muletillas solo describen recepción o lo que
+  realmente arranca, nunca resultados.
 - La memoria de largo plazo solo se escribe por petición explícita del usuario; el modelo puede leerla pero ninguna herramienta
   que edite datos del usuario se le ofrece (`modelCallable: false`, ADR-0023).
 - Todo se registra en el esquema de traza (dataset de investigación), con `propensity` en cada decisión de ruteo.
@@ -64,12 +69,15 @@ Reglas duras:
 | IPC | NDJSON por stdio con token, sin puertos de red; en Tauri el shell relaya stdio por un `Channel` (ADR-0021); el navegador usa el puente solo-dev de Vite | hecho |
 | UI | React + TypeScript + Framer Motion | propuesto |
 | Almacenamiento MVP | SQLite + sqlite-vec detrás de una interfaz (Postgres en V2/sync) | propuesto |
-| Herramientas | Registro interno único; MCP como adaptador (consumir/exponer) | propuesto |
+| Herramientas | Registro interno único; **cliente MCP por stdio** (riesgo lo decide el usuario, salida no confiable, entorno sin claves, ADR-0025); exponer JARVIS como servidor MCP: V2 | consumir hecho (probado contra el SDK oficial) |
+| Web | `web.search` (DuckDuckGo HTML, sin cuenta) + `web.fetch` (solo direcciones públicas) + guarda de egreso en el policy engine; preguntas «de hoy» exigen modelo con herramientas y el prompt lleva la fecha (ADR-0028) | hecho; probado en vivo |
+| Rutinas | Nombre → órdenes locales en orden, sin modelo, policy por paso; «¿qué podés hacer?» desde la config viva (ADR-0027) | hecho |
 | Proveedores MVP | Anthropic + OpenRouter + Ollama (3 adaptadores para probar la abstracción) | propuesto |
 | Respuesta inmediata | R1 plantillas ES/EN + acuse como evento (MVP); R2 caché semántico con embedding local <100 MB (V2); R3 perfil de estilo por contadores, sin modelo propio (ADR-0015) | propuesto |
 | Memoria | Conversación en RAM (últimos turnos, 20 min) + recuerdos explícitos («recuerda que…») en SQLite, recuperación por palabras con presupuesto; el modelo lee, nunca escribe (ADR-0023) | hecho; huecos semánticos pendientes |
+| Latencia | Streaming de voz con parciales, especulación (eventos retenidos, herramientas en espera hasta confirmar), cierre de turno semántico, voz por frases, `ModelHealth` (enfriamiento + EWMA de primer token), herramientas por petición, muletillas según latencia predicha (ADR-0029) | hecho; medido con grabaciones reales; sin micrófono real |
 | Voz | STT: carrera Groq whisper + Gemini (entiende lo que quisiste decir) con whisper local de respaldo (ADR-0020); push-to-talk + STT local con whisper.cpp (binario y modelo del usuario, ADR-0016) hecho; TTS (ADR-0017) y wake word en dos etapas con tu voz + whisper tiny + ventana de 10 s (ADR-0018) implementados, **sin probar con voz real** | parcial |
-| Programación | Delegar en los CLIs oficiales en vez de reimplementar el bucle agente: **Gemini CLI** (gratis) primero y **Claude Code** (plan Pro) si falla, se queda sin cuota o falla la comprobación del proyecto (`verify`). Herramienta `code.agent` sensible y con salida no confiable; orden "en el proyecto X, …" (ADR-0024) | Gemini probado en real; Windows y Claude sin probar |
+| Programación | Delegar en los CLIs oficiales en vez de reimplementar el bucle agente: **Gemini CLI** (gratis) primero y **Claude Code** (plan Pro) si falla, se queda sin cuota o falla la comprobación del proyecto (`verify`). Herramienta `code.agent` sensible y con salida no confiable; orden "en el proyecto X, …" (ADR-0024). Puntos de restauración git por ejecución: «¿qué cambió el agente?», «deshacé los cambios» (ADR-0026) | Gemini probado en real; Windows y Claude sin probar; deshacer probado en Windows con repos reales |
 
 ## 5. Niveles de permiso
 
