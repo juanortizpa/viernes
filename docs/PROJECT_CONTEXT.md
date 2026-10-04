@@ -40,7 +40,7 @@ UI (Isla + Cuervo) / Voz
         │
    Registro de herramientas (MCP como adaptador en el borde)
         │
-   Memoria (SQLite + sqlite-vec en MVP; Postgres/pgvector en V2)
+   Memoria (SQLite: conversación en RAM + recuerdos explícitos, ADR-0023; sqlite-vec solo con un embedding semántico real; Postgres/pgvector en V2)
 ```
 
 Reglas duras:
@@ -51,6 +51,8 @@ Reglas duras:
 - Credenciales: nunca como memoria normal, nunca en texto plano al LLM (referencias, V2).
 - La capa inmediata (ADR-0015) es determinista, tiene lista de exclusión (tiempo, estado, herramientas, datos sensibles),
   se etiqueta como `source: instant` y nunca se mezcla con las métricas de los modelos.
+- La memoria de largo plazo solo se escribe por petición explícita del usuario; el modelo puede leerla pero ninguna herramienta
+  que edite datos del usuario se le ofrece (`modelCallable: false`, ADR-0023).
 - Todo se registra en el esquema de traza (dataset de investigación), con `propensity` en cada decisión de ruteo.
 
 ## 4. Decisiones tecnológicas vigentes
@@ -65,8 +67,9 @@ Reglas duras:
 | Herramientas | Registro interno único; MCP como adaptador (consumir/exponer) | propuesto |
 | Proveedores MVP | Anthropic + OpenRouter + Ollama (3 adaptadores para probar la abstracción) | propuesto |
 | Respuesta inmediata | R1 plantillas ES/EN + acuse como evento (MVP); R2 caché semántico con embedding local <100 MB (V2); R3 perfil de estilo por contadores, sin modelo propio (ADR-0015) | propuesto |
+| Memoria | Conversación en RAM (últimos turnos, 20 min) + recuerdos explícitos («recuerda que…») en SQLite, recuperación por palabras con presupuesto; el modelo lee, nunca escribe (ADR-0023) | hecho; huecos semánticos pendientes |
 | Voz | STT: carrera Groq whisper + Gemini (entiende lo que quisiste decir) con whisper local de respaldo (ADR-0020); push-to-talk + STT local con whisper.cpp (binario y modelo del usuario, ADR-0016) hecho; TTS (ADR-0017) y wake word en dos etapas con tu voz + whisper tiny + ventana de 10 s (ADR-0018) implementados, **sin probar con voz real** | parcial |
-| Programación | Delegar en los CLIs oficiales en vez de reimplementar el bucle agente: **Gemini CLI** (gratis) primero y **Claude Code** (plan Pro) si falla, se queda sin cuota o falla la comprobación del proyecto (`verify`). Herramienta `code.agent` sensible y con salida no confiable; orden "en el proyecto X, …" (ADR-0023) | Gemini probado en real; Windows y Claude sin probar |
+| Programación | Delegar en los CLIs oficiales en vez de reimplementar el bucle agente: **Gemini CLI** (gratis) primero y **Claude Code** (plan Pro) si falla, se queda sin cuota o falla la comprobación del proyecto (`verify`). Herramienta `code.agent` sensible y con salida no confiable; orden "en el proyecto X, …" (ADR-0024) | Gemini probado en real; Windows y Claude sin probar |
 
 ## 5. Niveles de permiso
 
@@ -80,7 +83,7 @@ disparar SENSITIVE/CRITICAL sin confirmación.
   intent router local + registro de herramientas + policy engine + router v1 + evaluador de código +
   escalado con checkpoints + telemetría completa.
 - **MVP-0.5 (respuesta inmediata R1–R3, hecho):** saludos por reglas, acuse rápido, caché semántico de respuestas verificadas y perfil de estilo (ADR-0015).
-- **MVP-1:** memoria, router aprendido (bandit), panel AI Economy, animaciones del cuervo.
+- **MVP-1:** memoria (conversación + recuerdos explícitos hechos, ADR-0023), router aprendido (bandit), panel AI Economy, animaciones del cuervo.
 - **MVP-2:** voz (push-to-talk + STT local ya hecho; TTS y wake word pendientes), consciencia de contexto.
 - **V2:** bóveda de credenciales, visión, multiagente, proactividad, sync, grafo de conocimiento.
 - **Investigación:** tabla contrafactual, brazos A–D + oráculo + baseline tipo RouteLLM, curva de

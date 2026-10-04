@@ -6,7 +6,7 @@ target
 .playwright
 jarvis.config.json
 jarvis.env
-tools
+/tools
 .jarvis
 jarvis.config.json.bak
 apps/desktop/src-tauri/gen

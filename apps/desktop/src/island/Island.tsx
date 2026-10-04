@@ -120,6 +120,8 @@ export function Island({ state, onPermission, onCancel, economy, showEconomy = f
         {expanded && (state.model || showTokenChips) && (
           <motion.div key="chips" className="island__chips" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             {state.route === "local" && <span className="chip chip--good">0 tokens · sin LLM</span>}
+            {state.context && state.context.memories > 0 && <span className="chip" title="Recuerdos que pediste guardar y que se añadieron a esta consulta">🧠 {state.context.memories} {state.context.memories === 1 ? "recuerdo" : "recuerdos"}</span>}
+            {state.context && state.context.turns > 0 && <span className="chip" title="Intercambios anteriores de esta conversación que se enviaron al modelo">💬 contexto: {state.context.turns}</span>}
             {state.model && <span className="chip">{state.model}</span>}
             {state.tokens > 0 && <span className="chip">{state.tokens.toLocaleString("es")} tok · ${state.costUsd.toFixed(4)}</span>}
             {state.escalations > 0 && <span className="chip chip--warn">{state.escalations} escalado</span>}

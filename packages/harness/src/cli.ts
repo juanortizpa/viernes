@@ -3,6 +3,8 @@ import { ModelCapabilities } from "@jarvis/protocol";
 import { RulesRouter } from "@jarvis/core";
 import { AnthropicProvider, GoogleProvider, GroqProvider, OllamaProvider, OpenRouterProvider, ProviderRegistry } from "@jarvis/providers";
 import { z } from "zod";
+import { runMemoryEval } from "./memory-eval";
+import { ablationCases, armNames, renderAblation, runAblationSample, type AblationSample, type Arm } from "./memory-ablation";
 import {
   CellTable, alwaysCheapest, alwaysPremium, analyze, buildReplayData, cascadePolicy, crossValidatedPolicy, heuristicJudge, oracleJudge, oraclePolicy,
   evalInstantCache, renderInstantEval, renderMarkdown, routerPolicy, runCounterfactual, seedSuite, type Policy, type PriceBook,
@@ -77,9 +79,32 @@ async function listModels(provider: string): Promise<void> {
   console.log("Free-tier limits are per account: check them in the provider's dashboard before putting a model in a config.");
 }
 
+/** Live ablation of long-term memory (ADR-0023): three arms x the same questions x N samples, per model. Free models only. */
+async function memoryAblation(flags: Map<string, string>): Promise<void> {
+  const { models, providers } = load(flags);
+  const samplesPerCase = Number(flags.get("samples") ?? 2);
+  const all: { model: string; samples: AblationSample[] }[] = [];
+  for (const model of models) {
+    const samples: AblationSample[] = [];
+    console.error(`${model.model}: ${ablationCases.length} questions x 3 arms x ${samplesPerCase} samples`);
+    for (const c of ablationCases)
+      for (let i = 0; i < samplesPerCase; i++)
+        for (const arm of ["A", "B", "C"] as Arm[]) {
+          const s = await runAblationSample(arm, c, model, providers);
+          samples.push(s);
+          console.error(`  [${armNames[arm].slice(0, 1)}] ${s.ok ? "ok  " : s.error ? "ERR " : "FAIL"}${s.leaked ? " LEAK" : ""} ${c.q.slice(0, 50)}`);
+        }
+    all.push({ model: model.model, samples });
+    console.log(renderAblation(model.model, samples));
+  }
+  if (flags.has("out")) writeFileSync(flags.get("out")!, JSON.stringify(all, null, 2));
+}
+
 async function main(): Promise<void> {
   const { cmd, flags } = parseArgs(process.argv.slice(2));
   if (cmd === "instant-eval") return console.log(renderInstantEval(evalInstantCache([0.5, 0.6, 0.7, 0.8, 0.9])));
+  if (cmd === "memory-eval") return console.log(runMemoryEval());
+  if (cmd === "memory-ablation") return memoryAblation(flags);
   if (cmd === "list-models") return listModels(flags.get("provider") ?? "");
   const tablePath = flags.get("table") ?? "data/counterfactual.jsonl";
   const tasks = seedSuite.slice(0, flags.has("limit") ? Number(flags.get("limit")) : undefined);
@@ -121,7 +146,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.log("usage:\n  harness instant-eval\n  harness list-models --provider groq|google\n  harness run    --config <json> [--table path] [--models a,b] [--limit N] [--concurrency N] [--budget N] [--max-tokens N]\n  harness report --config <json> [--table path] [--prices json] [--out file.md] [--seed N]");
+  console.log("usage:\n  harness instant-eval\n  harness memory-eval\n  harness memory-ablation --config <json> --models a,b [--samples N] [--out file.json]\n  harness list-models --provider groq|google\n  harness run    --config <json> [--table path] [--models a,b] [--limit N] [--concurrency N] [--budget N] [--max-tokens N]\n  harness report --config <json> [--table path] [--prices json] [--out file.md] [--seed N]");
 }
 
 main().catch((e) => {

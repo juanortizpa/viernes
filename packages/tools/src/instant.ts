@@ -30,6 +30,7 @@ export const makeInstantForget = (book: InstantBook): Tool<{ query: string }, un
   description: "Delete cached answers whose question matches the given text (or id)",
   risk: "reversible",
   reversible: true,
+  modelCallable: false,
   input: z.object({ query: z.string().min(3).max(200) }),
   async run({ query }) {
     const n = book.forget(query);
@@ -43,6 +44,7 @@ export const makeInstantClear = (book: InstantBook): Tool<Record<string, never>,
   description: "Delete every answer in the local instant-answer cache",
   risk: "sensitive",
   reversible: false,
+  modelCallable: false,
   input: z.object({}).strict(),
   async run() {
     const n = book.clear();
@@ -58,6 +60,7 @@ export const makeInstantToggle = (book: InstantBook): Tool<{ enabled: boolean },
   description: "Enable or disable serving and learning of cached answers",
   risk: "reversible",
   reversible: true,
+  modelCallable: false,
   input: z.object({ enabled: z.boolean() }),
   async run({ enabled }) {
     book.setEnabled(enabled);

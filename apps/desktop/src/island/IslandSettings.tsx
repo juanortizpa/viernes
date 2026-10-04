@@ -13,6 +13,8 @@ interface Props {
   pttShortcut?: string | null;
   /** The hands-free block (`WakeSettings`), shared with the browser panel. */
   wake: ReactNode;
+  /** What JARVIS remembers (`MemoryPanel`), shared with the browser panel. */
+  memory: ReactNode;
   onHide: () => void;
   onClose: () => void;
 }
@@ -20,7 +22,7 @@ interface Props {
 const shortcutLabel = (s: string) => s.replace("Space", "Espacio");
 
 /** Voice settings inside the island (the browser panel has the same controls plus calibration tools). */
-export function IslandSettings({ speakMode, onSpeakMode, speech, audioDsp, onAudioDsp, pttShortcut, wake, onHide, onClose }: Props) {
+export function IslandSettings({ speakMode, onSpeakMode, speech, audioDsp, onAudioDsp, pttShortcut, wake, memory, onHide, onClose }: Props) {
   return (
     <section className="island-settings" aria-label="Ajustes de JARVIS">
       <header className="island-settings__head">
@@ -55,6 +57,8 @@ export function IslandSettings({ speakMode, onSpeakMode, speech, audioDsp, onAud
         </select>
       </label>
       {wake}
+      <h3 className="island-settings__title">Memoria</h3>
+      {memory}
       <p className="island-settings__foot">
         <button type="button" className="dock__btn" onClick={onHide}>
           Ocultar isla

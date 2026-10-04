@@ -95,6 +95,7 @@ export class IntentRouter {
     }
 
     for (const rule of this.opts.rules ?? []) {
+      // Rules match the normalised text; the original keeps casing and accents for rules that must store what was said.
       const hit = rule(text, input);
       if (hit) return hit;
     }

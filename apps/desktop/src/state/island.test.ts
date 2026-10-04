@@ -40,6 +40,16 @@ describe("islandReducer", () => {
     expect(run([{ type: "task.finished", outcome: "success", summary: "abrí paint" }], s).detail).toBe("abrí paint");
   });
 
+  it("shows memory/context only when the event says it went into the prompt, and starts clean on the next task", () => {
+    const used = run([
+      { type: "task.started", input: "regalo para mi hermana", modality: "text" },
+      { type: "context.used", conversationTurns: 2, memories: ["a1", "b2"] },
+    ]);
+    expect(used.context).toEqual({ turns: 2, memories: 2 });
+    expect(run([{ type: "task.started", input: "otra cosa", modality: "text" }], used).context).toBeUndefined();
+    expect(run([{ type: "task.started", input: "x", modality: "text" }]).context).toBeUndefined();
+  });
+
   it("permission request sets pending and mode; denial warns and clears it", () => {
     const asked = run([
       { type: "task.started", input: "x", modality: "text" },

@@ -69,6 +69,20 @@ describe("LiveClient", () => {
     ]);
   });
 
+  it("asks for, forgets, wipes and switches memory, and hands snapshots to listeners", async () => {
+    const { socket, client } = await ready();
+    const got: unknown[] = [];
+    client.onMemory((m) => got.push(m));
+    client.requestMemory();
+    client.forgetMemory("a1");
+    client.clearMemory();
+    client.setMemoryEnabled(false);
+    expect(socket.sent.slice(1)).toEqual([{ type: "memory.get" }, { type: "memory.forget", id: "a1" }, { type: "memory.clear" }, { type: "memory.toggle", enabled: false }]);
+    socket.receive({ type: "memory", enabled: true, conversationTurns: 2, items: [{ id: "a1", kind: "fact", text: "vivo en Cali", createdAt: 1, uses: 0 }] });
+    socket.receive({ type: "memory", enabled: "yes", conversationTurns: 0, items: [] }); // malformed: ignored
+    expect(got).toEqual([{ enabled: true, conversationTurns: 2, items: [{ id: "a1", kind: "fact", text: "vivo en Cali", createdAt: 1, uses: 0 }] }]);
+  });
+
   it("refuses to send before ready", () => {
     expect(() => setup().client.submit("x")).toThrow(/not ready/);
   });

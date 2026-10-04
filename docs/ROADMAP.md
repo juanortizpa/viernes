@@ -13,9 +13,9 @@
 | 3 | Arnés de experimento | 🟦 tabla completa para 7 modelos (Groq + Google); faltan tareas más difíciles | Primer resultado de brazos A–D (¡temprano!) |
 | R | Respuesta inmediata (acuse, saludos, caché) | ✅ R1–R3 hechos y medidos (acuse 1 ms vs 1 s; caché 1 ms vs ~500 ms, 0 falsos positivos; perfil de estilo) | Saludos y acuses <50 ms, sin progreso falso |
 | 4 | Shell y UI completos | 🟦 la isla Tauri usa el sidecar real, deja pasar clics fuera de ella, tiene atajo global, bandeja y ajustes (ADR-0021/0022; probado en Linux); falta Windows (overlay real, pantalla completa, multi-monitor, DPI) | Isla con estados reales, permisos, panel Economy |
-| 5 | Memoria + optimización de contexto | ⬜ | Recuperación medida con ablación |
+| 5 | Memoria + optimización de contexto | 🟦 conversación + recuerdos explícitos hechos y medidos (ADR-0023): recuperación 94 % en prueba retenida, ablación real 0 → 28/28 con +25 tokens; falta lo semántico (embedding neuronal) | Recuperación medida con ablación |
 | 6 | Router aprendido + experimento final | ⬜ | Frontera de Pareto costo vs éxito |
-| P | Agente de programación (ADR-0023) | 🟦 Gemini CLI → Claude Code con comprobación del proyecto; Gemini probado en real (91 s, sin escalar); falta Windows y Claude real | "en el proyecto X, arregla…" edita, comprueba y lo cuenta por voz |
+| P | Agente de programación (ADR-0024) | 🟦 Gemini CLI → Claude Code con comprobación del proyecto; Gemini probado en real (91 s, sin escalar); falta Windows y Claude real | "en el proyecto X, arregla…" edita, comprueba y lo cuenta por voz |
 | 7 | Voz | 🟦 push-to-talk + STT local (probado en Windows), TTS y wake word de dos etapas (estos dos solo con audio simulado) | Push-to-talk → respuesta hablada |
 
 ---
@@ -158,9 +158,19 @@ exista algo visible, no solo logs.
 - [x] Cuervo "hablando" (pico animado, solo cuando el sintetizador informa que habla)
 - [ ] Revisión de diseño con el usuario
 
-## Fase 5 — Memoria y contexto (3 semanas) ⬜
-- [ ] Memoria factual/preferencia/conductual/operacional, política de escritura, olvido, control del usuario
-- [ ] Recuperación y presupuesto de contexto; ablación de calidad
+## Fase 5 — Memoria y contexto (3 semanas) 🟦 (ADR-0023)
+- [x] **Memoria de conversación** (`ConversationMemory`): los últimos intercambios van al modelo; solo RAM, se olvida a los 20 min o con «olvida esta conversación»; los seguimientos se clasifican con la pregunta que responden y nunca usan la caché; sin secretos ni respuestas basadas en contenido no confiable. Arregla el caso real «¿quién ganó el mundial?» → «masculino» (verificado con Groq)
+- [x] Memoria **factual y de preferencias** (`MemoryBook` + SQLite): solo por petición explícita («recuerda que…»); preferencias siempre aplicadas, datos por relevancia con presupuesto; rechaza secretos, duplicados y exceso
+- [x] Política de escritura: el modelo **lee pero no escribe** memoria (`Tool.modelCallable=false`, también para alias/caché/estilo)
+- [x] Olvido y control del usuario: «qué recuerdas de mí», «olvida que…» (pregunta si es ambiguo), «borra toda mi memoria» (con confirmación), activar/desactivar, panel Memoria en la isla y el navegador
+- [x] Conductual = perfil de estilo (ADR-0015 R3); operacional = alias aprendidos (ADR-0010)
+- [x] Veracidad: evento `context.used` (ids, nunca texto) → chips «🧠 recuerdos · 💬 contexto»; `ExecutionTrace.context` para el dataset
+- [x] **Recuperación medida** (`harness memory-eval`): corpus propio con negativas difíciles y huecos semánticos, desarrollo/prueba retenida, comparada contra todo-siempre, top-3 y solo-embedding
+- [x] **Ablación con modelo real** (`harness memory-ablation`, 2 modelos Groq): sin memoria 0/28 → recuperación 28/28 con +25 tokens (meter todo: 28/28 con +400–590); 0 fugas en respuestas generales
+- [ ] Huecos semánticos y entre idiomas (0/6 con recuperación por palabras): embedding neuronal multilingüe local o reordenar con LLM; decidir con datos de uso real
+- [ ] Memoria propuesta por el modelo con bandeja de revisión del usuario (V2)
+- [ ] Actualizar/fusionar recuerdos contradictorios (V2)
+- [ ] Presupuesto de contexto para conversaciones largas (resumir turnos viejos en vez de descartarlos)
 
 ## Fase 6 — Router aprendido y experimento final (3–4 semanas) ⬜
 - [ ] Bandit contextual (Thompson/LinUCB) con exploración y propensity
@@ -184,7 +194,7 @@ exista algo visible, no solo logs.
 - [ ] Cancelación de eco real y barge-in por voz (hoy se ignora el micrófono mientras habla)
 - [ ] STT en streaming (V2)
 
-## Fase P — Agente de programación (ADR-0023) 🟦
+## Fase P — Agente de programación (ADR-0024) 🟦
 - [x] `packages/agents`: adaptadores Gemini CLI y Claude Code (stream-json, tarea por stdin, límite total e inactividad, corte del árbol de procesos), etapas en español, cadena el-más-barato-primero con comprobación del proyecto y contexto del intento anterior
 - [x] Herramienta `code.agent` (sensible, salida no confiable, cancelable, progreso real), proyectos por alias (`coding.projects`), orden directa "en el proyecto X, …", resumen hablado
 - [x] `setup`: detecta Gemini CLI / Claude Code (`--install-agents` instala Gemini CLI), siembra JARVIS como proyecto y conserva la lista
@@ -241,4 +251,6 @@ exista algo visible, no solo logs.
 | 2026-10-04 | Primer `island.bat` en Windows: fallaba con «"tauri" no se reconoce» porque `@tauri-apps/cli` se añadió a las dependencias pero `node_modules` era anterior. `island.mjs` ahora ejecuta `pnpm install --frozen-lockfile` si falta el CLI (cualquier `git pull` que añada dependencias ya no rompe el arranque) y deja de usar `shell: true` con argumentos (aviso DEP0190). Probado quitando el CLI en Linux. |
 | 2026-10-04 | **Primer uso en Windows: la isla se congelaba («No responde») al pulsarla dos veces.** Interbloqueo mío en el clic que atraviesa: el sondeo mantenía el cerrojo de las regiones mientras preguntaba el cursor a la ventana (en Windows espera al hilo principal) y `set_hit_regions`, síncrono en el hilo principal, esperaba ese cerrojo. Ahora el sondeo usa una copia (`snapshot`) y nunca llama a la ventana con un cerrojo tomado. En Linux no se reproducía (esas consultas no pasan por el hilo principal), así que la corrección se razonó desde el código y se comprobó que no regresa (25 clics rápidos, sigue respondiendo); **falta confirmarlo en Windows**. 7 tests Rust. |
 | 2026-10-04 | Respuestas del usuario: producto personal, 100 % gratis (APIs gratuitas + Claude Pro y Gemini por suscripción), solo español, asistente general con foco en programar. Como la isla real en Tauri ya existe (ADR-0021/0022), el orden propuesto pasa a ser: (1) agente de programación delegando en Claude Code / Gemini CLI locales, (2) memoria, (3) cerrar la validación de la isla en Windows. Fases 3/6 (experimento) en segundo plano. |
-| 2026-10-04 | **Agente de programación (ADR-0023):** `packages/agents` (Gemini CLI → Claude Code, el más barato primero; escala si falla, se queda sin cuota o falla la comprobación del proyecto), herramienta `code.agent` sensible y no confiable con progreso real y cancelación, orden directa "en el proyecto X, …", proyectos en `coding.projects`, resumen hablado, `setup` detecta los CLIs. Hallazgos reales: Gemini CLI sin interfaz rechaza carpetas no confiables (se pasa `GEMINI_CLI_TRUST_WORKSPACE`) y se cuelga reintentando 503 (corte por inactividad + comprobación igual). Prueba real: bug arreglado en 91 s sin escalar. De paso: el TTS cortaba oraciones en "app.js" (corregido). 405 tests. |
+| 2026-10-04 | **Memoria (ADR-0023).** Caso real: «¿quién ganó el mundial?» → «¿masculino o femenino?» → «masculino» → «¿qué quieres hacer con la palabra masculino?». Reproducido con Groq antes del cambio y corregido después. M1: memoria de conversación (RAM, 20 min, seguimientos con contexto en ruteo y sin caché, sin secretos ni contenido no confiable). M2: recuerdos explícitos («recuerda que…») en SQLite, preferencias siempre y datos por relevancia, el modelo lee pero no escribe (`modelCallable`), control completo por voz/texto y panel. M3: `memory-eval` (recupera 88 %/94 % dev/prueba; 100 % y 5 % de falsa inyección en consultas normales) y ablación real con 2 modelos (0 → 28/28 por +25 tokens; meter todo cuesta +400–590; 0 fugas). Fallos encontrados midiendo y corregidos: «≤ 4 palabras = seguimiento» pegaba la pregunta anterior y recuperaba un recuerdo ajeno; «estoy» como palabra temática hizo que el modelo inventara una respuesta; mi propia evaluación fallaba con espacios no separables y aprobaba por suerte. Límite declarado: huecos semánticos/entre idiomas. **Sin probar en Windows.** |
+| 2026-10-04 | **Agente de programación (ADR-0024):** `packages/agents` (Gemini CLI → Claude Code, el más barato primero; escala si falla, se queda sin cuota o falla la comprobación del proyecto), herramienta `code.agent` sensible y no confiable con progreso real y cancelación, orden directa "en el proyecto X, …", proyectos en `coding.projects`, resumen hablado, `setup` detecta los CLIs. Hallazgos reales: Gemini CLI sin interfaz rechaza carpetas no confiables (se pasa `GEMINI_CLI_TRUST_WORKSPACE`) y se cuelga reintentando 503 (corte por inactividad + comprobación igual). Prueba real: bug arreglado en 91 s sin escalar. De paso: el TTS cortaba oraciones en "app.js" (corregido); la salida no confiable de una orden directa ya no entra a la memoria de conversación. |
+| 2026-10-04 | **`main` no compilaba:** la regla `tools` del `.gitignore` (pensada para la carpeta raíz de descargas) ignoraba en silencio todo archivo nuevo dentro de `packages/tools/`, así que `packages/tools/src/memory.ts` nunca se subió. Regla cambiada a `/tools` y el módulo reescrito a partir de sus llamadas y tests (ADR-0023 memoria): 461 tests en verde. |

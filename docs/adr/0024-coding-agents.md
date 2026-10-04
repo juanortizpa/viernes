@@ -1,4 +1,4 @@
-# ADR-0023: Agente de programación — Gemini CLI primero, Claude Code después
+# ADR-0024: Agente de programación — Gemini CLI primero, Claude Code después
 
 **Estado:** aceptado · 2026-10-04
 

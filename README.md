@@ -68,6 +68,8 @@ conecta a la isla por stdio ([ADR-0021](docs/adr/0021-tauri-sidecar-relay.md)): 
 La primera vez compila la isla (necesita Rust, varios minutos); después arranca en un segundo y solo recompila si cambió el código.
 Fuera de la isla los clics pasan a las apps de abajo; **Ctrl+Alt+Espacio** (mantener) habla desde cualquier app; ⚙ abre los ajustes de voz;
 el icono de la bandeja la oculta o la cierra ([ADR-0022](docs/adr/0022-overlay-click-through-shortcut-tray.md)).
+**Memoria** ([ADR-0023](docs/adr/0023-memory-conversation-and-long-term.md)): recuerda la conversación en curso (en RAM) y lo que le pidas
+explícitamente («recuerda que mi gato se llama Pelusa»); «qué recuerdas de mí», «olvida que…» y el panel ⚙ › Memoria lo controlan.
 `island.bat --dev` usa `tauri dev` con recarga en caliente. Probado en Linux; **sin probar en Windows** (ver [docs/SPIKE_OVERLAY.md](docs/SPIKE_OVERLAY.md)).
 
 Pruebas contra la API real (opcional, gasta fracciones de centavo): `$env:JARVIS_LIVE = "1"; pnpm test`.

@@ -106,7 +106,7 @@ export function contentTokens(text: string): string[] {
     .filter((t) => t && !STOP.has(t));
 }
 
-function withinOneEdit(a: string, b: string): boolean {
+export function withinOneEdit(a: string, b: string): boolean {
   if (a === b) return true;
   if (Math.min(a.length, b.length) < 5 || Math.abs(a.length - b.length) > 1) return false;
   if (a.length === b.length) {

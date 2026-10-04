@@ -9,7 +9,7 @@ import {
   ProviderRegistry,
   type FetchLike,
 } from "@jarvis/providers";
-import { AlwaysCheapestRouter, AlwaysPremiumRouter, AppCatalog, IntentRouter, MemoryTraceStore, Orchestrator, ResponseHeuristicEvaluator, RuleInstantResponder, SemanticCache, StyleTracker, summarizeEconomy, instantControlRules, styleControlRules, RulesRouter, StaticRouter, type AliasStore, type InstantStore, type EventBus, type ModelRouter, type PermissionResolver, type TraceStore } from "@jarvis/core";
+import { AlwaysCheapestRouter, AlwaysPremiumRouter, AppCatalog, ConversationMemory, IntentRouter, MemoryBook, conversationControlRules, memoryControlRules, MemoryTraceStore, Orchestrator, ResponseHeuristicEvaluator, RuleInstantResponder, SemanticCache, StyleTracker, summarizeEconomy, instantControlRules, styleControlRules, RulesRouter, StaticRouter, type AliasStore, type InstantStore, type MemoryStore, type EventBus, type ModelRouter, type PermissionResolver, type TraceStore } from "@jarvis/core";
 import type { EconomySummary } from "@jarvis/protocol";
 import { FallbackTranscriber, GeminiTranscriber, GroqTranscriber, RaceTranscriber, WhisperCppTranscriber, type Transcriber } from "@jarvis/voice";
 import {
@@ -19,6 +19,12 @@ import {
   makeAliasesForget,
   makeAliasesLearn,
   makeAliasesList,
+  makeConversationClear,
+  makeMemoryAdd,
+  makeMemoryClear,
+  makeMemoryForget,
+  makeMemoryList,
+  makeMemoryToggle,
   makeInstantClear,
   makeInstantForget,
   makeInstantList,
@@ -37,6 +43,7 @@ import { Config } from "./config";
 import { tmpdir as tmpdirOs } from "node:os";
 import { codingIntentRule, makeCodeAgentTool } from "./coding";
 import { join as joinPath } from "node:path";
+import type { MemoryControl } from "./server";
 
 /** Launches only what the catalog knows, accepting either the raw command or a name a person would say. */
 export function makeCatalogLauncher(catalog: Pick<AppCatalog, "hasCommand" | "lookup" | "suggest">, launch: AppLauncher): AppLauncher {
@@ -86,6 +93,8 @@ export interface RuntimeDeps {
   workspace?: string;
   /** Overrides agent discovery (tests). */
   codingAgents?: () => import("@jarvis/agents").CodingAgent[];
+  /** Where long-term memory persists; in-memory when omitted. */
+  memoryStore?: MemoryStore;
   /** Overrides the configured speech-to-text engine (tests). */
   transcriber?: Transcriber;
   /** Apps discovered on the machine; lowest-priority aliases. */
@@ -103,6 +112,8 @@ export interface Runtime {
   wakeWords: readonly string[];
   /** Speech engines in the order they are tried, e.g. ["groq:whisper-large-v3-turbo", "local"]. */
   voiceEngines: string[];
+  /** The user's view and control of long-term memory, for the UI (ADR-0023). */
+  memory: MemoryControl;
   /** AI Economy aggregate over the stored traces; undefined if the store cannot list. */
   economy(limit: number): EconomySummary | undefined;
   createOrchestrator(io: { bus: EventBus; askPermission: PermissionResolver }): Orchestrator;
@@ -164,6 +175,14 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
   });
   // The profile shares the cache's store (aggregate counters only) so one data file holds what the assistant has learned.
   const style = new StyleTracker({ store: deps.instantStore, enabled: config.styleProfile });
+  // Working memory of the chat and the facts the user asked to keep (ADR-0023). One sidecar serves one connection (ADR-0008), so
+  // sharing these across `createOrchestrator` calls is the same as per connection.
+  const conversation = new ConversationMemory({
+    enabled: config.memory.conversation.enabled,
+    maxTurns: config.memory.conversation.maxTurns,
+    idleMs: config.memory.conversation.idleMinutes * 60_000,
+  });
+  const memory = new MemoryBook({ store: deps.memoryStore, enabled: config.memory.longTerm.enabled, maxItems: config.memory.longTerm.maxItems, minScore: config.memory.longTerm.minScore });
   const tools = new ToolRegistry()
     .register(timeNow)
     .register(timeDate)
@@ -180,7 +199,14 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
     .register(makeStyleShow(style))
     .register(makeStyleReset(style))
     .register(makeStyleToggle(style))
-    .register(makeCodeAgentTool(config.coding, deps.workspace ?? joinPath(tmpdirOs(), "jarvis-workspace"), deps.codingAgents));
+    .register(makeCodeAgentTool(config.coding, deps.workspace ?? joinPath(tmpdirOs(), "jarvis-workspace"), deps.codingAgents))
+    .register(makeMemoryAdd(memory))
+    .register(makeMemoryList(memory))
+    .register(makeMemoryForget(memory, { alsoForget: () => conversation.clear() }))
+    .register(makeMemoryClear(memory, { alsoForget: () => conversation.clear() }))
+    .register(makeMemoryToggle(memory))
+    .register(makeConversationClear(conversation));
+  const controlRules = [...instantControlRules, ...styleControlRules, ...conversationControlRules, ...memoryControlRules];
   const makeRouter = (): ModelRouter =>
     config.router === "always_premium"
       ? new AlwaysPremiumRouter()
@@ -204,7 +230,7 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
   const groq = groqKey ? new GroqTranscriber({ apiKey: groqKey, model: v.cloudModel, language: v.language, prompt: vPrompt, fetch: fetchImpl }) : undefined;
   const gemini = geminiKey ? new GeminiTranscriber({ apiKey: geminiKey, model: v.understandModel, vocabulary: Object.keys(config.apps).slice(0, 20), fetch: fetchImpl }) : undefined;
   // Fast path: a transcript that the deterministic router already maps to a local command needs no interpretation.
-  const quickRouter = new IntentRouter({ apps: AppCatalog.fromRecord(config.apps), rules: [...instantControlRules, ...styleControlRules] });
+  const quickRouter = new IntentRouter({ apps: AppCatalog.fromRecord(config.apps), rules: controlRules });
   const isClearCommand = (text: string): boolean => {
     const r = quickRouter.resolve(text);
     return r.route === "local" && r.confidence === 1;
@@ -238,13 +264,26 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
     voiceEngines,
     models,
     offline,
+    memory: {
+      snapshot: () => ({
+        enabled: memory.enabled,
+        conversationTurns: conversation.size(),
+        items: memory.list().map((i) => ({ id: i.id, kind: i.kind, text: i.text, createdAt: i.createdAt, uses: i.uses, ...(i.usedAt !== undefined ? { usedAt: i.usedAt } : {}) })),
+      }),
+      // From the panel too: the conversation may still hold what is being forgotten.
+      forget: (id) => (memory.forget(id).ok ? void conversation.clear() : undefined),
+      clear: () => void (memory.clear(), conversation.clear()),
+      setEnabled: (enabled) => memory.setEnabled(enabled),
+    },
     economy: (limit) => (traces.list ? summarizeEconomy(traces.list(limit)) : undefined),
     createOrchestrator: ({ bus, askPermission }) =>
       new Orchestrator({
         bus,
-        intents: new IntentRouter({ apps: catalog, rules: [...instantControlRules, ...styleControlRules, codingIntentRule] }),
+        intents: new IntentRouter({ apps: catalog, rules: [...controlRules, codingIntentRule] }),
         ...(config.instantResponses ? { instant: new RuleInstantResponder(), cache } : {}),
         style,
+        conversation,
+        memory,
         router: makeRouter(),
         providers,
         tools,

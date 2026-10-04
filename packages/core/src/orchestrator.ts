@@ -4,6 +4,9 @@ import { TaintTracker, type PolicyEngine } from "@jarvis/policy";
 import type { ChatMessage, ProviderRegistry, ToolCall } from "@jarvis/providers";
 import type { AnyTool, Checkpoint, ToolRegistry } from "@jarvis/tools";
 import { EventBus, TaskEmitter } from "./bus";
+import { OMITTED_ANSWER, type ConversationMemory } from "./conversation";
+import type { MemoryBook, MemoryItem } from "./memory";
+import { memoryPrompt } from "./memory";
 import type { InstantResponder } from "./instant";
 import type { InstantCache } from "./instant-cache";
 import type { FollowUp, IntentRouter } from "./intent";
@@ -35,6 +38,10 @@ export interface OrchestratorDeps {
   cache?: InstantCache;
   /** Optional learned speaking style (ADR-0015, R3): observes user messages and adds a fixed-phrase hint to the system prompt. */
   style?: Pick<StyleTracker, "observe" | "hint">;
+  /** Optional working memory of the current conversation (ADR-0023, M1): earlier turns go to the model with each request. */
+  conversation?: Pick<ConversationMemory, "messages" | "isFollowUp" | "routingText" | "record" | "size">;
+  /** Optional long-term memory (ADR-0023, M2): saved preferences and relevant facts are added to the system prompt. Read-only here. */
+  memory?: Pick<MemoryBook, "retrieve" | "markUsed">;
   router: ModelRouter;
   providers: ProviderRegistry;
   tools: ToolRegistry;
@@ -101,8 +108,46 @@ function toolMessageContent(r: ToolOutcome): string {
   return r.provenance === "untrusted_external" ? `<untrusted_external_content>\n${body}\n</untrusted_external_content>` : body;
 }
 
+/** What the assistant remembers for ONE request (ADR-0023). Built once, before routing, so routing, cache and prompt agree. */
+interface PromptContext {
+  /** Earlier exchanges of this conversation, oldest first. */
+  history: ChatMessage[];
+  /** Text used to judge difficulty and pick a model: for a follow-up, the previous question plus the reply. */
+  routeText: string;
+  followUp: boolean;
+  preferences: MemoryItem[];
+  facts: MemoryItem[];
+}
+
+const memoryIds = (pc: PromptContext): string[] => [...pc.preferences, ...pc.facts].map((m) => m.id);
+
 export class Orchestrator {
   constructor(private readonly deps: OrchestratorDeps) {}
+
+  private promptContext(input: string, llm: boolean): PromptContext {
+    const conv = this.deps.conversation;
+    const followUp = llm && (conv?.isFollowUp(input) ?? false);
+    const routeText = followUp && conv ? conv.routingText(input) : input;
+    let recalled: { preferences: MemoryItem[]; facts: { item: MemoryItem }[] } = { preferences: [], facts: [] };
+    if (llm) {
+      try {
+        recalled = this.deps.memory?.retrieve(routeText) ?? recalled; // memory must never fail a task
+      } catch {
+        /* ignore */
+      }
+    }
+    return { history: llm ? (conv?.messages() ?? []) : [], routeText, followUp, preferences: recalled.preferences, facts: recalled.facts.map((f) => f.item) };
+  }
+
+  /** Puts an exchange into the conversation. A failing memory must never fail the user's task. */
+  private remember(input: string, answer: string | undefined): void {
+    if (!answer) return;
+    try {
+      this.deps.conversation?.record(input, answer);
+    } catch {
+      /* ignore */
+    }
+  }
 
   async run(input: string, opts: RunOptions = {}): Promise<ExecutionTrace> {
     const now = this.deps.now ?? Date.now;
@@ -136,6 +181,8 @@ export class Orchestrator {
     try {
       machine.to("routing");
       const intent = this.deps.intents.resolve(input);
+      const pc = this.promptContext(input, intent.route === "llm");
+      const memoryUsed = pc.preferences.length + pc.facts.length > 0;
       const reply = intent.route === "llm" ? this.deps.instant?.reply(input) : undefined;
       if (reply !== undefined) {
         // Served without a model: "local" is truthful (nothing reached an LLM) and keeps the UI off "choosing a model".
@@ -148,7 +195,8 @@ export class Orchestrator {
         summary = reply;
         return trace;
       }
-      const cached = intent.route === "llm" ? this.deps.cache?.lookup(input) : undefined;
+      // A cached answer ignores what was said a moment ago and what the user asked to remember: never serve one in those cases.
+      const cached = intent.route === "llm" && !pc.followUp && !memoryUsed ? this.deps.cache?.lookup(input) : undefined;
       if (cached) {
         out.emit({ type: "intent.resolved", route: "local", intent: "instant.cache", confidence: cached.score });
         out.emit({ type: "instant.issued", kind: "cache", text: cached.entry.response });
@@ -157,6 +205,7 @@ export class Orchestrator {
         trace.instant = "cache";
         trace.finalOutcome = "success";
         summary = cached.entry.response;
+        this.remember(input, cached.entry.response);
         return trace;
       }
       out.emit({
@@ -175,12 +224,20 @@ export class Orchestrator {
         }
       }
 
-      const result: { outcome: "success" | "failure"; summary?: string; learn?: string } =
+      const result: { outcome: "success" | "failure"; summary?: string; learn?: string; answer?: string; tainted?: boolean; sensitive?: boolean } =
         intent.route === "local"
           ? await this.runLocal(taskId, intent.tool, intent.args, intent.then, out, machine, trace, opts.signal)
-          : await this.runModel(taskId, input, out, machine, trace, opts.signal, opts.modality === "voice");
+          : await this.runModel(taskId, input, out, machine, trace, opts.signal, opts.modality === "voice", pc);
       trace.finalOutcome = opts.signal?.aborted ? "cancelled" : result.outcome;
       summary = result.summary;
+      if (trace.finalOutcome === "success") {
+        if (intent.route === "local") {
+          // Commands about memory itself stay out of the conversation: after "olvida que…" nothing may still carry the forgotten text.
+          if (!intent.tool.startsWith("conversation.") && !intent.tool.startsWith("memory.")) this.remember(input, result.tainted ? OMITTED_ANSWER : result.summary);
+        } else if (!result.sensitive) {
+          this.remember(input, result.tainted ? OMITTED_ANSWER : result.answer);
+        }
+      }
       if (result.learn !== undefined && trace.finalOutcome === "success") {
         // A cache failure must never fail the user's task.
         try {
@@ -211,7 +268,7 @@ export class Orchestrator {
     machine: TaskMachine,
     trace: ExecutionTrace,
     signal?: AbortSignal,
-  ): Promise<{ outcome: "success" | "failure"; summary?: string }> {
+  ): Promise<{ outcome: "success" | "failure"; summary?: string; tainted?: boolean }> {
     trace.usedLocalIntent = true;
     trace.taskType = "local_action";
 
@@ -221,7 +278,8 @@ export class Orchestrator {
     const r = await this.invokeTool(ctx, tool, rawArgs);
     const next = r.ok && then ? this.deps.tools.get(then.tool) : undefined;
     if (next && then) await this.invokeTool(ctx, next, then.args);
-    return { outcome: r.ok ? "success" : "failure", summary: r.summary };
+    // Untrusted tool output (a coding agent's report) never enters the conversation verbatim, as on the model path.
+    return { outcome: r.ok ? "success" : "failure", summary: r.summary, tainted: ctx.taint.isTainted };
   }
 
   /**
@@ -278,14 +336,30 @@ export class Orchestrator {
     trace: ExecutionTrace,
     signal?: AbortSignal,
     voice = false,
-  ): Promise<{ outcome: "success" | "failure"; summary?: string; /** An answer safe to remember (ADR-0015). */ learn?: string }> {
+    pc: PromptContext = { history: [], routeText: input, followUp: false, preferences: [], facts: [] },
+  ): Promise<{ outcome: "success" | "failure"; summary?: string; /** An answer safe to remember (ADR-0015). */ learn?: string; answer?: string; tainted?: boolean; sensitive?: boolean }> {
     // A model only "supports tools" if its adapter can also send them.
     const caps = this.deps.providers
       .capabilities()
       .map((c) => ({ ...c, supportsTools: c.supportsTools && this.deps.providers.get(c.provider)?.supportsToolCalls === true }));
-    const req = routeRequestFor(input);
+    // A follow-up ("masculino") is as hard as the question it answers: classify the pair, not the lone word.
+    const req = routeRequestFor(pc.routeText);
     const cls = { taskType: req.taskType, complexity: req.complexity };
     trace.taskType = cls.taskType;
+    const memories = memoryIds(pc);
+    const turns = pc.history.length / 2;
+    if (turns > 0 || memories.length > 0) {
+      // Only emitted when something really goes into the prompt, so the UI can say so truthfully.
+      out.emit({ type: "context.used", conversationTurns: turns, memories });
+      trace.context = { conversationTurns: turns, memories: memories.length };
+      if (memories.length > 0) {
+        try {
+          this.deps.memory?.markUsed(memories);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
     if (req.sensitive) out.emit({ type: "progress", stage: "Datos sensibles detectados: solo modelos locales", detail: detectSensitive(input).reasons.join(", ") });
     let decision: RoutingDecision = this.deps.router.route(req, caps);
     out.emit({ type: "route.decided", decision });
@@ -298,7 +372,7 @@ export class Orchestrator {
 
     for (;;) {
       const state: AttemptState = { sideEffects: false, irreversible: false, usedTools: false, checkpoints: [] };
-      const attempt = await this.runAttempt(taskId, input, decision, caps, { out, machine, trace, taint, attempt: state, signal }, signal, maxEscalations > 0, voice);
+      const attempt = await this.runAttempt(taskId, input, decision, caps, { out, machine, trace, taint, attempt: state, signal }, signal, maxEscalations > 0, voice, pc);
       let verdict = await runEvaluators(evaluators, { input, taskType: cls.taskType, response: attempt.text, failure: attempt.failure });
       // A broken attempt is a failure whatever the evaluators say (some skip, some only read the text).
       if (attempt.failure !== undefined && verdict?.outcome !== "failure") {
@@ -315,8 +389,9 @@ export class Orchestrator {
       if (!verdict || !shouldEscalate(verdict)) {
         if (failed) return { outcome: "failure", summary: attempt.failure ?? verdict?.evidence };
         // Remember only what a judge accepted, that no tool touched, and that carries no untrusted or sensitive content.
-        const learnable = verdict?.outcome === "success" && verdict.confidence >= 0.5 && !anyTools && !taint.isTainted && !req.sensitive;
-        return { outcome: "success", ...(learnable ? { learn: attempt.text } : {}) };
+        // Nor an answer that depended on this conversation or on saved memories.
+        const learnable = verdict?.outcome === "success" && verdict.confidence >= 0.5 && !anyTools && !taint.isTainted && !req.sensitive && !pc.followUp && memories.length === 0;
+        return { outcome: "success", answer: attempt.text, tainted: taint.isTainted, sensitive: req.sensitive, ...(learnable ? { learn: attempt.text } : {}) };
       }
 
       const next = this.nextModel(req, caps, decision.model!);
@@ -324,10 +399,10 @@ export class Orchestrator {
       if ((state.sideEffects && state.irreversible) || trace.escalations >= maxEscalations || !next || signal?.aborted) {
         // No safe or available escalation: keep what we have. Uncertain answers are still delivered; failures are not.
         if (attempt.error) throw attempt.error;
-        return failed ? { outcome: "failure", summary: reason } : { outcome: "success" };
+        return failed ? { outcome: "failure", summary: reason } : { outcome: "success", answer: attempt.text, tainted: taint.isTainted, sensitive: req.sensitive };
       }
 
-      if (!(await this.rollback(state, out))) return failed ? { outcome: "failure", summary: `${reason}; could not undo its changes` } : { outcome: "success" };
+      if (!(await this.rollback(state, out))) return failed ? { outcome: "failure", summary: `${reason}; could not undo its changes` } : { outcome: "success", answer: attempt.text, tainted: taint.isTainted, sensitive: req.sensitive };
 
       trace.escalations++;
       out.emit({ type: "escalated", from: decision.model!, to: next.model, reason });
@@ -377,6 +452,7 @@ export class Orchestrator {
     signal: AbortSignal | undefined,
     recoverable: boolean,
     voice = false,
+    pc: PromptContext = { history: [], routeText: input, followUp: false, preferences: [], facts: [] },
   ): Promise<{ text: string; usage: Usage; failure?: string; error?: Error }> {
     const { out } = ctx;
     const provider = decision.provider ? this.deps.providers.get(decision.provider) : undefined;
@@ -385,10 +461,11 @@ export class Orchestrator {
     const model = caps.find((c) => c.model === decision.model);
     const useTools = provider.supportsToolCalls === true && model?.supportsTools === true;
     const specs = useTools
-      ? this.deps.tools.list().map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema }))
+      ? this.deps.tools.listForModel().map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema }))
       : undefined;
     const styleHint = this.deps.style?.hint();
-    const messages: ChatMessage[] = [{ role: "user", content: input }];
+    const messages: ChatMessage[] = [...pc.history, { role: "user", content: input }];
+    const memoryHint = memoryPrompt(pc.preferences, pc.facts);
     const total: Usage = { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, estimatedCostUsd: 0, latencyMs: 0 };
     let finalText = "";
 
@@ -399,7 +476,7 @@ export class Orchestrator {
         const calls: ToolCall[] = [];
         for await (const chunk of provider.generate({
           model: decision.model,
-          system: (useTools ? SYSTEM_PROMPT + TOOLS_PROMPT : SYSTEM_PROMPT) + (voice ? VOICE_PROMPT : "") + (styleHint ? ` ${styleHint}` : ""),
+          system: (useTools ? SYSTEM_PROMPT + TOOLS_PROMPT : SYSTEM_PROMPT) + (voice ? VOICE_PROMPT : "") + (styleHint ? ` ${styleHint}` : "") + memoryHint,
           messages,
           tools: specs,
           signal,
@@ -425,7 +502,7 @@ export class Orchestrator {
 
         messages.push({ role: "assistant", content: text, toolCalls: calls });
         for (const call of calls) {
-          const tool = this.deps.tools.get(call.name);
+          const tool = this.deps.tools.getForModel(call.name); // a tool reserved for the user's own commands is "unknown" to the model
           const r: ToolOutcome = tool
             ? await this.invokeTool({ taskId, ...ctx }, tool, call.args)
             : { ok: false, summary: `unknown tool ${call.name}` };

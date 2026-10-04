@@ -26,6 +26,8 @@ export interface IslandState {
   level?: number;
   /** The speech synthesiser is really playing audio. */
   speaking?: boolean;
+  /** Earlier turns and saved memories that really went into this request's prompt (from `context.used`). */
+  context?: { turns: number; memories: number };
   /** The model's answer of the current attempt, as streamed; shown when the task finishes without a summary. */
   answer?: string;
   /** Hands-free listening: what the always-on loop is really doing. Undefined/off = the microphone is closed. */
@@ -112,6 +114,9 @@ export function islandReducer(state: IslandState, action: IslandAction): IslandS
       return e.kind === "ack"
         ? { ...state, mode: "thinking", headline: "Recibido", detail: e.text }
         : { ...state, route: "local", mode: "thinking", headline: e.kind === "cache" ? "Respuesta guardada" : "Respuesta rápida", detail: e.text };
+
+    case "context.used":
+      return { ...state, context: { turns: e.conversationTurns, memories: e.memories.length } };
 
     case "route.decided":
       return {

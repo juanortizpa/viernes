@@ -1,4 +1,4 @@
-/** A coding agent run in one project folder (ADR-0023). */
+/** A coding agent run in one project folder (ADR-0024). */
 export interface AgentRunOptions {
   /** Full prompt for the agent (built by the chain). Sent on stdin, never on the command line. */
   prompt: string;
