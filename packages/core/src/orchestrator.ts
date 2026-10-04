@@ -5,7 +5,8 @@ import type { ChatMessage, ProviderRegistry, ToolCall } from "@jarvis/providers"
 import type { AnyTool, ToolRegistry } from "@jarvis/tools";
 import { EventBus, TaskEmitter } from "./bus";
 import type { FollowUp, IntentRouter } from "./intent";
-import type { ModelRouter } from "./model-router";
+import { estimateCostUsd, premiumModel, type ModelRouter } from "./model-router";
+import { classifyTask } from "./task-classifier";
 import { TaskMachine } from "./task-state";
 import type { TraceStore } from "./trace-store";
 
@@ -199,8 +200,10 @@ export class Orchestrator {
     trace: ExecutionTrace,
     signal?: AbortSignal,
   ): Promise<{ outcome: "success" | "failure"; summary?: string }> {
+    const cls = classifyTask(input);
+    trace.taskType = cls.taskType;
     const decision: RoutingDecision = this.deps.router.route(
-      { input, taskType: "other", complexity: 0.5 },
+      { input, ...cls, inputTokens: trace.inputTokensEstimate },
       this.deps.providers.capabilities(),
     );
     out.emit({ type: "route.decided", decision });
@@ -267,5 +270,8 @@ export class Orchestrator {
     const attempt: Attempt = { model: decision.model!, provider: decision.provider!, decision, usage };
     trace.attempts.push(attempt);
     trace.totalCostUsd += usage.estimatedCostUsd;
+    // Always-premium baseline on the same token counts: the defined reference for "savings" (ADR-0006).
+    const premium = premiumModel(this.deps.providers.capabilities());
+    if (premium) trace.baselineCostUsd = (trace.baselineCostUsd ?? 0) + estimateCostUsd(premium, usage);
   }
 }

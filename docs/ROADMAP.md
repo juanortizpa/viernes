@@ -83,13 +83,15 @@ exista algo visible, no solo logs.
 - [x] Telemetría persistida: `SqliteTraceStore` (`packages/storage`, `node:sqlite`, sin dependencias nativas); el sidecar la usa con `JARVIS_DATA_DIR` o `traceDb` en la config
 - [x] Probar un adaptador contra una API real (OpenRouter, ver arriba)
 
-## Fase 2 — Router y evaluador (3 semanas) ⬜
-- [ ] Estrategias de router intercambiables (siempre-premium, siempre-barato, reglas)
-- [ ] Filtrado por capacidades (visión, herramientas, contexto, sensibilidad de datos)
-- [ ] Evaluador de código (tests) y de postcondición de herramientas
+## Fase 2 — Router y evaluador (3 semanas) 🟨 (primer corte hecho)
+- [x] Estrategias de router intercambiables (siempre-premium, siempre-barato, reglas) — `router` en la config, ADR-0011
+- [x] Filtrado por capacidades (visión, herramientas, contexto, sensibilidad de datos) con motivo de rechazo en la traza
+- [x] Clasificador de tarea por reglas (tipo + complejidad) y `baselineCostUsd` (baseline always-premium) en cada traza
+- [ ] Detectar datos sensibles (hoy `sensitive` existe en el contrato pero nada lo activa) y exigir `supportsTools` cuando se ofrezcan herramientas
+- [ ] Evaluador de código (tests) y de postcondición de herramientas (la postcondición ya existe dentro de `invokeTool`; falta extraerla como `Evaluator`)
 - [ ] Escalado con checkpoints (snapshot / dry-run / plan→aprobación)
 - [ ] Contabilidad de costo incluyendo costo del evaluador
-- [ ] ADR: cascada vs ruteo predictivo
+- [x] ADR: cascada vs ruteo predictivo (provisional: reglas → cascada con evaluador → predictivo solo con datos del arnés)
 
 ## Fase 3 — Arnés de experimento (3 semanas) ⬜
 - [ ] Suite de tareas con ground truth (HumanEval/MBPP, subconjunto SWE-bench-Lite, QA, tareas propias ES/EN)
@@ -141,3 +143,5 @@ exista algo visible, no solo logs.
 | 2026-10-04 | Fase 1 cerrada salvo Windows: OpenRouter probado con la API real; `packages/storage` (SQLite); bucle de herramientas con LLM (ADR-0009); sidecar empaquetado como un solo `.mjs`. Hallazgo de la prueba real: OpenAI/OpenRouter rechazan nombres de función con punto (`time.now`), así que el adaptador los codifica en el borde; las pruebas con `fetch` simulado no podían detectarlo. Un modelo real (gpt-4o-mini) resistió una inyección de prompt; la garantía de que el policy engine bloquea está en los tests deterministas, no en esa prueba. |
 | 2026-10-04 | Pruebas en Windows (primer contacto): "qué hora es" y "abre VS Code" funcionan; fallaban Paint, abrir otra pestaña y "qué día será mañana". Añadidos alias (`paint`→`mspaint`, navegador/pestaña nueva→`msedge`), herramienta determinista `time.date` con regla local para hoy/mañana/ayer, y `time.now` ahora devuelve hora local legible (antes ISO en UTC). "Otra pestaña" abre el navegador por defecto de Edge; no controla pestañas existentes (eso sería V2). |
 | 2026-10-04 | Automejora, primer paso (ADR-0010): `AppCatalog` (config > aprendido > escaneado), escáner de Menú Inicio, alias aprendidos con confirmación del policy engine y persistidos en SQLite, `aliases.list/forget`, y el lanzador solo abre comandos del catálogo. 105 tests. **No probado en Windows real** (el escáner solo se probó con carpetas temporales). Pendiente/V2: memoria negativa de rechazos, apps UWP, skills declarativas. |
+| 2026-10-04 | Windows: Teams y otras apps de la Store no aparecían porque no tienen `.lnk`. El escáner ahora también lee `Get-StartApps` y las lanza con `explorer.exe shell:AppsFolder\<AppID>` (argv, sin shell). **Sin probar en Windows real.** |
+| 2026-10-04 | Inicio de Fase 2 (ADR-0011): estrategias de router, filtrado por capacidades, clasificador de tarea, `baselineCostUsd`. 120 tests. Pendiente de la fase: evaluadores, cascada con escalado, costo del evaluador, detección de datos sensibles. |

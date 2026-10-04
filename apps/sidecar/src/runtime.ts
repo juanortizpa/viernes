@@ -7,7 +7,7 @@ import {
   ProviderRegistry,
   type FetchLike,
 } from "@jarvis/providers";
-import { AppCatalog, IntentRouter, MemoryTraceStore, Orchestrator, StaticRouter, type AliasStore, type EventBus, type PermissionResolver, type TraceStore } from "@jarvis/core";
+import { AlwaysCheapestRouter, AlwaysPremiumRouter, AppCatalog, IntentRouter, MemoryTraceStore, Orchestrator, RulesRouter, StaticRouter, type AliasStore, type EventBus, type ModelRouter, type PermissionResolver, type TraceStore } from "@jarvis/core";
 import {
   ToolRegistry,
   filesRead,
@@ -105,6 +105,14 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
     .register(makeAliasesLearn(catalog))
     .register(makeAliasesForget(catalog))
     .register(makeAliasesList(catalog));
+  const makeRouter = (): ModelRouter =>
+    config.router === "always_premium"
+      ? new AlwaysPremiumRouter()
+      : config.router === "always_cheapest"
+        ? new AlwaysCheapestRouter()
+        : config.router === "rules"
+          ? new RulesRouter()
+          : new StaticRouter(defaultModel);
   const traces = deps.traces ?? new MemoryTraceStore();
 
   return {
@@ -115,7 +123,7 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
       new Orchestrator({
         bus,
         intents: new IntentRouter({ apps: catalog }),
-        router: new StaticRouter(defaultModel),
+        router: makeRouter(),
         providers,
         tools,
         policy: new PolicyEngine(),
