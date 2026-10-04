@@ -39,6 +39,13 @@ describe("router strategies", () => {
     expect(r.route(req({ taskType: "other", complexity: 0.9 }), [cheap, premium]).model).toBe("premium");
   });
 
+  it("with equal prices, configuration order means weakest -> strongest", () => {
+    const [a, b, c] = ["a", "b", "c"].map((m) => cap(m, { estimatedInputCost: 0, estimatedOutputCost: 0 }));
+    expect(new AlwaysCheapestRouter().route(req(), [a!, b!, c!]).model).toBe("a");
+    expect(new AlwaysPremiumRouter().route(req(), [a!, b!, c!]).model).toBe("c");
+    expect(new RulesRouter().route(req({ taskType: "coding", complexity: 0.7 }), [a!, b!, c!]).model).toBe("c");
+  });
+
   it("never picks an ineligible model; records rejections; fails explicitly when none qualify", () => {
     const d = new RulesRouter().route(req({ taskType: "coding", needsVision: false, sensitive: true }), all);
     expect(d.model).toBe("local");

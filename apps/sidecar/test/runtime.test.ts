@@ -30,6 +30,20 @@ describe("buildRuntime", () => {
     expect(buildRuntime(cfg, { env: { ANTHROPIC_API_KEY: "k" }, launcher: noop })).toMatchObject({ offline: false, models: ["m"] });
   });
 
+  it("freeOnly refuses any model with a price and accepts free ones", () => {
+    const paid = Config.parse({ freeOnly: true, anthropic: { models: [model] } });
+    expect(() => buildRuntime(paid, { env: { ANTHROPIC_API_KEY: "k" }, launcher: noop })).toThrow(/freeOnly.*\bm\b/);
+    const free = Config.parse({ freeOnly: true, anthropic: { models: [{ ...model, estimatedInputCost: 0, estimatedOutputCost: 0 }] } });
+    expect(buildRuntime(free, { env: { ANTHROPIC_API_KEY: "k" }, launcher: noop }).models).toEqual(["m"]);
+  });
+
+  it("the shipped free example config loads, is free and orders models weakest to strongest", () => {
+    const cfg = loadConfig(new URL("../../../jarvis.config.free.example.json", import.meta.url).pathname);
+    const r = buildRuntime(cfg, { env: { OPENROUTER_API_KEY: "k" }, launcher: noop });
+    expect(r.models).toHaveLength(3);
+    expect(cfg.freeOnly).toBe(true);
+  });
+
   it("rejects a defaultModel nobody offers", () => {
     expect(() => buildRuntime(Config.parse({ defaultModel: "ghost" }), { env: {}, launcher: noop })).toThrow(/ghost/);
   });

@@ -49,8 +49,9 @@ export function filterCandidates(
 /** Input + output price per 1M tokens: a crude but monotone "how premium is it" measure. */
 export const blendedCost = (c: ModelCapabilities): number => c.estimatedInputCost + c.estimatedOutputCost;
 
+/** Ties go to the LAST model, ties in `cheapestModel` to the FIRST: with equal (e.g. all-free) prices, configuration order means weakest -> strongest. */
 export const premiumModel = (cs: ModelCapabilities[]): ModelCapabilities | undefined =>
-  cs.reduce<ModelCapabilities | undefined>((best, c) => (!best || blendedCost(c) > blendedCost(best) ? c : best), undefined);
+  cs.reduce<ModelCapabilities | undefined>((best, c) => (!best || blendedCost(c) >= blendedCost(best) ? c : best), undefined);
 
 export const cheapestModel = (cs: ModelCapabilities[]): ModelCapabilities | undefined =>
   cs.reduce<ModelCapabilities | undefined>((best, c) => (!best || blendedCost(c) < blendedCost(best) ? c : best), undefined);

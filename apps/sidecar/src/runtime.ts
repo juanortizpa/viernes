@@ -7,7 +7,7 @@ import {
   ProviderRegistry,
   type FetchLike,
 } from "@jarvis/providers";
-import { AlwaysCheapestRouter, AlwaysPremiumRouter, AppCatalog, IntentRouter, MemoryTraceStore, Orchestrator, RulesRouter, StaticRouter, type AliasStore, type EventBus, type ModelRouter, type PermissionResolver, type TraceStore } from "@jarvis/core";
+import { AlwaysCheapestRouter, AlwaysPremiumRouter, AppCatalog, IntentRouter, MemoryTraceStore, Orchestrator, ResponseHeuristicEvaluator, RulesRouter, StaticRouter, type AliasStore, type EventBus, type ModelRouter, type PermissionResolver, type TraceStore } from "@jarvis/core";
 import {
   ToolRegistry,
   filesRead,
@@ -71,6 +71,11 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
   if (config.anthropic) providers.register(new AnthropicProvider({ apiKey: key("ANTHROPIC_API_KEY"), models: config.anthropic.models, fetch: deps.fetch }));
   if (config.openrouter) providers.register(new OpenRouterProvider({ apiKey: key("OPENROUTER_API_KEY"), models: config.openrouter.models, fetch: deps.fetch }));
 
+  if (config.freeOnly) {
+    const paid = providers.capabilities().filter((c) => c.estimatedInputCost > 0 || c.estimatedOutputCost > 0);
+    if (paid.length) throw new Error(`freeOnly is set but these models have a price: ${paid.map((c) => c.model).join(", ")}`);
+  }
+
   let models = providers.capabilities().map((c) => c.model);
   const offline = models.length === 0;
   if (offline) {
@@ -129,6 +134,8 @@ export function buildRuntime(config: Config, deps: RuntimeDeps): Runtime {
         policy: new PolicyEngine(),
         askPermission,
         traces,
+        evaluators: [new ResponseHeuristicEvaluator()],
+        maxEscalations: config.maxEscalations,
       }),
   };
 }

@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
-import type { Attempt, ExecutionTrace, Provenance, RoutingDecision, Usage } from "@jarvis/protocol";
+import { shouldEscalate, type Attempt, type ExecutionTrace, type ModelCapabilities, type Provenance, type RoutingDecision, type Usage, type Verdict } from "@jarvis/protocol";
 import { TaintTracker, type PolicyEngine } from "@jarvis/policy";
 import type { ChatMessage, ProviderRegistry, ToolCall } from "@jarvis/providers";
 import type { AnyTool, ToolRegistry } from "@jarvis/tools";
 import { EventBus, TaskEmitter } from "./bus";
 import type { FollowUp, IntentRouter } from "./intent";
-import { estimateCostUsd, premiumModel, type ModelRouter } from "./model-router";
+import { runEvaluators, toolPostconditionVerdict, type Evaluator } from "./evaluator";
+import { blendedCost, estimateCostUsd, filterCandidates, premiumModel, type ModelRouter, type RouteRequest } from "./model-router";
 import { classifyTask } from "./task-classifier";
 import { TaskMachine } from "./task-state";
 import type { TraceStore } from "./trace-store";
@@ -29,6 +30,10 @@ export interface OrchestratorDeps {
   policy: PolicyEngine;
   askPermission: PermissionResolver;
   traces: TraceStore;
+  /** Judge each model attempt. Empty (default): no verdicts, no escalation. */
+  evaluators?: readonly Evaluator[];
+  /** Cascade: how many times a failed/uncertain attempt may move up to the next more expensive eligible model. */
+  maxEscalations?: number;
   now?: () => number;
   newId?: () => string;
 }
@@ -59,6 +64,8 @@ interface ToolRunCtx {
   machine: TaskMachine;
   trace: ExecutionTrace;
   taint: TaintTracker;
+  /** Set once a tool above `read` risk actually ran; escalating would then repeat side effects. */
+  attempt?: { sideEffects: boolean };
 }
 
 /** What the model sees of a tool result. Untrusted output is fenced and labelled as data (ADR-0005). */
@@ -172,21 +179,14 @@ export class Orchestrator {
     }
 
     machine.to("running");
+    if (ctx.attempt && tool.risk !== "read") ctx.attempt.sideEffects = true;
     const result = await tool.run(parsed.data, { taskId });
     taint.observe(result.provenance);
     out.emit({ type: "tool.completed", tool: tool.name, ok: result.ok, summary: result.summary });
 
     if (result.ok && tool.verify) {
       const ok = await tool.verify(parsed.data, result, { taskId });
-      out.emit({
-        type: "eval.completed",
-        verdict: {
-          evaluator: "tool_postcondition",
-          outcome: ok ? "success" : "failure",
-          confidence: 1,
-          evidence: ok ? "postcondition holds" : "postcondition failed",
-        },
-      });
+      out.emit({ type: "eval.completed", verdict: toolPostconditionVerdict(ok) });
       if (!ok) return { ok: false, summary: "postcondition failed", output: result.output, provenance: result.provenance };
     }
     return { ok: result.ok, summary: result.summary, output: result.output, provenance: result.provenance };
@@ -200,78 +200,142 @@ export class Orchestrator {
     trace: ExecutionTrace,
     signal?: AbortSignal,
   ): Promise<{ outcome: "success" | "failure"; summary?: string }> {
+    const caps = this.deps.providers.capabilities();
     const cls = classifyTask(input);
     trace.taskType = cls.taskType;
-    const decision: RoutingDecision = this.deps.router.route(
-      { input, ...cls, inputTokens: trace.inputTokensEstimate },
-      this.deps.providers.capabilities(),
-    );
+    const req: RouteRequest = { input, ...cls, inputTokens: trace.inputTokensEstimate };
+    let decision: RoutingDecision = this.deps.router.route(req, caps);
     out.emit({ type: "route.decided", decision });
+
+    const evaluators = this.deps.evaluators ?? [];
+    const maxEscalations = evaluators.length > 0 ? (this.deps.maxEscalations ?? 0) : 0;
+    const taint = new TaintTracker(); // spans the whole task, across attempts: untrusted content stays in context
+    machine.to("running");
+
+    for (;;) {
+      const state = { sideEffects: false };
+      const attempt = await this.runAttempt(taskId, input, decision, caps, { out, machine, trace, taint, attempt: state }, signal, maxEscalations > 0);
+      const verdict = await runEvaluators(evaluators, { input, taskType: cls.taskType, response: attempt.text, failure: attempt.failure });
+      if (verdict) {
+        out.emit({ type: "eval.completed", verdict });
+        if (verdict.usage) trace.totalCostUsd += verdict.usage.estimatedCostUsd;
+      }
+      this.finishAttempt(trace, decision, attempt.usage, verdict);
+
+      const failed = attempt.failure !== undefined || verdict?.outcome === "failure";
+      if (!verdict || !shouldEscalate(verdict)) return failed ? { outcome: "failure", summary: attempt.failure ?? verdict?.evidence } : { outcome: "success" };
+
+      const next = this.nextModel(req, caps, decision.model!);
+      const reason = attempt.failure ?? verdict.evidence;
+      if (state.sideEffects || trace.escalations >= maxEscalations || !next || signal?.aborted) {
+        // No safe or available escalation: keep what we have. Uncertain answers are still delivered; failures are not.
+        if (attempt.error) throw attempt.error;
+        return failed ? { outcome: "failure", summary: reason } : { outcome: "success" };
+      }
+
+      trace.escalations++;
+      out.emit({ type: "escalated", from: decision.model!, to: next.model, reason });
+      decision = {
+        kind: "model",
+        model: next.model,
+        provider: next.provider,
+        strategy: "cascade_v1",
+        taskType: cls.taskType,
+        complexity: cls.complexity,
+        candidates: [{ model: next.model, score: 1 }],
+        propensity: 1,
+        explored: false,
+        rationale: `escalated from ${decision.model}: ${reason}`,
+      };
+    }
+  }
+
+  /** Next more expensive eligible model after `current` (ties keep configuration order). */
+  private nextModel(req: RouteRequest, caps: ModelCapabilities[], current: string): ModelCapabilities | undefined {
+    const ladder = filterCandidates(req, caps)
+      .eligible.map((c, i) => ({ c, i }))
+      .sort((a, b) => blendedCost(a.c) - blendedCost(b.c) || a.i - b.i)
+      .map((x) => x.c);
+    const idx = ladder.findIndex((c) => c.model === current);
+    return idx >= 0 ? ladder[idx + 1] : undefined;
+  }
+
+  /** One model attempt: the model<->tool loop. A provider error is returned (not thrown) when a cascade could recover. */
+  private async runAttempt(
+    taskId: string,
+    input: string,
+    decision: RoutingDecision,
+    caps: ModelCapabilities[],
+    ctx: Omit<ToolRunCtx, "taskId">,
+    signal: AbortSignal | undefined,
+    recoverable: boolean,
+  ): Promise<{ text: string; usage: Usage; failure?: string; error?: Error }> {
+    const { out } = ctx;
     const provider = decision.provider ? this.deps.providers.get(decision.provider) : undefined;
     if (!decision.model || !provider) throw new Error("router selected an unavailable provider");
 
-    machine.to("running");
-    const caps = this.deps.providers.capabilities().find((c) => c.model === decision.model);
-    const useTools = provider.supportsToolCalls === true && caps?.supportsTools === true;
+    const model = caps.find((c) => c.model === decision.model);
+    const useTools = provider.supportsToolCalls === true && model?.supportsTools === true;
     const specs = useTools
       ? this.deps.tools.list().map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema }))
       : undefined;
-    const taint = new TaintTracker(); // spans the whole task: once untrusted content is in context, it stays tainted
     const messages: ChatMessage[] = [{ role: "user", content: input }];
     const total: Usage = { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, estimatedCostUsd: 0, latencyMs: 0 };
+    let finalText = "";
 
-    for (let step = 0; ; step++) {
-      let usage: Usage | undefined;
-      let text = "";
-      const calls: ToolCall[] = [];
-      for await (const chunk of provider.generate({
-        model: decision.model,
-        system: useTools ? SYSTEM_PROMPT + TOOLS_PROMPT : SYSTEM_PROMPT,
-        messages,
-        tools: specs,
-        signal,
-      })) {
-        if (chunk.type === "delta") {
-          text += chunk.text;
-          out.emit({ type: "response.delta", text: chunk.text });
-        } else if (chunk.type === "tool_call") calls.push(chunk.call);
-        else usage = chunk.usage;
-      }
-      if (!usage) throw new Error("provider ended without usage");
-      out.emit({ type: "model.completed", model: decision.model, usage });
-      total.inputTokens += usage.inputTokens;
-      total.outputTokens += usage.outputTokens;
-      total.cachedInputTokens += usage.cachedInputTokens;
-      total.estimatedCostUsd += usage.estimatedCostUsd;
-      total.latencyMs += usage.latencyMs;
-      total.timeToFirstTokenMs ??= usage.timeToFirstTokenMs;
+    try {
+      for (let step = 0; ; step++) {
+        let usage: Usage | undefined;
+        let text = "";
+        const calls: ToolCall[] = [];
+        for await (const chunk of provider.generate({
+          model: decision.model,
+          system: useTools ? SYSTEM_PROMPT + TOOLS_PROMPT : SYSTEM_PROMPT,
+          messages,
+          tools: specs,
+          signal,
+        })) {
+          if (chunk.type === "delta") {
+            text += chunk.text;
+            out.emit({ type: "response.delta", text: chunk.text });
+          } else if (chunk.type === "tool_call") calls.push(chunk.call);
+          else usage = chunk.usage;
+        }
+        if (!usage) throw new Error("provider ended without usage");
+        out.emit({ type: "model.completed", model: decision.model, usage });
+        total.inputTokens += usage.inputTokens;
+        total.outputTokens += usage.outputTokens;
+        total.cachedInputTokens += usage.cachedInputTokens;
+        total.estimatedCostUsd += usage.estimatedCostUsd;
+        total.latencyMs += usage.latencyMs;
+        total.timeToFirstTokenMs ??= usage.timeToFirstTokenMs;
+        finalText = text;
 
-      if (calls.length === 0) break;
-      if (step + 1 >= MAX_TOOL_STEPS) {
-        this.finishAttempt(trace, decision, total);
-        return { outcome: "failure", summary: `tool step limit (${MAX_TOOL_STEPS}) reached` };
-      }
+        if (calls.length === 0) return { text: finalText, usage: total };
+        if (step + 1 >= MAX_TOOL_STEPS) return { text: finalText, usage: total, failure: `tool step limit (${MAX_TOOL_STEPS}) reached` };
 
-      messages.push({ role: "assistant", content: text, toolCalls: calls });
-      for (const call of calls) {
-        const tool = this.deps.tools.get(call.name);
-        const r: ToolOutcome = tool
-          ? await this.invokeTool({ taskId, out, machine, trace, taint }, tool, call.args)
-          : { ok: false, summary: `unknown tool ${call.name}` };
-        messages.push({ role: "tool", toolCallId: call.id, content: toolMessageContent(r) });
+        messages.push({ role: "assistant", content: text, toolCalls: calls });
+        for (const call of calls) {
+          const tool = this.deps.tools.get(call.name);
+          const r: ToolOutcome = tool
+            ? await this.invokeTool({ taskId, ...ctx }, tool, call.args)
+            : { ok: false, summary: `unknown tool ${call.name}` };
+          messages.push({ role: "tool", toolCallId: call.id, content: toolMessageContent(r) });
+        }
       }
+    } catch (e) {
+      if (signal?.aborted || !recoverable) throw e;
+      const error = e instanceof Error ? e : new Error(String(e));
+      return { text: finalText, usage: total, failure: `provider error: ${error.message}`, error };
     }
-
-    this.finishAttempt(trace, decision, total);
-    return { outcome: "success" };
   }
 
-  private finishAttempt(trace: ExecutionTrace, decision: RoutingDecision, usage: Usage): void {
-    const attempt: Attempt = { model: decision.model!, provider: decision.provider!, decision, usage };
+  private finishAttempt(trace: ExecutionTrace, decision: RoutingDecision, usage: Usage, verdict?: Verdict): void {
+    const attempt: Attempt = { model: decision.model!, provider: decision.provider!, decision, usage, ...(verdict ? { verdict } : {}) };
     trace.attempts.push(attempt);
     trace.totalCostUsd += usage.estimatedCostUsd;
-    // Always-premium baseline on the same token counts: the defined reference for "savings" (ADR-0006).
+    // Always-premium baseline: one shot on the premium model with the last attempt's tokens (ADR-0006).
     const premium = premiumModel(this.deps.providers.capabilities());
-    if (premium) trace.baselineCostUsd = (trace.baselineCostUsd ?? 0) + estimateCostUsd(premium, usage);
+    if (premium) trace.baselineCostUsd = estimateCostUsd(premium, usage);
   }
 }

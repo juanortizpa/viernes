@@ -86,7 +86,13 @@ export function islandReducer(state: IslandState, action: IslandAction): IslandS
         : { ...state, mode: "warning", headline: `${e.tool} falló`, detail: e.summary };
 
     case "response.delta":
-      return { ...state, mode: "thinking", headline: "Respondiendo…", detail: ((state.detail ?? "") + e.text).slice(-140) };
+      // A fresh answer starts a fresh line: the previous detail was a rationale, a reason or an abandoned attempt.
+      return {
+        ...state,
+        mode: "thinking",
+        headline: "Respondiendo…",
+        detail: ((state.headline === "Respondiendo…" ? (state.detail ?? "") : "") + e.text).slice(-140),
+      };
 
     case "model.completed":
       return {

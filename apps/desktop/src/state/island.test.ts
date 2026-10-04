@@ -47,6 +47,17 @@ describe("islandReducer", () => {
     expect(s.model).toBe("b");
   });
 
+  it("a new answer replaces the previous detail instead of appending to it", () => {
+    const e = (event: object, seq: number) => ({ kind: "event", event: { id: String(seq), taskId: "t", seq, ts: seq, ...event } }) as never;
+    let st = islandReducer(initialState, e({ type: "route.decided", decision: { kind: "model", model: "a", strategy: "s", taskType: "other", complexity: 0, candidates: [], propensity: 1, explored: false, rationale: "razón" } }, 0));
+    st = islandReducer(st, e({ type: "response.delta", text: "Hola " }, 1));
+    st = islandReducer(st, e({ type: "response.delta", text: "mundo" }, 2));
+    expect(st.detail).toBe("Hola mundo");
+    st = islandReducer(st, e({ type: "escalated", from: "a", to: "b", reason: "vacío" }, 3));
+    st = islandReducer(st, e({ type: "response.delta", text: "Segunda" }, 4));
+    expect(st.detail).toBe("Segunda");
+  });
+
   it("only shows a progress fraction when an event provided one", () => {
     const none = run([{ type: "task.started", input: "x", modality: "text" }, { type: "progress", stage: "indexando" }]);
     expect(none.fraction).toBeUndefined();

@@ -11,6 +11,10 @@ export const Config = z.object({
   router: z.enum(["static", "always_premium", "always_cheapest", "rules"]).default("static"),
   /** SQLite file for execution traces. Overridden by JARVIS_DATA_DIR/traces.db when that env var is set. */
   traceDb: z.string().optional(),
+  /** How many times a failed/uncertain answer may move up to the next, stronger model (cascade, ADR-0011). 0 disables it. */
+  maxEscalations: z.number().int().min(0).max(3).default(1),
+  /** Refuse to start if any configured model has a non-zero price. */
+  freeOnly: z.boolean().default(false),
   /** Discover installed apps (Windows Start Menu) so "abre X" works without hand-written aliases. */
   scanApps: z.boolean().default(true),
   apps: z.record(z.string()).default({

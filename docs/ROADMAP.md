@@ -83,14 +83,18 @@ exista algo visible, no solo logs.
 - [x] Telemetría persistida: `SqliteTraceStore` (`packages/storage`, `node:sqlite`, sin dependencias nativas); el sidecar la usa con `JARVIS_DATA_DIR` o `traceDb` en la config
 - [x] Probar un adaptador contra una API real (OpenRouter, ver arriba)
 
-## Fase 2 — Router y evaluador (3 semanas) 🟨 (primer corte hecho)
+## Fase 2 — Router y evaluador (3 semanas) 🟨 (evaluadores y cascada hechos; faltan checkpoints y datos sensibles)
 - [x] Estrategias de router intercambiables (siempre-premium, siempre-barato, reglas) — `router` en la config, ADR-0011
 - [x] Filtrado por capacidades (visión, herramientas, contexto, sensibilidad de datos) con motivo de rechazo en la traza
 - [x] Clasificador de tarea por reglas (tipo + complejidad) y `baselineCostUsd` (baseline always-premium) en cada traza
 - [ ] Detectar datos sensibles (hoy `sensitive` existe en el contrato pero nada lo activa) y exigir `supportsTools` cuando se ofrezcan herramientas
-- [ ] Evaluador de código (tests) y de postcondición de herramientas (la postcondición ya existe dentro de `invokeTool`; falta extraerla como `Evaluator`)
-- [ ] Escalado con checkpoints (snapshot / dry-run / plan→aprobación)
-- [ ] Contabilidad de costo incluyendo costo del evaluador
+- [x] Evaluadores (ADR-0012): heurísticas de respuesta, evaluador de código con runner inyectado (sin runner en vivo: requiere sandbox, Fase 3), postcondición de herramienta
+- [x] Cascada: escalado al siguiente modelo elegible (orden de config débil→fuerte si todo es gratis), también ante errores del proveedor
+- [x] Escalado seguro mínimo: no se escala tras una herramienta con efectos secundarios
+- [ ] Checkpoints completos (snapshot / dry-run / plan→aprobación) para poder escalar tras acciones con efectos
+- [x] Contabilidad de costo incluyendo costo del evaluador (suma `verdict.usage`; hoy los evaluadores son gratis)
+- [x] Todo gratis: `freeOnly` + `jarvis.config.free.example.json` (OpenRouter `:free`); sin juez LLM de pago
+- [ ] Validar la escalada con un modelo gratuito real (la prueba en vivo solo cubrió el camino sin fallo: ruteo + veredicto)
 - [x] ADR: cascada vs ruteo predictivo (provisional: reglas → cascada con evaluador → predictivo solo con datos del arnés)
 
 ## Fase 3 — Arnés de experimento (3 semanas) ⬜
@@ -145,3 +149,4 @@ exista algo visible, no solo logs.
 | 2026-10-04 | Automejora, primer paso (ADR-0010): `AppCatalog` (config > aprendido > escaneado), escáner de Menú Inicio, alias aprendidos con confirmación del policy engine y persistidos en SQLite, `aliases.list/forget`, y el lanzador solo abre comandos del catálogo. 105 tests. **No probado en Windows real** (el escáner solo se probó con carpetas temporales). Pendiente/V2: memoria negativa de rechazos, apps UWP, skills declarativas. |
 | 2026-10-04 | Windows: Teams y otras apps de la Store no aparecían porque no tienen `.lnk`. El escáner ahora también lee `Get-StartApps` y las lanza con `explorer.exe shell:AppsFolder\<AppID>` (argv, sin shell). **Sin probar en Windows real.** |
 | 2026-10-04 | Inicio de Fase 2 (ADR-0011): estrategias de router, filtrado por capacidades, clasificador de tarea, `baselineCostUsd`. 120 tests. Pendiente de la fase: evaluadores, cascada con escalado, costo del evaluador, detección de datos sensibles. |
+| 2026-10-04 | Fase 2, evaluadores y cascada (ADR-0012): `Evaluator`s deterministas gratuitos, bucle de intentos con escalado por veredicto o error del proveedor, no escala tras efectos secundarios, `freeOnly`, config de ejemplo con modelos `:free`. Prueba en vivo con OpenRouter gratis: ruteo y veredicto correctos (fácil→modelo pequeño, código→el más fuerte, costo 0); la escalada solo está probada con proveedores falsos. UI: una respuesta nueva ya no se concatena a la razón/intento anterior. 136 tests. |
