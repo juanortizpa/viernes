@@ -127,4 +127,62 @@ describe("AnthropicProvider", () => {
     });
     await expect(collect(p, "claude-x")).rejects.toThrow(/overloaded/);
   });
+
+  it("sends tools and tool-result messages in OpenAI format, and assembles streamed tool_calls", async () => {
+    let sent: any;
+    const p = new OpenRouterProvider({
+      apiKey: "k",
+      models: [caps("or/m", "openrouter")],
+      fetch: async (u, init) => {
+        sent = JSON.parse(init.body as string);
+        return body([
+          'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_a","function":{"name":"files__read","arguments":"{\\"pa"}}]}}]}',
+          'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"th\\":\\"/x\\"}"}}]}}]}',
+          'data: {"choices":[{"delta":{"tool_calls":[{"index":1,"id":"call_b","function":{"name":"time__now","arguments":"{bad"}}]}}]}',
+          'data: {"choices":[],"usage":{"prompt_tokens":5,"completion_tokens":2}}',
+          "data: [DONE]",
+        ])(u, init);
+      },
+    });
+    expect(p.supportsToolCalls).toBe(true);
+    const chunks: ProviderChunk[] = [];
+    for await (const c of p.generate({
+      model: "or/m",
+      messages: [
+        { role: "user", content: "hi" },
+        { role: "assistant", content: "", toolCalls: [{ id: "call_0", name: "time.now", args: {} }] },
+        { role: "tool", toolCallId: "call_0", content: "{}" },
+      ],
+      tools: [
+        { name: "files.read", description: "d", inputSchema: { type: "object" } },
+        { name: "time.now", description: "t", inputSchema: { type: "object" } },
+      ],
+    }))
+      chunks.push(c);
+
+    expect(sent.tools.map((t: any) => t.function.name)).toEqual(["files__read", "time__now"]);
+    expect(sent.messages[1]).toEqual({
+      role: "assistant",
+      content: null,
+      tool_calls: [{ id: "call_0", type: "function", function: { name: "time__now", arguments: "{}" } }],
+    });
+    expect(sent.messages[2]).toEqual({ role: "tool", tool_call_id: "call_0", content: "{}" });
+    expect(chunks.filter((c) => c.type === "tool_call")).toEqual([
+      { type: "tool_call", call: { id: "call_a", name: "files.read", args: { path: "/x" } } },
+      { type: "tool_call", call: { id: "call_b", name: "time.now", args: undefined } }, // malformed JSON -> undefined, never throws
+    ]);
+    expect(chunks.at(-1)).toMatchObject({ type: "done", usage: { inputTokens: 5, outputTokens: 2 } });
+  });
+
+  it("Anthropic and Ollama refuse tools explicitly instead of silently ignoring them", async () => {
+    const refusing: Provider[] = [
+      new OllamaProvider({ models: [caps("o", "ollama")], fetch: body([]) }),
+      new AnthropicProvider({ apiKey: "k", models: [caps("a", "anthropic")], fetch: body([]) }),
+    ];
+    for (const p of refusing) {
+      expect(p.supportsToolCalls).toBeFalsy();
+      const it = p.generate({ model: "x", messages: [], tools: [{ name: "t", description: "", inputSchema: {} }] });
+      await expect(it.next()).rejects.toThrow(/tool calling is not implemented/);
+    }
+  });
 });

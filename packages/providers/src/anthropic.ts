@@ -23,6 +23,7 @@ export class AnthropicProvider implements Provider {
   }
 
   async *generate(req: GenerateRequest): AsyncGenerator<ProviderChunk> {
+    if (req.tools?.length) throw new ProviderError("tool calling is not implemented for this adapter", this.id);
     const caps = this.opts.models.find((m) => m.model === req.model);
     if (!caps) throw new ProviderError(`unknown model ${req.model}`, this.id);
     const start = Date.now();

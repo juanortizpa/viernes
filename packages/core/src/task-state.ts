@@ -4,7 +4,7 @@ const ALLOWED: Record<TaskState, readonly TaskState[]> = {
   created: ["routing", "finished"],
   routing: ["awaiting_permission", "running", "finished"],
   awaiting_permission: ["running", "finished"],
-  running: ["running", "finished"],
+  running: ["running", "awaiting_permission", "finished"],
   finished: [],
 };
 

@@ -27,3 +27,14 @@ export async function* readLines(res: Response, provider: string): AsyncGenerato
 
 /** Payload of an SSE `data:` line, or undefined for other lines. */
 export const sseData = (line: string): string | undefined => (line.startsWith("data:") ? line.slice(5).trim() : undefined);
+
+/**
+ * Tool names on the wire. OpenAI-style APIs only accept `[a-zA-Z0-9_-]`, while our registry uses
+ * dotted names (`files.read`). Encoding lives at the adapter boundary so the rest of the system
+ * keeps its names; decoding goes through the names the request offered, never a blind reverse.
+ */
+export const encodeToolName = (name: string): string => name.replace(/\./g, "__");
+export const toolNameDecoder = (offered: readonly string[]): ((wire: string) => string) => {
+  const map = new Map(offered.map((n) => [encodeToolName(n), n]));
+  return (wire) => map.get(wire) ?? wire;
+};

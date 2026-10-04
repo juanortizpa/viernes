@@ -22,6 +22,7 @@ export class OllamaProvider implements Provider {
   }
 
   async *generate(req: GenerateRequest): AsyncGenerator<ProviderChunk> {
+    if (req.tools?.length) throw new ProviderError("tool calling is not implemented for this adapter", this.id);
     const start = Date.now();
     let firstToken: number | undefined;
     const messages = [...(req.system ? [{ role: "system", content: req.system }] : []), ...req.messages];
